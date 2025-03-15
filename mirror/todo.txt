@@ -1,0 +1,6 @@
+
+
+github actions
+  test on different node, bun and deno versions
+  test on linux, windows and mac
+

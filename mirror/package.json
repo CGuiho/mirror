@@ -1,0 +1,61 @@
+{
+  "name": "@guiho40/janitor",
+  "description": "GUIHO Janitor",
+  "version": "0.3.0",
+  "main": "library/janitor.js",
+  "types": "library/janitor.d.ts",
+  "module": "source/janitor.ts",
+  "type": "module",
+  "readmeFilename": "../readme.md",
+  "keywords": [],
+  "license": "PROPRIETARY",
+  "author": {
+    "name": "Cristóvão GUIHO",
+    "email": "cg@guiho.co",
+    "url": "https://guiho.co/cg"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "dev": "bun run --watch source/janitor.ts",
+    "build": "rm -rf library && tsc -p .",
+    "vitest": "vitest",
+    "coverage": "vitest run --coverage",
+    "bundle": "rm -rf bundle && bun build source/janitor.ts --outdir bundle --target node --sourcemap=linked",
+    "link": "npm link && npm link @guiho40/janitor",
+    "typecheck": "tsc -p . --noEmit",
+    "clean": "rm -rf .temp",
+    "clean-build": "rm -rf build library bundle",
+    "clean-installation": "rm -rf node_modules bun.lock",
+    "clean-hard": "bun clean && bun clean-build && bun clean-installation",
+    "google-artifactregistry-auth": "npx google-artifactregistry-auth",
+    "mirror": "bun ../mirror/mirror.ts @guiho40/janitor ./package.json",
+    "_tc": "bun run typecheck"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/CGuiho/janitor.git",
+    "directory": "janitor"
+  },
+  "homepage": "https://github.com/CGuiho/janitor#readme",
+  "bugs": "https://github.com/CGuiho/janitor/issues",
+  "engines": {
+    "node": ">=23.0.0"
+  },
+  "files": [
+    "library/",
+    "types/",
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "docs.md"
+  ],
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@vitest/coverage-v8": "3.0.8",
+    "vite": "^6.2.2",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^3.0.8"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
