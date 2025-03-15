@@ -1,10 +1,10 @@
 {
-  "name": "@guiho40/janitor",
-  "description": "GUIHO Janitor",
+  "name": "@guiho40/mirror",
+  "description": "GUIHO Mirror",
   "version": "0.3.0",
-  "main": "library/janitor.js",
-  "types": "library/janitor.d.ts",
-  "module": "source/janitor.ts",
+  "main": "library/mirror.js",
+  "types": "library/mirror.d.ts",
+  "module": "source/mirror.ts",
   "type": "module",
   "readmeFilename": "../readme.md",
   "keywords": [],
@@ -16,28 +16,27 @@
   },
   "sideEffects": false,
   "scripts": {
-    "dev": "bun run --watch source/janitor.ts",
+    "dev": "bun run --watch source/mirror.ts",
     "build": "rm -rf library && tsc -p .",
     "vitest": "vitest",
     "coverage": "vitest run --coverage",
-    "bundle": "rm -rf bundle && bun build source/janitor.ts --outdir bundle --target node --sourcemap=linked",
-    "link": "npm link && npm link @guiho40/janitor",
+    "bundle": "rm -rf bundle && bun build source/mirror.ts --outdir bundle --target node --sourcemap=linked",
+    "link": "npm link && npm link @guiho40/mirror",
     "typecheck": "tsc -p . --noEmit",
     "clean": "rm -rf .temp",
     "clean-build": "rm -rf build library bundle",
     "clean-installation": "rm -rf node_modules bun.lock",
     "clean-hard": "bun clean && bun clean-build && bun clean-installation",
     "google-artifactregistry-auth": "npx google-artifactregistry-auth",
-    "mirror": "bun ../mirror/mirror.ts @guiho40/janitor ./package.json",
     "_tc": "bun run typecheck"
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/CGuiho/janitor.git",
-    "directory": "janitor"
+    "url": "git+ssh://git@github.com/CGuiho/mirror.git",
+    "directory": "mirror"
   },
-  "homepage": "https://github.com/CGuiho/janitor#readme",
-  "bugs": "https://github.com/CGuiho/janitor/issues",
+  "homepage": "https://github.com/CGuiho/mirror#readme",
+  "bugs": "https://github.com/CGuiho/mirror/issues",
   "engines": {
     "node": ">=23.0.0"
   },
