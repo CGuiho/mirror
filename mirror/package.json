@@ -16,7 +16,7 @@
   },
   "sideEffects": false,
   "bin": {
-    "mirror": "./bin/mirror"
+    "mirror": "./bin/mirror.exe"
   },
   "scripts": {
     "dev": "bun run --watch source/mirror.ts",
