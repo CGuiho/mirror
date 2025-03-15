@@ -1,0 +1,47 @@
+{
+  "autorun": true,
+  "autokill": true,
+  "terminals": [
+    {
+      "name": "GUIHO",
+      "description": "GUIHO",
+      "icon": "zap",
+      "color": "terminal.ansiWhite",
+      "open": true,
+      "focus": true,
+      "commands": [
+        "cd janitor",
+        "sleep 60",
+        "bun google-artifactregistry-auth",
+        "bun upgrade",
+        "bun run typecheck"
+      ]
+    },
+    {
+      "name": "GUIHO Vitest",
+      "description": "GUIHO",
+      "icon": "zap",
+      "color": "terminal.ansiWhite",
+      "open": true,
+      "focus": true,
+      "commands": [
+        "cd janitor",
+        "bun vitest"
+      ]
+    },
+    {
+      "split": "GUIHO",
+      "name": "GUIHO Server",
+      "description": "GUIHO",
+      "icon": "zap",
+      "color": "terminal.ansiWhite",
+      "open": true,
+      "focus": true,
+      "commands": [
+        "cd janitor",
+        "bun install || bun clean-hard && bun install",
+        "bun clean && bun dev"
+      ]
+    }
+  ]
+}

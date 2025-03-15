@@ -1,0 +1,11 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "command": "./guiho/node_modules/.bin/react-router dev",
+      "name": "GUIHO Dev Server",
+      "request": "launch",
+      "type": "node-terminal"
+    }
+  ]
+}
