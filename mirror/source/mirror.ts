@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+
 import { $ } from 'bun'
 import { fail } from 'node:assert'
 import { type ReleaseType, inc, valid as isValidVersion } from 'semver'
