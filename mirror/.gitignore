@@ -5,6 +5,8 @@ library
 build
 bundle
 
+bin
+
 # output
 out
 dist

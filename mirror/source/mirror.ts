@@ -3,7 +3,11 @@ import { $ } from 'bun'
 import { fail } from 'node:assert'
 import { type ReleaseType, inc, valid as isValidVersion } from 'semver'
 
-const usage = `Usage: ${process.argv[1]} <path-to-package.json> <semver-valid-target-version> \n -h, --help: Show this message`
+const usage = `
+  Usage: mirror <path-to-package.json> <semver-valid-target-version> \n
+  Usage: mirror <semver-valid-target-version> \n
+  -h, --help: Show this message \n
+  `
 
 if (process.argv[2] === '--help' || process.argv[2] === '-h') {
   console.log(usage)
