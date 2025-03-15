@@ -15,9 +15,13 @@
     "url": "https://guiho.co/cg"
   },
   "sideEffects": false,
+  "bin": {
+    "mirror": "./bin/mirror"
+  },
   "scripts": {
     "dev": "bun run --watch source/mirror.ts",
     "build": "rm -rf library && tsc -p .",
+    "binary": "bun build source/mirror.ts --outdir bin --target bun",
     "vitest": "vitest",
     "coverage": "vitest run --coverage",
     "bundle": "rm -rf bundle && bun build source/mirror.ts --outdir bundle --target node --sourcemap=linked",
@@ -43,6 +47,7 @@
   "files": [
     "library/",
     "types/",
+    "bin/",
     "CHANGELOG.md",
     "LICENSE.md",
     "docs.md"
