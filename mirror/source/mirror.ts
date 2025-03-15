@@ -23,8 +23,8 @@ if (process.argv[2] && process.argv[3]) {
 } else if (process.argv[2]) {
   targetVersion = process.argv[2]
 } else {
-  console.error(usage)
-  process.exit(1)
+  console.info(usage)
+  process.exit(0)
 }
 
 const variants: ReleaseType[] = ['major', 'premajor', 'minor', 'preminor', 'patch', 'prepatch', 'prerelease']
