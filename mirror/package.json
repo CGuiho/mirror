@@ -22,10 +22,7 @@
     "dev": "bun run --watch source/mirror.ts",
     "build": "rm -rf library && tsc -p .",
     "binary": "bun build source/mirror.ts --compile --outfile bin/mirror",
-    "vitest": "vitest",
-    "coverage": "vitest run --coverage",
     "bundle": "rm -rf bundle && bun build source/mirror.ts --outdir bundle --target node --sourcemap=linked",
-    "link": "npm link && npm link @guiho40/mirror",
     "typecheck": "tsc -p . --noEmit",
     "clean": "rm -rf .temp",
     "clean-build": "rm -rf build library bundle",
@@ -58,10 +55,8 @@
   "devDependencies": {
     "@types/bun": "latest",
     "@types/semver": "^7.7.0",
-    "@vitest/coverage-v8": "3.0.8",
     "vite": "^6.3.5",
-    "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^3.1.4"
+    "vite-tsconfig-paths": "^5.1.4"
   },
   "peerDependencies": {
     "typescript": "^5.8.2"
