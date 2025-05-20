@@ -6,8 +6,11 @@ import { type ReleaseType, inc, valid as isValidVersion } from 'semver'
 const usage = `
   Usage: mirror <path-to-package.json> <semver-valid-target-version> \n
   Usage: mirror <semver-valid-target-version> \n
-  -h, --help: Show this message \n
-  see: Show the current version of the package.json \n
+  Usage: mirror <command> \n
+  Flags: \n
+    -h, --help: Show this message \n
+  Commands: \n
+    see: Show the current version of the package.json \n
   `
 
 if (process.argv[2] === '--help' || process.argv[2] === '-h') {
