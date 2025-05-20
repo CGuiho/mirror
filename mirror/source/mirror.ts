@@ -7,10 +7,19 @@ const usage = `
   Usage: mirror <path-to-package.json> <semver-valid-target-version> \n
   Usage: mirror <semver-valid-target-version> \n
   -h, --help: Show this message \n
+  see: Show the current version of the package.json \n
   `
 
 if (process.argv[2] === '--help' || process.argv[2] === '-h') {
   console.log(usage)
+  process.exit(0)
+}
+
+if (process.argv[2] === 'see') {
+  const json = await Bun.file('./package.json').json()
+  const { version, name } = json
+  console.log(version)
+  console.log(`${name}@${version}`)
   process.exit(0)
 }
 
