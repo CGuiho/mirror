@@ -1,7 +1,7 @@
 {
   "name": "@guiho40/mirror",
   "description": "GUIHO Mirror",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "main": "library/mirror.js",
   "types": "library/mirror.d.ts",
   "module": "source/mirror.ts",
