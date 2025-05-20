@@ -21,8 +21,8 @@ if (process.argv[2] === '--help' || process.argv[2] === '-h') {
 if (process.argv[2] === 'see') {
   const json = await Bun.file('./package.json').json()
   const { version, name } = json
-  console.log(version)
-  console.log(`${name}@${version}`)
+  console.log(`  ${version}`)
+  console.log(`  ${name}@${version}`)
   process.exit(0)
 }
 
