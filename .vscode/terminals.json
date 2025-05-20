@@ -3,14 +3,14 @@
   "autokill": true,
   "terminals": [
     {
-      "name": "GUIHO",
-      "description": "GUIHO",
+      "name": "GUIHO Mirror",
+      "description": "GUIHO Mirror",
       "icon": "zap",
       "color": "terminal.ansiWhite",
       "open": true,
       "focus": true,
       "commands": [
-        "cd janitor",
+        "cd mirror",
         "sleep 60",
         "bun google-artifactregistry-auth",
         "bun upgrade",
@@ -18,27 +18,15 @@
       ]
     },
     {
-      "name": "GUIHO Vitest",
-      "description": "GUIHO",
+      "split": "GUIHO Mirror",
+      "name": "GUIHO Mirror Server",
+      "description": "GUIHO Mirror",
       "icon": "zap",
       "color": "terminal.ansiWhite",
       "open": true,
       "focus": true,
       "commands": [
-        "cd janitor",
-        "bun vitest"
-      ]
-    },
-    {
-      "split": "GUIHO",
-      "name": "GUIHO Server",
-      "description": "GUIHO",
-      "icon": "zap",
-      "color": "terminal.ansiWhite",
-      "open": true,
-      "focus": true,
-      "commands": [
-        "cd janitor",
+        "cd mirror",
         "bun install || bun clean-hard && bun install",
         "bun clean && bun dev"
       ]
