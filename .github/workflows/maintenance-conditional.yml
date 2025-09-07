@@ -1,0 +1,87 @@
+name: Conditional Maintenance
+
+on:
+  schedule:
+    - cron: '4 2 * * 0'
+  workflow_dispatch:
+
+jobs:
+  create_issue:
+    name: Create Conditional Maintenance Issue
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create Conditional Maintenance Issue
+        run: |
+
+          # Verify inactivity period
+          LAST_COMMIT_TIMESTAMP=$(git log -1 --format=%ct)
+          CURRENT_TIMESTAMP=$(date +%s)
+          SECONDS_IN_INACTIVITY_PERIOD=$((DAYS_OF_INACTIVITY * 86400))
+          TIME_DIFFERENCE=$((CURRENT_TIMESTAMP - LAST_COMMIT_TIMESTAMP))
+
+          echo "Last commit timestamp: $LAST_COMMIT_TIMESTAMP"
+          echo "Current timestamp: $CURRENT_TIMESTAMP"
+          echo "Inactivity threshold (seconds): $SECONDS_IN_INACTIVITY_PERIOD"
+          echo "Time since last commit (seconds): $TIME_DIFFERENCE"
+
+          if [ $TIME_DIFFERENCE -le $SECONDS_IN_INACTIVITY_PERIOD ]; then
+            echo "No issue created: Repository has recent activity."
+            exit 0
+          fi
+
+          if [[ $CLOSE_PREVIOUS == true ]]; then
+            previous_issue_number=$(gh issue list \
+              --label "$LABELS" \
+              --json number \
+              --jq '.[0].number')
+            if [[ -n $previous_issue_number ]]; then
+              gh issue close "$previous_issue_number"
+              gh issue unpin "$previous_issue_number"
+            fi
+          fi
+
+          # full title with date to avoid duplicates
+          full_title="$TITLE - $(date +'%Y-%m-%d')"
+
+          new_issue_url=$(gh issue create \
+            --title "$full_title" \
+            --assignee "$ASSIGNEES" \
+            --label "$LABELS" \
+            --body "$BODY")
+
+          if [[ $PINNED == true ]]; then
+            gh issue pin "$new_issue_url"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          
+          DAYS_OF_INACTIVITY: 60
+
+          TITLE: Conditional Maintenance
+          ASSIGNEES: cguiho
+          LABELS: conditional-maintenance,maintenance
+          BODY: |
+            # Conditional Maintenance
+
+            ## Checklist
+
+            - [ ] Update dependencies
+            - [ ] Check for security vulnerabilities
+            - [ ] Review open issues and pull requests
+            - [ ] Hunt dead code
+            - [ ] Update documentation
+
+            ## Project
+
+            - [GUIHO Project](https://github.com/users/CGuiho/projects/2)
+          PINNED: false
+          CLOSE_PREVIOUS: true
