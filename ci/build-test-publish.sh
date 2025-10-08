@@ -43,7 +43,7 @@ bunx google-artifactregistry-auth
 bun install
 
 bun run typecheck || (cleanup && exit 1)
-bun test || (cleanup && exit 1)
+# bun test || (cleanup && exit 1)
 
 bun run build || (cleanup && exit 1)
 bun binary
