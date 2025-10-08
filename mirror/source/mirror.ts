@@ -71,7 +71,7 @@ await $`git push --tags`
 
 const now = new Date()
 
-console.info(`\n Finished At ${now.toTimeString()} of ${now.toDateString()} \n`)
+console.info(`\n🕗 ${now.toTimeString()} of ${now.toDateString()} \n`)
 
 console.info('✅ Done')
 console.info('🚀🎉 GUIHO Mirror')
