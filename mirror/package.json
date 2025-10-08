@@ -41,12 +41,11 @@
   },
   "homepage": "https://github.com/CGuiho/mirror#readme",
   "bugs": "https://github.com/CGuiho/mirror/issues",
-  "engines": {
-    "node": ">=23.0.0"
-  },
+
   "files": [
     "library/",
     "types/",
+    "docs/",
     "bin/",
     "CHANGELOG.md",
     "LICENSE.md",
@@ -58,9 +57,7 @@
   "devDependencies": {
     "@guiho40/mirror": "^1.1.0",
     "@types/bun": "latest",
-    "@types/semver": "^7.7.1",
-    "vite": "^6.3.6",
-    "vite-tsconfig-paths": "^5.1.4"
+    "@types/semver": "^7.7.1"
   },
   "peerDependencies": {
     "typescript": "^5.8.2"
