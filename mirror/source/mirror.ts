@@ -69,5 +69,9 @@ await $`git tag ${name}@${desired} -m "Release ${name}@${desired}"`
 await $`git push`
 await $`git push --tags`
 
+const now = new Date()
+
+console.info(`\n Finished At ${now.toTimeString()} of ${now.toDateString()} \n`)
+
 console.info('✅ Done')
 console.info('🚀🎉 GUIHO Mirror')
