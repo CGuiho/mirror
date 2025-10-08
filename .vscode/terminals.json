@@ -12,23 +12,9 @@
       "commands": [
         "cd mirror",
         "sleep 60",
-        "bun google-artifactregistry-auth",
-        "bun upgrade",
-        "bun run typecheck"
-      ]
-    },
-    {
-      "split": "GUIHO Mirror",
-      "name": "GUIHO Mirror Server",
-      "description": "GUIHO Mirror",
-      "icon": "zap",
-      "color": "terminal.ansiWhite",
-      "open": true,
-      "focus": true,
-      "commands": [
-        "cd mirror",
+        "bun _gaa",
         "bun install || bun clean-hard && bun install",
-        "bun clean && bun dev"
+        "bun run typecheck"
       ]
     }
   ]
