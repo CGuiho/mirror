@@ -2,6 +2,8 @@
 
 # @copyright Copyright © 2025 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
 
+set -e
+
 _repo_url="https://github.com/cguiho/mirror.git"
 _package_name="@guiho40/mirror" # Also change this on the command line below. (around line 14)
 
@@ -43,7 +45,7 @@ bunx google-artifactregistry-auth
 bun install
 
 bun run typecheck || (cleanup && exit 1)
-# bun test || (cleanup && exit 1)
+bun test || (cleanup && exit 1)
 
 bun run build || (cleanup && exit 1)
 bun binary
