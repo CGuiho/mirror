@@ -61,7 +61,19 @@ const desired = isValidVersion(targetVersion)
 if (!desired) throw new Error('Failed to bump')
 console.debug(current, '—>', desired)
 
-await Bun.write(pathPackageJson, JSON.stringify(Object.assign(json, { version: desired }), null, 2))
+const newJson = Object.assign(json, { version: desired })
+const newJsonString = JSON.stringify(newJson, null, 2)
+await Bun.write(pathPackageJson, newJsonString)
+
+try {
+  const buildJson = await Bun.file(pathPackageJson || './package.build.json').json()
+  const newBuildJson = Object.assign(buildJson, { version: desired })
+  const newBuildJsonString = JSON.stringify(newBuildJson, null, 2)
+  await Bun.write('./package.build.json', newBuildJsonString)
+}
+catch {
+  console.info('No package.build.json to update')
+}
 
 await $`git add ${pathPackageJson}`
 await $`git commit -m ${name}@${desired}`
