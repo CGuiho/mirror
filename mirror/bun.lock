@@ -8,7 +8,7 @@
         "semver": "^7.7.3",
       },
       "devDependencies": {
-        "@guiho40/mirror": "^1.1.0",
+        "@guiho40/mirror": "^1.2.0",
         "@types/bun": "latest",
         "@types/semver": "^7.7.1",
       },
@@ -18,7 +18,7 @@
     },
   },
   "packages": {
-    "@guiho40/mirror": ["@guiho40/mirror@1.1.0", "https://europe-west4-npm.pkg.dev/guiho40/guiho40/@guiho40/mirror/-/@guiho40/mirror-1.1.0.tgz", { "dependencies": { "semver": "^7.7.2" }, "peerDependencies": { "typescript": "^5.8.2" }, "bin": { "mirror": "bin/mirror.exe" } }, "sha512-7VwBJylygWMQ9+IxZGp33WTfYgkUxy4vcu0J00DuDCVngKKZ8kPn0oDiPvg8iFDed0kQesV9slKdPdm2Fzhvsg=="],
+    "@guiho40/mirror": ["@guiho40/mirror@1.2.0", "https://europe-west4-npm.pkg.dev/guiho40/guiho40/@guiho40/mirror/-/@guiho40/mirror-1.2.0.tgz", { "dependencies": { "semver": "^7.7.3" }, "peerDependencies": { "typescript": "^5.8.2" }, "bin": { "mirror": "bin/mirror.exe" } }, "sha512-oW/ZMP1UfrgQuqh/1+77Leq1RCpBLGM8kO+nq/6TJppkzd+rKTOxfPAxurkA5ThcLBlqhPN9n7xF5qf9IxRCIA=="],
 
     "@types/bun": ["@types/bun@1.2.13", "", { "dependencies": { "bun-types": "1.2.13" } }, "sha512-u6vXep/i9VBxoJl3GjZsl/BFIsvML8DfVDO0RYLEwtSZSp981kEO1V5NwRcO1CPJ7AmvpbnDCiMKo3JvbDEjAg=="],
 

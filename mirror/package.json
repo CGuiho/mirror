@@ -54,7 +54,7 @@
     "semver": "^7.7.3"
   },
   "devDependencies": {
-    "@guiho40/mirror": "^1.1.0",
+    "@guiho40/mirror": "^1.2.0",
     "@types/bun": "latest",
     "@types/semver": "^7.7.1"
   },
