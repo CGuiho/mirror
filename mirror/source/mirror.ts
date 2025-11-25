@@ -75,7 +75,7 @@ if (buildJsonExists)
     const newBuildJson = Object.assign(buildJson, { version: desired })
     await Bun.write(pathPackageJsonBuild, JSON.stringify(newBuildJson, null, 2))
 
-    console.info('\n\n package.build.json has also been updated. \n\n')
+    console.info('\n package.build.json has also been updated. \n')
 
     await $`git add ${pathPackageJsonBuild}`
   } catch {
@@ -93,4 +93,4 @@ const now = new Date()
 console.info(`\n🕗 ${now.toTimeString()} of ${now.toDateString()} \n`)
 
 console.info('✅ Done')
-console.info('🚀🎉 GUIHO Mirror')
+console.info('🚀 GUIHO Mirror 🎉')
