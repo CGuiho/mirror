@@ -78,7 +78,6 @@ if (buildJsonExists)
     console.info('\n package.build.json has also been updated. \n')
 
     await $`git add ${pathPackageJsonBuild}`
-    
   } catch {
     console.info('\n No package.build.json to update. \n')
   }
