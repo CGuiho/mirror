@@ -4,17 +4,17 @@ import { fail } from 'node:assert'
 import { type ReleaseType, inc, valid as isValidVersion } from 'semver'
 
 const usage = `
-  🪞 GUIHO Mirror - A simple tool to bump package.json versions and create git tags \n
-    🪞 GUIHO Mirror will also update package.build.json if it exists \n
-  \n
-  Usage: mirror <path-to-package.json> <semver-valid-target-version> \n
-  Usage: mirror <semver-valid-target-version> \n
-  Usage: mirror <command> \n
-  Flags: \n
-    -h, --help: Show this message \n
-  Commands: \n
-    see: Show the current version of the package.json \n
-  \n
+  🪞 GUIHO Mirror - A simple tool to bump package.json versions and create git tags
+    🪞 GUIHO Mirror will also update package.build.json if it exists
+
+  Usage: mirror <path-to-package.json> <semver-valid-target-version>
+  Usage: mirror <semver-valid-target-version>
+  Usage: mirror <command>
+  Flags:
+    -h, --help: Show this message
+  Commands:
+    see: Show the current version of the package.json
+
   🪞 GUIHO Mirror
   `
 
