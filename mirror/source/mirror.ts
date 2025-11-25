@@ -3,6 +3,8 @@ import { $ } from 'bun'
 import { fail } from 'node:assert'
 import { type ReleaseType, inc, valid as isValidVersion } from 'semver'
 
+console.info('\n🪞 GUIHO Mirror\n')
+
 const usage = `
   🪞 GUIHO Mirror - A simple tool to bump package.json versions and create git tags
     🪞 GUIHO Mirror will also update package.build.json if it exists
@@ -55,7 +57,7 @@ const { version: current, name } = json
 
 if (!isValidVersion(current)) throw new Error(`Invalid current version ${current}`)
 
-if (await isDirty()) console.warn('🚧😬 There are uncommitted changes. Commit them before releasing.')
+if (await isDirty()) console.warn('\n🚧😬 There are uncommitted changes. Commit them before releasing.')
 
 const desired = isValidVersion(targetVersion)
   ? targetVersion
@@ -64,7 +66,7 @@ const desired = isValidVersion(targetVersion)
   : fail('invalid target version')
 
 if (!desired) throw new Error('Failed to bump')
-console.debug(current, '—>', desired)
+console.info(`\n${current} —> ${desired}\n`)
 
 const newJson = Object.assign(json, { version: desired })
 await Bun.write(pathPackageJson, JSON.stringify(newJson, null, 2))
@@ -80,11 +82,11 @@ if (buildJsonExists)
     const newBuildJson = Object.assign(buildJson, { version: desired })
     await Bun.write(pathPackageJsonBuild, JSON.stringify(newBuildJson, null, 2))
 
-    console.info('\n package.build.json has also been updated. \n')
+    console.info('\npackage.build.json has also been updated. \n')
 
     await $`git add ${pathPackageJsonBuild}`
   } catch {
-    console.info('\n No package.build.json to update. \n')
+    console.info('\nNo package.build.json to update. \n')
   }
 
 await $`git add ${pathPackageJson}`
