@@ -62,18 +62,25 @@ if (!desired) throw new Error('Failed to bump')
 console.debug(current, '—>', desired)
 
 const newJson = Object.assign(json, { version: desired })
-const newJsonString = JSON.stringify(newJson, null, 2)
-await Bun.write(pathPackageJson, newJsonString)
+await Bun.write(pathPackageJson, JSON.stringify(newJson, null, 2))
 
-try {
-  const buildJson = await Bun.file(pathPackageJson || './package.build.json').json()
-  const newBuildJson = Object.assign(buildJson, { version: desired })
-  const newBuildJsonString = JSON.stringify(newBuildJson, null, 2)
-  await Bun.write('./package.build.json', newBuildJsonString)
-}
-catch {
-  console.info('No package.build.json to update')
-}
+// package.build.json -- This is a separate file that might exist in some projects
+// It must have the exact same version as package.json
+const pathPackageJsonBuild = String(pathPackageJson).replace('package.json', 'package.build.json')
+const buildJsonExists = await Bun.file(pathPackageJsonBuild).exists()
+
+if (buildJsonExists)
+  try {
+    const buildJson = await Bun.file(pathPackageJsonBuild).json()
+    const newBuildJson = Object.assign(buildJson, { version: desired })
+    await Bun.write(pathPackageJsonBuild, JSON.stringify(newBuildJson, null, 2))
+
+    console.info('\n\n package.build.json has also been updated. \n\n')
+
+    await $`git add ${pathPackageJsonBuild}`
+  } catch {
+    console.info('\n No package.build.json to update. \n')
+  }
 
 await $`git add ${pathPackageJson}`
 await $`git commit -m ${name}@${desired}`
