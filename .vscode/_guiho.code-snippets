@@ -39,21 +39,26 @@
     "body": ["/* prettier-ignore */"]
   },
 
+  "File Identification": {
+    "prefix": "-file-identification",
+    "body": [
+      "/**",
+      " * File name: $TM_FILENAME",
+      " * Relative file path: $RELATIVE_FILEPATH",
+      " * The relative path is the file path on workspace or folder.",
+      " */",
+      "$1"
+    ],
+    "description": "Get File Identification."
+  },
+
   "Copyright": {
     "prefix": "-copyright",
     "body": [
       "/**",
       " * @copyright Copyright © ${CURRENT_YEAR} GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.",
       " */",
-      "",
-      "/**",
-      " * File name: $TM_FILENAME",
-      " * Relative file path: $RELATIVE_FILEPATH",
-      " * The relative path is the file path on workspace or folder.",
-      " */",
-      "",
-      "$1",
-      ""
+      "$1"
     ],
     "description": "Get GUIHO Copyright."
   },
@@ -65,17 +70,9 @@
       " * @copyright Copyright © ${CURRENT_YEAR} GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.",
       " */",
       "",
-      "/**",
-      " * File name: $TM_FILENAME",
-      " * Relative file path: $RELATIVE_FILEPATH",
-      " * The relative path is the file path on workspace or folder.",
-      " */",
-      "",
       "export {  }",
       "export type {  }",
-      "",
-      "$1",
-      ""
+      "$1"
     ],
     "description": "Get GUIHO Copyright."
   },

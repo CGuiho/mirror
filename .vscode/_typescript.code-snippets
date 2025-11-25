@@ -23,12 +23,6 @@
       " * @copyright Copyright © ${CURRENT_YEAR} GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.",
       " */",
       "",
-      "/**",
-      " * File name: $TM_FILENAME",
-      " * Relative file path: $RELATIVE_FILEPATH",
-      " * The relative path is the file path on workspace or folder.",
-      " */",
-      "",
       "import { Elysia } from 'elysia'",
       "",
       "export { ${TM_FILENAME_BASE/-(.)/${1:/upcase}/g} }",
@@ -41,18 +35,40 @@
     "description": "Get GUIHO Copyright and elysia imports."
   },
 
+	  "Copyright TS Elysia Dependency Injection": {
+    "prefix": "-copyright-ts-elysia-dependency-injection",
+    "body": [
+      "/**",
+      " * @copyright Copyright © ${CURRENT_YEAR} GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.",
+      " */",
+      "",
+      "import type { DependencyInjection } from '#guiho/app/guiho-core'",
+      "import { Elysia } from 'elysia'",
+      "",
+      "export { ${TM_FILENAME_BASE/-(.)/${1:/upcase}/g} }",
+      "export type {  }",
+      "",
+      "function ${TM_FILENAME_BASE/-(.)/${1:/upcase}/g}(di: DependencyInjection) {",
+      "  return new Elysia({ name: '$TM_FILENAME_BASE', prefix: '/$TM_FILENAME_BASE' })",
+      "    $1",
+      "}",
+      ""
+    ],
+    "description": "Get GUIHO Copyright and elysia imports."
+  },
+
 	"Generate translation object": {
 		"prefix": "-translation",
 		"scope": "typescriptreact,typescript",
 		"body": [
 			"const translation = {",
-			" en: { $1 },",
+			" 'en-US': { $1 },",
       " ",
-      " pt: {},",
+      " 'pt-PT': {},",
       " ",
-      " fr: {},",
+      " 'fr-FR': {},",
       " ",
-      " es: {},",
+      " 'es-ES'},",
  		"}",
 		],
 		"description": "Generate translation object"
@@ -61,11 +77,11 @@
 		"prefix": "-translation-en",
 		"scope": "typescriptreact,typescript",
 		"body": [
-      "const en = {",
+      "const enUS = {",
       "  $1",
 			"}",
       "",
-      "const t = en"
+      "const t = enUS"
 		],
 		"description": "Generate translation en object"
 	},

@@ -26,12 +26,6 @@
   " * Copyright © ${CURRENT_YEAR} GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.",
   " */",
   "",
-  "/*!",
-  " * File name: $TM_FILENAME",
-  " * Relative file path: $RELATIVE_FILEPATH",
-  " * The relative path is the file path on workspace or folder.",
-  " */",
-  "",
   ".${TM_FILENAME_BASE/(\\.module)|-(.)/${2:/upcase}/g} {",
   "  border: 2px solid #${RANDOM_HEX};",
   "  $1",
@@ -40,7 +34,6 @@
 ],
 "description": "CSS Setup Page."
 },
-
 
 "fileName from file-name.module.css": {
   "prefix": "-file-name-camelCase-css",
