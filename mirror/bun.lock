@@ -8,25 +8,25 @@
         "semver": "^7.7.3",
       },
       "devDependencies": {
-        "@guiho40/mirror": "^1.2.0",
-        "@types/bun": "latest",
+        "@guiho40/mirror": "^2.2.0",
+        "@types/bun": "1.3.3",
         "@types/semver": "^7.7.1",
       },
       "peerDependencies": {
-        "typescript": "^5.8.2",
+        "typescript": "^5.9.3",
       },
     },
   },
   "packages": {
-    "@guiho40/mirror": ["@guiho40/mirror@1.2.0", "https://europe-west4-npm.pkg.dev/guiho40/guiho40/@guiho40/mirror/-/@guiho40/mirror-1.2.0.tgz", { "dependencies": { "semver": "^7.7.3" }, "peerDependencies": { "typescript": "^5.8.2" }, "bin": { "mirror": "bin/mirror.exe" } }, "sha512-oW/ZMP1UfrgQuqh/1+77Leq1RCpBLGM8kO+nq/6TJppkzd+rKTOxfPAxurkA5ThcLBlqhPN9n7xF5qf9IxRCIA=="],
+    "@guiho40/mirror": ["@guiho40/mirror@2.2.0", "https://europe-west4-npm.pkg.dev/guiho40/guiho40/@guiho40/mirror/-/@guiho40/mirror-2.2.0.tgz", { "dependencies": { "semver": "^7.7.3" }, "peerDependencies": { "typescript": "^5.8.2" }, "bin": { "mirror": "bin/mirror.exe" } }, "sha512-O9Xhg2d/eJHJTJmbAgfd048UgmtLQJ64qgqOTpYHcObI0504xIj1heZsvvJUhVDVtdlOn4m7UvaMUgLZDwjMkg=="],
 
-    "@types/bun": ["@types/bun@1.2.13", "", { "dependencies": { "bun-types": "1.2.13" } }, "sha512-u6vXep/i9VBxoJl3GjZsl/BFIsvML8DfVDO0RYLEwtSZSp981kEO1V5NwRcO1CPJ7AmvpbnDCiMKo3JvbDEjAg=="],
+    "@types/bun": ["@types/bun@1.3.3", "", { "dependencies": { "bun-types": "1.3.3" } }, "sha512-ogrKbJ2X5N0kWLLFKeytG0eHDleBYtngtlbu9cyBKFtNL3cnpDZkNdQj8flVf6WTZUX5ulI9AY1oa7ljhSrp+g=="],
 
     "@types/node": ["@types/node@22.13.10", "", { "dependencies": { "undici-types": "~6.20.0" } }, "sha512-I6LPUvlRH+O6VRUqYOcMudhaIdUVWfsjnZavnsraHvpBwaEyMN29ry+0UVJhImYL16xsscu0aske3yA+uPOWfw=="],
 
     "@types/semver": ["@types/semver@7.7.1", "", {}, "sha512-FmgJfu+MOcQ370SD0ev7EI8TlCAfKYU+B4m5T3yXc1CiRN94g/SZPtsCkk506aUDtlMnFZvasDwHHUcZUEaYuA=="],
 
-    "bun-types": ["bun-types@1.2.13", "", { "dependencies": { "@types/node": "*" } }, "sha512-rRjA1T6n7wto4gxhAO/ErZEtOXyEZEmnIHQfl0Dt1QQSB4QV0iP6BZ9/YB5fZaHFQ2dwHFrmPaRQ9GGMX01k9Q=="],
+    "bun-types": ["bun-types@1.3.3", "", { "dependencies": { "@types/node": "*" } }, "sha512-z3Xwlg7j2l9JY27x5Qn3Wlyos8YAp0kKRlrePAOjgjMGS5IG6E7Jnlx736vH9UVI4wUICwwhC9anYL++XeOgTQ=="],
 
     "semver": ["semver@7.7.3", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-SdsKMrI9TdgjdweUSR9MweHA4EJ8YxHn8DFaDisvhVlUOe4BF1tLD7GAj0lIqWVl+dPb/rExr0Btby5loQm20Q=="],
 
