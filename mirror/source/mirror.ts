@@ -9,14 +9,9 @@ const usage = `
   🪞 GUIHO Mirror - A simple tool to bump package.json versions and create git tags
     🪞 GUIHO Mirror will also update package.build.json if it exists
 
-  Usage: mirror <path-to-package.json> <semver-target> [identifier]
-  Usage: mirror <semver-target> [identifier]
-  
-  Examples:
-    mirror premajor alpha       (1.0.0 -> 2.0.0-alpha.0)
-    mirror prerelease beta      (2.0.0-alpha.0 -> 2.0.0-beta.0)
-    mirror ./pkg.json minor     (Explicit path)
-
+  Usage: mirror <path-to-package.json> <semver-valid-target-version>
+  Usage: mirror <semver-valid-target-version>
+  Usage: mirror <command>
   Flags:
     -h, --help: Show this message
   Commands:
@@ -25,14 +20,12 @@ const usage = `
   🪞 GUIHO Mirror
   `
 
-const args = process.argv.slice(2) // Skip bun and script path
-
-if (args.includes('--help') || args.includes('-h')) {
+if (process.argv[2] === '--help' || process.argv[2] === '-h') {
   console.log(usage)
   process.exit(0)
 }
 
-if (args[0] === 'see') {
+if (process.argv[2] === 'see') {
   const json = await Bun.file('./package.json').json()
   const { version, name } = json
   console.log(`  ${version}`)
@@ -41,22 +34,14 @@ if (args[0] === 'see') {
 }
 
 let pathPackageJson = './package.json'
-let targetVersion: string | undefined = undefined
-let preReleaseId: string | undefined = undefined
+let targetVersion = ''
 
-// Argument Parsing Logic
-// Check if the first argument looks like a JSON file path
-if (args[0] && args[0].endsWith('.json')) {
-  pathPackageJson = args[0]
-  targetVersion = args[1]
-  preReleaseId = args[2]
+if (process.argv[2] && process.argv[3]) {
+  pathPackageJson = process.argv[2]
+  targetVersion = process.argv[3]
+} else if (process.argv[2]) {
+  targetVersion = process.argv[2]
 } else {
-  // Default path, first arg is version
-  targetVersion = args[0]
-  preReleaseId = args[1]
-}
-
-if (!targetVersion) {
   console.info(usage)
   process.exit(0)
 }
@@ -67,26 +52,22 @@ const isValidTarget = (subject: string): subject is ReleaseType => (variants as 
 
 const isDirty = async () => (await $`git status --porcelain`.quiet()).text()
 
-// --- Execution ---
-
-const json = await Bun.file(pathPackageJson).json()
+const json = await Bun.file(pathPackageJson || './package.json').json()
 const { version: current, name } = json
 
 if (!isValidVersion(current)) throw new Error(`Invalid current version ${current}`)
 
 if (await isDirty()) console.warn('🚧😬 There are uncommitted changes. Commit them before releasing.')
 
-// Calculate desired version
 const desired = isValidVersion(targetVersion)
   ? targetVersion
   : targetVersion && isValidTarget(targetVersion)
-  ? inc(current, targetVersion, undefined, preReleaseId) // <--- Updated to use the variable identifier
+  ? inc(current, targetVersion, 'alpha', '1')
   : fail('invalid target version')
 
 if (!desired) throw new Error('Failed to bump')
 console.info(`${current} —> ${desired}\n`)
 
-// Update package.json
 const newJson = Object.assign(json, { version: desired })
 await Bun.write(pathPackageJson, JSON.stringify(newJson, null, 2))
 
