@@ -68,6 +68,15 @@ const desired = isValidVersion(targetVersion)
 if (!desired) throw new Error('Failed to bump')
 console.info(`${current} —> ${desired}\n`)
 
+console.info('\n🕗 4s - Waiting... This is your chance to cancel if needed.')
+await Bun.sleep(1000)
+console.info('🕗 3s - Waiting... This is your chance to cancel if needed.')
+await Bun.sleep(1000)
+console.info('🕗 2s - Waiting... This is your chance to cancel if needed.')
+await Bun.sleep(1000)
+console.info('🕗 1s - Waiting... This is your chance to cancel if needed.\n')
+await Bun.sleep(1000)
+
 const newJson = Object.assign(json, { version: desired })
 await Bun.write(pathPackageJson, JSON.stringify(newJson, null, 2))
 
