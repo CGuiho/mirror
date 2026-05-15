@@ -5,10 +5,10 @@
     "": {
       "name": "@guiho40/mirror",
       "dependencies": {
-        "semver": "^7.7.3",
+        "semver": "^7.8.0",
       },
       "devDependencies": {
-        "@guiho40/mirror": "^2.2.0",
+        "@guiho40/mirror": "^2.3.0",
         "@types/bun": "1.3.3",
         "@types/semver": "^7.7.1",
       },
@@ -18,7 +18,7 @@
     },
   },
   "packages": {
-    "@guiho40/mirror": ["@guiho40/mirror@2.2.0", "https://europe-west4-npm.pkg.dev/guiho40/guiho40/@guiho40/mirror/-/@guiho40/mirror-2.2.0.tgz", { "dependencies": { "semver": "^7.7.3" }, "peerDependencies": { "typescript": "^5.8.2" }, "bin": { "mirror": "bin/mirror.exe" } }, "sha512-O9Xhg2d/eJHJTJmbAgfd048UgmtLQJ64qgqOTpYHcObI0504xIj1heZsvvJUhVDVtdlOn4m7UvaMUgLZDwjMkg=="],
+    "@guiho40/mirror": ["@guiho40/mirror@2.3.0", "https://europe-west4-npm.pkg.dev/guiho40/guiho40/@guiho40/mirror/-/@guiho40/mirror-2.3.0.tgz", { "dependencies": { "semver": "^7.7.3" }, "peerDependencies": { "typescript": "^5.8.2" }, "bin": { "mirror": "bin/mirror.exe" } }, "sha512-N5UrQtby3nPKsD8BNXYzvagCk93m9ZQupGwnyxSGaX6sGR6EjmGkXcNDEug0DHYX7Gv4t3lmgjnH19+eLVfSMw=="],
 
     "@types/bun": ["@types/bun@1.3.3", "", { "dependencies": { "bun-types": "1.3.3" } }, "sha512-ogrKbJ2X5N0kWLLFKeytG0eHDleBYtngtlbu9cyBKFtNL3cnpDZkNdQj8flVf6WTZUX5ulI9AY1oa7ljhSrp+g=="],
 
@@ -28,7 +28,7 @@
 
     "bun-types": ["bun-types@1.3.3", "", { "dependencies": { "@types/node": "*" } }, "sha512-z3Xwlg7j2l9JY27x5Qn3Wlyos8YAp0kKRlrePAOjgjMGS5IG6E7Jnlx736vH9UVI4wUICwwhC9anYL++XeOgTQ=="],
 
-    "semver": ["semver@7.7.3", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-SdsKMrI9TdgjdweUSR9MweHA4EJ8YxHn8DFaDisvhVlUOe4BF1tLD7GAj0lIqWVl+dPb/rExr0Btby5loQm20Q=="],
+    "semver": ["semver@7.8.0", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-AcM7dV/5ul4EekoQ29Agm5vri8JNqRyj39o0qpX6vDF2GZrtutZl5RwgD1XnZjiTAfncsJhMI48QQH3sN87YNA=="],
 
     "typescript": ["typescript@5.8.2", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-aJn6wq13/afZp/jT9QZmwEjDqqvSGp1VT5GVg+f/t6/oVyrgXM6BY1h9BRh/O5p3PlUPAe+WuiEZOmb/49RqoQ=="],
 
