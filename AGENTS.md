@@ -25,3 +25,12 @@
 - Generated outputs (`mirror/library/`, `mirror/bundle/`, `mirror/bin/`, `*.tgz`) are ignored; do not hand-edit them.
 - `ci/build-test-publish.sh` clones to `.temp/mirror`, checks out an `@guiho40/mirror@...` tag, authenticates Artifact Registry, then runs `typecheck -> bun test -> build -> binary -> bun publish`. Its explicit-argument branch currently builds `_tag` from undefined `_version`; verify before relying on it.
 - `.vscode/terminals.json` references `bun clean-hard`, but `mirror/package.json` does not define that script.
+
+<!-- BEGIN AGENT KANBAN — DO NOT EDIT THIS SECTION -->
+## Agent Kanban
+
+Read `.agentkanban/INSTRUCTION.md` for task workflow rules.
+Read `.agentkanban/memory.md` for project context.
+
+If a task file (`.agentkanban/tasks/**/*.md`) was referenced earlier in this conversation, re-read it before responding and always respond in and at the end the task file.
+<!-- END AGENT KANBAN -->
