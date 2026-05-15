@@ -12,6 +12,7 @@
     "allowJs": false,
 
     // Library Build
+    "rootDir": "source",
     "outDir": "library",
     
     "declaration": true,
