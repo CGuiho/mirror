@@ -1,5 +1,5 @@
-import type { MirrorAdapterName, MirrorCliOptions, MirrorFormat } from './guiho-mirror-types'
-import { MirrorError } from './guiho-mirror-errors'
+import type { MirrorAdapterName, MirrorCliOptions, MirrorFormat } from './types'
+import { MirrorError } from './errors'
 
 const booleanFlags = new Set(['dry-run', 'commit', 'push', 'allow-dirty', 'yes', 'no-color', 'help', 'version'])
 const adapterNames = new Set(['package', 'jsr', 'git'])
