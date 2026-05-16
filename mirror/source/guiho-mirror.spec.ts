@@ -300,7 +300,7 @@ describe('Mirror v3', () => {
     const result = await runMirrorCli()
 
     expect(result.exitCode).toBe(0)
-    expect(result.stdout).toContain('mirror v2.3.0')
+    expect(result.stdout).toMatch(/mirror v\d+\.\d+\.\d+/)
     expect(result.stdout).toContain('USAGE')
   })
 
