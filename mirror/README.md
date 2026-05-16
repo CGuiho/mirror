@@ -180,3 +180,11 @@ bun test
 bun run build
 bun run binary
 ```
+
+---
+
+## 🎵 The Origin of the Name
+
+The name **Mirror** was inspired by the music track ["MIRROR" by SleepyThePrince & DJ Dadda](https://www.youtube.com/watch?v=vi0didVAqjU), featured on the album *"Blackout"*.
+
+In a deeper sense, the name also fits the purpose of the library perfectly: just as looking in a mirror reflects an exact snapshot of who we are, this library reflects the exact state and version of whatever you are building.
