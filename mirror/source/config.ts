@@ -14,8 +14,8 @@ import type {
 } from './types'
 import { MirrorError } from './errors'
 
-const adapters = new Set(['package', 'jsr', 'git'])
-const projectNameSources = new Set(['package', 'jsr'])
+const adapters = new Set(['package.json', 'jsr.json', 'git'])
+const projectNameSources = new Set(['package.json', 'jsr.json'])
 
 export const resolveMirrorPath = (cwd: string, path: string) => (isAbsolute(path) ? path : resolve(cwd, path))
 
@@ -113,16 +113,16 @@ export const normalizeMirrorConfig = (
 export const createInitConfig = (kind: MirrorAdapterName, cwd: string) => {
   const projectName = basename(cwd)
 
-  if (kind === 'package') {
+  if (kind === 'package.json') {
     return `schema = 1
 
 [project]
-name_source = "package"
+name_source = "package.json"
 
 [version]
 scheme = "semver"
-source = "package"
-output = ["package"]
+source = "package.json"
+output = ["package.json"]
 prerelease_id = ""
 
 [package]
@@ -139,16 +139,16 @@ allow_dirty = false
 `
   }
 
-  if (kind === 'jsr') {
+  if (kind === 'jsr.json') {
     return `schema = 1
 
 [project]
-name_source = "jsr"
+name_source = "jsr.json"
 
 [version]
 scheme = "semver"
-source = "jsr"
-output = ["jsr"]
+source = "jsr.json"
+output = ["jsr.json"]
 prerelease_id = ""
 
 [jsr]
@@ -193,12 +193,12 @@ export const writeInitConfig = async (kind: MirrorAdapterName, cwd: string, over
 export const configPathForDisplay = (config: MirrorConfig) => (config.configPath ? relativeFromCwd(config.cwd, config.configPath) : '(none)')
 
 const assertAdapter = (value: unknown, key: string): MirrorAdapterName => {
-  if (typeof value !== 'string' || !adapters.has(value)) throw new MirrorError(`Invalid or missing ${key}. Expected package, jsr, or git.`)
+  if (typeof value !== 'string' || !adapters.has(value)) throw new MirrorError(`Invalid or missing ${key}. Expected package.json, jsr.json, or git.`)
   return value as MirrorAdapterName
 }
 
 const assertProjectNameSource = (value: unknown, key: string): MirrorProjectNameSource => {
-  if (typeof value !== 'string' || !projectNameSources.has(value)) throw new MirrorError(`Invalid ${key}. Expected package or jsr.`)
+  if (typeof value !== 'string' || !projectNameSources.has(value)) throw new MirrorError(`Invalid ${key}. Expected package.json or jsr.json.`)
   return value as MirrorProjectNameSource
 }
 
