@@ -7,7 +7,7 @@ import { configPathForDisplay, relativeFromCwd } from './config'
 
 export const mirrorBanner = () => {
   const noColor = process.env['NO_COLOR'] === '1'
-  const title = noColor ? '🪞 GUIHO Mirror' : '\x1b[1;36m🪞 GUIHO Mirror\x1b[0m'
+  const title = noColor ? '🪞  GUIHO Mirror' : '\x1b[1;36m🪞  GUIHO Mirror\x1b[0m'
   return `\n${title}\n\n`
 }
 
