@@ -1,55 +1,55 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# @copyright Copyright © 2025 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
+set -euo pipefail
 
-set -e
-
-_repo_url="https://github.com/cguiho/mirror.git"
-_package_name="@guiho40/mirror" # Also change this on the command line below. (around line 14)
+_repo_url="${MIRROR_REPO_URL:-https://github.com/CGuiho/mirror.git}"
+_package_name="@guiho/mirror"
 
 _cwd=$(pwd)
 _repo_dir="$_cwd/../../.temp/mirror"
-_project_dir=$_repo_dir/mirror
+_project_dir="$_repo_dir/mirror"
 
-if [ -z "$1" ]; then
+if [ "${1:-}" = "" ]; then
   echo "No version tag provided. Using the latest tag."
-  latest_tag=$(git ls-remote --tags $_repo_url | grep -o 'refs/tags/@guiho40/mirror@[^ ]*' | sed 's#refs/tags/##' | grep -v '\^{}' | sort -V | tail -n1)
-  echo "Using Latest tag: $latest_tag"
-  
-  _tag=$latest_tag
+  _tag=$(git ls-remote --tags "$_repo_url" \
+    | grep -o "refs/tags/$_package_name@[^[:space:]]*" \
+    | sed 's#refs/tags/##' \
+    | grep -v '\^{}' \
+    | sort -V \
+    | tail -n1)
 else
-  _tag="$_package_name@$_version"
+  _tag="$_package_name@$1"
 fi
 
-echo "🔥🎯 Version tag: $_tag"
+if [ "$_tag" = "" ]; then
+  echo "No release tag found for $_package_name." >&2
+  exit 1
+fi
 
-sleep 2
+echo "Version tag: $_tag"
 
-function cleanup {
+cleanup() {
   rm -rf "$_repo_dir"
 }
-cleanup
 
+cleanup
 mkdir -p "$_repo_dir"
 
 cd "$_repo_dir"
+git clone "$_repo_url" .
+git checkout "$_tag"
 
-git clone $_repo_url .
-git checkout $_tag
-
-cd $_project_dir
+cd "$_project_dir"
 
 echo "Building $_package_name version: $_tag"
 
-bunx google-artifactregistry-auth
-bun install
+bun install --frozen-lockfile
+bun run typecheck
+bun test
+bun run build
+bun run binary
 
-bun run typecheck || (cleanup && exit 1)
-bun test || (cleanup && exit 1)
-
-bun run build || (cleanup && exit 1)
-bun binary
-
-bun publish
+npm publish --access public
+npx --yes jsr publish
 
 cleanup
