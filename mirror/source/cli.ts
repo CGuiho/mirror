@@ -5,13 +5,14 @@
 import { defineCommand, runMain } from 'citty'
 import type { ArgsDef } from 'citty'
 import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { MirrorError } from './errors'
 import { readCurrentVersion, resolveProjectName } from './adapters'
-import { configPathForDisplay, loadMirrorConfig, writeInitConfig } from './config'
+import { configPathForDisplay, discoverMirrorConfig, loadMirrorConfig, relativeFromCwd, writeInitConfig } from './config'
 import { executeVersionPlan } from './executor'
 import { parseMirrorCliOptions } from './flags'
 import { buildVersionPlan, validateMirrorConfig } from './plan'
-import { mirrorBanner, reportConfig, reportExecution, reportExecutionSummary, reportPlan, reportValue } from './reporter'
+import { mirrorBanner, reportConfig, reportConfigSchema, reportExecution, reportExecutionSummary, reportPlan, reportValue } from './reporter'
 import type { MirrorAdapterName, MirrorCliOptions } from './types'
 import { resolveNextVersion } from './version'
 
@@ -68,7 +69,13 @@ export const runMirrorCli = async (rawArgs = process.argv.slice(2)) => {
   try {
     if (effectiveArgs.includes('--no-color')) process.env['NO_COLOR'] = '1'
 
-    if (effectiveArgs.includes('--help')) process.stdout.write(mirrorBanner())
+    if (effectiveArgs.includes('--help')) {
+      const parsed = parseMirrorCliOptions(effectiveArgs)
+      const cwd = resolve(parsed.cwd ?? process.cwd())
+      const discovery = await discoverMirrorConfig(cwd, parsed.config)
+      const configDisplay = discovery.path ? relativeFromCwd(cwd, discovery.path) : ''
+      process.stdout.write(mirrorBanner(configDisplay))
+    }
 
     await runMain(createMirrorCommand(), { rawArgs: effectiveArgs })
   } catch (error) {
@@ -128,6 +135,15 @@ const createConfigCommand = () =>
           const options = cliOptions(context.rawArgs, context.args)
           await validateMirrorConfig(options)
           process.stdout.write(reportValue('ok', options.format))
+        },
+      }),
+      schema: defineCommand({
+        meta: { name: 'schema', description: 'Print the configuration file reference.' },
+        args: globalArgs,
+        run(context) {
+          const options = cliOptions(context.rawArgs, context.args)
+          if (options.format !== 'json') process.stdout.write(mirrorBanner())
+          process.stdout.write(reportConfigSchema(options.format))
         },
       }),
     },
