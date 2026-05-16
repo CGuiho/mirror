@@ -1,5 +1,5 @@
-import type { MirrorConfig, MirrorExecutionResult, MirrorFormat, MirrorVersionPlan } from './guiho-mirror-types'
-import { configPathForDisplay, relativeFromCwd } from './guiho-mirror-config'
+import type { MirrorConfig, MirrorExecutionResult, MirrorFormat, MirrorVersionPlan } from './types'
+import { configPathForDisplay, relativeFromCwd } from './config'
 
 export const reportValue = (value: unknown, format: MirrorFormat = 'text') => {
   if (format === 'json') return `${JSON.stringify(value, null, 2)}\n`
