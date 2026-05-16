@@ -1,0 +1,38 @@
+{
+  "search.exclude": {
+    "**/.yarn": true,
+    "**/.pnp.*": true
+  },
+  "typescript.tsdk": "node_modules\\typescript\\lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "workbench.colorCustomizations": {
+    "editorUnnecessaryCode.border": "#f02222",
+
+    "titleBar.activeBackground": "#000000",
+    "titleBar.activeForeground": "#ffffff"
+  },
+  "github-actions.workflows.pinned.workflows": [],
+  "cSpell.words": [
+    "artifactregistry",
+    "cristo",
+    "europe",
+    "firestore",
+    "iban",
+    "ilike",
+    "Inss",
+    "Nante",
+    "Pipeable",
+    "Razura",
+    "realpath",
+    "Revalidator",
+    "Soneca",
+    "tesseract",
+    "Turma",
+    "turmab",
+    "unsign",
+    "Zinco"
+  ],
+
+  "omnisharp.enableEditorConfigSupport": false
+  
+}
