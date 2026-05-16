@@ -1,9 +1,9 @@
 import { $ } from 'bun'
 import { existsSync } from 'node:fs'
-import type { MirrorConfig, MirrorJsonObject } from './guiho-mirror-types'
-import { MirrorError } from './guiho-mirror-errors'
-import { assertValidSemver, sortSemverDescending } from './guiho-mirror-version'
-import { resolveMirrorPath } from './guiho-mirror-config'
+import type { MirrorConfig, MirrorJsonObject } from './types'
+import { MirrorError } from './errors'
+import { assertValidSemver, sortSemverDescending } from './version'
+import { resolveMirrorPath } from './config'
 
 export const supportedGitTagTemplates = ['v{version}', '{name}@{version}'] as const
 
