@@ -11,7 +11,7 @@ import { loadMirrorConfig, writeInitConfig } from './config'
 import { executeVersionPlan } from './executor'
 import { parseMirrorCliOptions } from './flags'
 import { buildVersionPlan, validateMirrorConfig } from './plan'
-import { reportConfig, reportExecution, reportExecutionSummary, reportPlan, reportValue } from './reporter'
+import { mirrorBanner, reportConfig, reportExecution, reportExecutionSummary, reportPlan, reportValue } from './reporter'
 import type { MirrorAdapterName, MirrorCliOptions } from './types'
 import { resolveNextVersion } from './version'
 
@@ -68,6 +68,8 @@ export const runMirrorCli = async (rawArgs = process.argv.slice(2)) => {
   try {
     if (effectiveArgs.includes('--no-color')) process.env['NO_COLOR'] = '1'
 
+    if (effectiveArgs.includes('--help')) process.stdout.write(mirrorBanner())
+
     await runMain(createMirrorCommand(), { rawArgs: effectiveArgs })
   } catch (error) {
     if (error instanceof MirrorError) {
@@ -114,6 +116,7 @@ const createConfigCommand = () =>
         args: overrideArgs,
         async run(context) {
           const options = cliOptions(context.rawArgs, context.args)
+          if (options.format !== 'json') process.stdout.write(mirrorBanner())
           process.stdout.write(reportConfig(await loadMirrorConfig(options), options.format))
         },
       }),
@@ -159,6 +162,7 @@ const createVersionCommand = () =>
         args: { ...overrideArgs, ...targetArg },
         async run(context) {
           const options = cliOptions(context.rawArgs, context.args)
+          if (options.format !== 'json') process.stdout.write(mirrorBanner())
           process.stdout.write(reportPlan(await buildVersionPlan(String(context.args['target']), options), options.format))
         },
       }),
@@ -169,6 +173,7 @@ const createVersionCommand = () =>
           const options = cliOptions(context.rawArgs, context.args)
           const plan = await buildVersionPlan(String(context.args['target']), options)
 
+          if (options.format !== 'json') process.stdout.write(mirrorBanner())
           if (options.format !== 'json') process.stdout.write(reportPlan(plan, options.format))
 
           const result = await executeVersionPlan(plan, options)
