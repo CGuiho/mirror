@@ -1,0 +1,12 @@
+{
+  "name": "@guiho/mirror",
+  "version": "3.0.0",
+  "exports": "./source/guiho-mirror.ts",
+  "publish": {
+    "include": [
+      "source/**/*.ts",
+      "README.md",
+      "LICENSE.md"
+    ]
+  }
+}
