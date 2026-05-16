@@ -474,9 +474,9 @@ const gitText = async (cwd: string, ...args: string[]) => {
 
   return stdout
 }
-j
+
 const runMirrorCli = async (...args: string[]) => {
-  const result = Bun.spawn(['bun', join(import.meta.dir, 'mirror.ts'), ...args], {
+  const result = Bun.spawn(['bun', join(import.meta.dir, 'guiho-mirror-bin.ts'), ...args], {
     stdout: 'pipe',
     stderr: 'pipe',
   })
