@@ -26,8 +26,8 @@ export const executeVersionPlan = async (
 
   const config = await loadMirrorConfig(options)
 
-  if (config.version.output.includes('package')) await writePackageVersion(config, plan.nextVersion)
-  if (config.version.output.includes('jsr')) await writeJsrVersion(config, plan.nextVersion)
+  if (config.version.output.includes('package.json')) await writePackageVersion(config, plan.nextVersion)
+  if (config.version.output.includes('jsr.json')) await writeJsrVersion(config, plan.nextVersion)
 
   for (const action of plan.actions) {
     if (action.type === 'git-commit') await createGitCommit(plan.cwd, action.paths, action.message)
