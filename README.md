@@ -23,3 +23,4 @@ bun run binary
 - JSR package: `@guiho/mirror`
 - Library entrypoint: `mirror/source/guiho-mirror.ts`
 - CLI entrypoint: `mirror/source/guiho-mirror-bin.ts`
+
