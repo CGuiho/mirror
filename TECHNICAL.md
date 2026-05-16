@@ -4,7 +4,7 @@
 
 Mirror v3 is implemented as a Bun/TypeScript ESM CLI and library in `mirror/source/`.
 
-The public library entrypoint is `mirror/source/guiho-mirror.ts`. The CLI entrypoint is `mirror/source/mirror.ts`, which delegates to the exported CLI command.
+The public library entrypoint is `mirror/source/guiho-mirror.ts`. The CLI entrypoint is `mirror/source/guiho-mirror-bin.ts`, which delegates to the exported CLI command.
 
 The package uses these modules:
 
