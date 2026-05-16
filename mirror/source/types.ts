@@ -4,8 +4,8 @@
 
 import type { ReleaseType } from 'semver'
 
-export type MirrorAdapterName = 'package' | 'jsr' | 'git'
-export type MirrorProjectNameSource = 'package' | 'jsr'
+export type MirrorAdapterName = 'package.json' | 'jsr.json' | 'git'
+export type MirrorProjectNameSource = 'package.json' | 'jsr.json'
 export type MirrorFormat = 'text' | 'json'
 export type MirrorVersionTarget = ReleaseType | string
 export type MirrorJsonObject = Record<string, unknown>
@@ -85,7 +85,7 @@ export type MirrorProject = {
 export type MirrorVersionPlanAction =
   | {
       type: 'write-file'
-      adapter: 'package' | 'jsr'
+      adapter: 'package.json' | 'jsr.json'
       path: string
       currentVersion: string
       nextVersion: string
