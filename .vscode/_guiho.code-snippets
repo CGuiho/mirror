@@ -1,0 +1,157 @@
+{
+  // Place your guiho workspace snippets here. Each snippet is defined under a snippet name and has a scope, prefix, body and
+  // description. Add comma separated ids of the languages where the snippet is applicable in the scope field. If scope
+  // is left empty or omitted, the snippet gets applied to all languages. The prefix is what is
+  // used to trigger the snippet and the body will be expanded and inserted. Possible variables are:
+  // $1, $2 for tab stops, $0 for the final cursor position, and ${1:label}, ${2:another} for placeholders.
+  // Placeholders with the same ids are connected.
+  // Example:
+  // "Print to console": {
+  // 	"scope": "javascript,typescript",
+  // 	"prefix": "log",
+  // 	"body": [
+  // 		"console.log('$1');",
+  // 		"$2"
+  // 	],
+  // 	"description": "Log output to console"
+  // }
+
+  "-section-comment": {
+    "prefix": "-section-comment",
+    "body": [
+      "/**",
+      " * @section $1",
+      " */",
+    ]
+  },
+
+  "-section-comment-deprecated": {
+    "prefix": "-section-comment-deprecated",
+    "body": [
+      "/// |====-====-====-====-====-====-====-====|",
+      "/// | $1",
+      "/// |====-====-====-====-====-====-====-====|"
+    ]
+  },
+
+  "prettier-ignore": {
+    "prefix": "-prettier-ignore",
+    "body": ["/* prettier-ignore */"]
+  },
+
+  "File Identification": {
+    "prefix": "-file-identification",
+    "body": [
+      "/**",
+      " * File name: $TM_FILENAME",
+      " * Relative file path: $RELATIVE_FILEPATH",
+      " * The relative path is the file path on workspace or folder.",
+      " */",
+      "$1"
+    ],
+    "description": "Get File Identification."
+  },
+
+  "Copyright": {
+    "prefix": "-copyright",
+    "body": [
+      "/**",
+      " * @copyright Copyright © ${CURRENT_YEAR} GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.",
+      " */",
+      "$1"
+    ],
+    "description": "Get GUIHO Copyright."
+  },
+
+  "Copyright TS": {
+    "prefix": "-copyright-ts",
+    "body": [
+      "/**",
+      " * @copyright Copyright © ${CURRENT_YEAR} GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.",
+      " */",
+      "",
+      "export {  }",
+      "export type {  }",
+      "$1"
+    ],
+    "description": "Get GUIHO Copyright."
+  },
+
+  "Get tsx style tag": {
+    "prefix": "-style",
+    "body": ["<style dangerouslySetInnerHTML={{ __html: style }} />", "$1"],
+    "description": "Get tsx style tag"
+  },
+
+  "FileName from File Name": {
+    "prefix": "-file-name-PascalCase",
+    "body": ["${TM_FILENAME_BASE/(^|-|_)([a-z])/${2:/upcase}/g}"],
+    "description": "Generate FileName from File Name"
+  },
+
+  "fileName from File Name": {
+    "prefix": "-file-name-camelCase",
+    "body": ["${TM_FILENAME_BASE/-(.)/${1:/upcase}/g}"],
+    "description": "Generate fileName from File Name"
+  },
+
+  "Console Log": {
+    "prefix": "-log",
+    "body": ["console.log()"],
+    "description": "Console Log"
+  },
+
+  "Console Log with Color Placeholder": {
+    "prefix": "-logHere",
+    "body": ["console.log('here #${RANDOM_HEX}')"],
+    "description": "Insert a console.log statement with a random for a color"
+  },
+
+  "Console Log Clipboard": {
+    "prefix": "-logClipboard",
+    "body": ["console.log('${CLIPBOARD}: ', ${CLIPBOARD})"],
+    "description": "Insert a console.log CLIPBOARD value"
+  },
+
+  "Return < /> (JSX)": {
+    "prefix": "-br",
+    "body": ["<$1 />"],
+    "description": "Return < /> (JSX)"
+  },
+
+  "Get File Name": {
+    "prefix": "-file-name",
+    "body": ["$TM_FILENAME_BASE"],
+    "description": "Get File Name"
+  },
+
+  "Get File Name With Extension": {
+    "prefix": "-file-name-with-extension",
+    "body": ["$TM_FILENAME"],
+    "description": "Get File Name With Extension"
+  },
+
+  "Get UUID v4": {
+    "prefix": "-uuid",
+    "body": ["$UUID"],
+    "description": "Get UUID v4"
+  },
+
+  "Get UUID v4 with prefix": {
+    "prefix": "_uuid_",
+    "body": ["_uuid_ $UUID"],
+    "description": "Get UUID v4  with prefix"
+  },
+
+  "Get Random 6-digit HEX ": {
+    "prefix": "-hex6",
+    "body": ["${RANDOM_HEX}"],
+    "description": "Get Random 6-digit HEX."
+  },
+
+  "Get Random HEX Color": {
+    "prefix": "-color",
+    "body": ["#${RANDOM_HEX}"],
+    "description": "Get Random HEX Color."
+  }
+}
