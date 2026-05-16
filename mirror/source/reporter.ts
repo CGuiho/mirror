@@ -40,6 +40,42 @@ export const reportConfig = (config: MirrorConfig, format: MirrorFormat = 'text'
   ].join('\n')
 }
 
+export const reportConfigSchema = (format: MirrorFormat = 'text') => {
+  if (format === 'json') {
+    return `${JSON.stringify({ schema: 'See text output for full reference.' }, null, 2)}\n`
+  }
+
+  return [
+    'MIRROR CONFIGURATION SCHEMA (mirror.config.toml)',
+    '',
+    '  schema = 1                                Required. Schema version. Must be 1.',
+    '',
+    '  [project]',
+    '  name = "<string>"                         Optional. Explicit project name.',
+    '  name_source = "package" | "jsr"           Optional. Read project name from this adapter.',
+    '',
+    '  [version]',
+    '  scheme = "semver"                         Required. Only "semver" is supported.',
+    '  source = "package" | "jsr" | "git"        Required. Adapter to read the current version from.',
+    '  output = ["package", "jsr", "git"]        Required. Adapters to write the next version to.',
+    '  prerelease_id = "<string>"                Optional. Default prerelease identifier (e.g. "alpha").',
+    '',
+    '  [package]',
+    '  path = "<path>"                           Optional. Path to package.json. Default: "package.json".',
+    '',
+    '  [jsr]',
+    '  path = "<path>"                           Optional. Path to jsr.json. Default: "jsr.json".',
+    '',
+    '  [git]',
+    '  tag_template = "<template>"               Optional. Git tag format. Default: "v{version}".',
+    '                                            Supported: "v{version}", "{name}@{version}".',
+    '  commit = true | false                     Optional. Create release commits. Default: false.',
+    '  push = true | false                       Optional. Push release refs. Default: false.',
+    '  allow_dirty = true | false                Optional. Allow dirty Git worktree. Default: false.',
+    '',
+  ].join('\n')
+}
+
 export const reportPlan = (plan: MirrorVersionPlan, format: MirrorFormat = 'text') => {
   if (format === 'json') return `${JSON.stringify(plan, null, 2)}\n`
 
