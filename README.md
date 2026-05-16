@@ -113,7 +113,7 @@ path = "package.json"                  # Optional. Override path to package.json
 path = "jsr.json"                      # Optional. Override path to jsr.json
 
 [git]
-tag_template = "{name}@{version}"      # Optional. Supported: "v{version}", "{name}@{version}"
+tag_template = "{name}@{version}"      # Optional. Supported: "v{version}", "{name}@{version}", "{name}/v{version}"
 commit = false                         # Optional. Create release commits. Default: false.
 push = false                           # Optional. Push release refs. Default: false.
 allow_dirty = false                    # Optional. Allow dirty Git worktree. Default: false.
