@@ -77,6 +77,20 @@ export const runMirrorCli = async (rawArgs = process.argv.slice(2)) => {
       process.stdout.write(mirrorBanner(configDisplay))
     }
 
+    if (rawArgs.length === 0) {
+      process.on('exit', () => {
+        process.stdout.write([
+          'EXAMPLES',
+          '',
+          '  mirror version current              Print the current version',
+          '  mirror version plan patch            Preview a patch release plan',
+          '  mirror version apply minor --commit  Apply a minor release with commit',
+          '  mirror config schema                 Print the configuration reference',
+          '',
+        ].join('\n') + '\n')
+      })
+    }
+
     await runMain(createMirrorCommand(), { rawArgs: effectiveArgs })
   } catch (error) {
     if (error instanceof MirrorError) {
