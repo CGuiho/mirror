@@ -6,7 +6,7 @@ import type { MirrorAdapterName, MirrorCliOptions, MirrorFormat } from './types'
 import { MirrorError } from './errors'
 
 const booleanFlags = new Set(['dry-run', 'commit', 'push', 'allow-dirty', 'yes', 'no-color', 'help', 'version'])
-const adapterNames = new Set(['package', 'jsr', 'git'])
+const adapterNames = new Set(['package.json', 'jsr.json', 'git'])
 
 const shortFlagAliases: Record<string, string> = {
   '-dy': '--dry-run',
