@@ -1,3 +1,7 @@
+/**
+ * @copyright Copyright (c) 2026 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
+ */
+
 import type { MirrorConfig, MirrorExecutionResult, MirrorFormat, MirrorVersionPlan } from './types'
 import { configPathForDisplay, relativeFromCwd } from './config'
 
