@@ -1,7 +1,5 @@
 # 🪞 GUIHO Mirror
 
-
-
 **Open source project versioning for Bun, npm, JSR, and Git.**
 
 Mirror is a powerful, deterministic CLI and TypeScript library for semantic project versioning. It reads a single version source, calculates the next semantic version, builds a transparent release plan, and safely applies it to configured outputs like `package.json`, `jsr.json`, and Git tags.
