@@ -8,12 +8,12 @@ export type {
   MirrorVersionPlan,
   MirrorVersionPlanAction,
   MirrorVersionTarget,
-} from './guiho-mirror-types'
+} from './types'
 
-export { MirrorError, invariant } from './guiho-mirror-errors'
-export { parseMirrorCliOptions } from './guiho-mirror-flags'
-export { createInitConfig, discoverMirrorConfig, loadMirrorConfig, normalizeMirrorConfig, writeInitConfig } from './guiho-mirror-config'
-export { assertValidSemver, isMirrorReleaseTarget, mirrorReleaseTargets, resolveNextVersion, sortSemverDescending } from './guiho-mirror-version'
+export { MirrorError, invariant } from './errors'
+export { parseMirrorCliOptions } from './flags'
+export { createInitConfig, discoverMirrorConfig, loadMirrorConfig, normalizeMirrorConfig, writeInitConfig } from './config'
+export { assertValidSemver, isMirrorReleaseTarget, mirrorReleaseTargets, resolveNextVersion, sortSemverDescending } from './version'
 export {
   createGitCommit,
   createGitTag,
@@ -33,8 +33,8 @@ export {
   versionFromTag,
   writeJsrVersion,
   writePackageVersion,
-} from './guiho-mirror-adapters'
-export { buildVersionPlan, releaseLabel, resolveFileOutputPaths, validateMirrorConfig } from './guiho-mirror-plan'
-export { applyVersionPlan, executeVersionPlan } from './guiho-mirror-executor'
-export { reportConfig, reportExecution, reportExecutionSummary, reportPlan, reportValue } from './guiho-mirror-reporter'
-export { createMirrorCommand, runMirrorCli } from './guiho-mirror-cli'
+} from './adapters'
+export { buildVersionPlan, releaseLabel, resolveFileOutputPaths, validateMirrorConfig } from './plan'
+export { applyVersionPlan, executeVersionPlan } from './executor'
+export { reportConfig, reportExecution, reportExecutionSummary, reportPlan, reportValue } from './reporter'
+export { createMirrorCommand, runMirrorCli } from './cli'
