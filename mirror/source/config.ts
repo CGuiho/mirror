@@ -7,8 +7,8 @@ import type {
   MirrorConfigDiscovery,
   MirrorProjectNameSource,
   MirrorRawConfig,
-} from './guiho-mirror-types'
-import { MirrorError } from './guiho-mirror-errors'
+} from './types'
+import { MirrorError } from './errors'
 
 const adapters = new Set(['package', 'jsr', 'git'])
 const projectNameSources = new Set(['package', 'jsr'])
