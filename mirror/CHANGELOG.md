@@ -1,6 +1,6 @@
 # Changelog
 
-## next
+## 3.0.0-alpha.2 (2026-05-17)
 
 Initial open source release.
 
