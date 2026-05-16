@@ -1,6 +1,6 @@
 {
   "include": ["source/**/*"],
-  "exclude": ["node_modules", "build", "bundle", "library"],
+  "exclude": ["node_modules", "build", "bundle", "library", "source/**/*.spec.ts"],
 
   "compilerOptions": {
     // Environment setup & latest features
@@ -10,6 +10,7 @@
     "moduleDetection": "force",
     "jsx": "react-jsx",
     "allowJs": false,
+    "resolveJsonModule": true,
 
     // Library Build
     "rootDir": "source",
