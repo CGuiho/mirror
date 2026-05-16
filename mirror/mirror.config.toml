@@ -1,0 +1,22 @@
+schema = 1
+
+[project]
+name_source = "package"
+
+[version]
+scheme = "semver"
+source = "package"
+output = ["package", "jsr", "git"]
+prerelease_id = ""
+
+[package]
+path = "package.json"
+
+[jsr]
+path = "jsr.json"
+
+[git]
+tag_template = "{name}@{version}"
+commit = false
+push = false
+allow_dirty = false
