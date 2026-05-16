@@ -8,18 +8,13 @@ The goal is open source readiness: predictable behavior, clear commands, safe de
 
 Mirror versions a subject. A subject is the application, package, repository, or generic directory being released. In TypeScript/Bun projects, the subject is usually the package described by `package.json`. In generic projects, the subject may only exist as a Git repository and its tags.
 
-## Current v2 Behavior To Preserve
+## Rewrite Boundary
 
-Mirror v2 currently supports these user-facing workflows:
+Mirror v3 is a clean break from the current implementation.
 
-- `mirror see` shows the current package version.
-- `mirror <release-type>` bumps the local `package.json` version.
-- `mirror <path-to-package.json> <release-type>` bumps a specific package file.
-- `mirror <specific-version>` sets a specific semantic version.
-- Release types are `major`, `premajor`, `minor`, `preminor`, `patch`, `prepatch`, and `prerelease`.
-- The current implementation creates a Git commit, creates a Git tag, pushes commits, and pushes tags.
+No v2 behavior is preserved for compatibility. Existing commands, positional arguments, output text, implicit Git operations, file mutation behavior, and release flow can all be deleted or replaced during implementation.
 
-Mirror v3 should preserve the command intent, but it should change unsafe release behavior. Open source users should not get remote Git pushes unless they explicitly request them.
+The current codebase is useful only as historical context. It is not a compatibility contract.
 
 ## V3 Scope
 
@@ -136,8 +131,6 @@ version: 1.2.3
 tag: @scope/package@1.2.3
 ```
 
-`mirror see` remains as a compatibility alias for `mirror current`.
-
 ### `mirror version <target>`
 
 Changes the project version.
@@ -162,33 +155,7 @@ Exact version target:
 mirror version 1.2.3
 ```
 
-Compatibility aliases:
-
-```text
-mirror patch
-mirror minor
-mirror major
-mirror prerelease
-mirror prepatch
-mirror preminor
-mirror premajor
-mirror 1.2.3
-mirror ./package.json patch
-```
-
-The aliases call the full command internally. The canonical command is always `mirror version <target>`.
-
-The v2 positional package path remains supported as a compatibility alias:
-
-```text
-mirror ./package.json patch
-```
-
-That form resolves to:
-
-```text
-mirror version patch --from package.json --set package.json --package-json ./package.json
-```
+The canonical command is `mirror version <target>`. V3 does not support root-level version aliases such as `mirror patch` or positional package path forms such as `mirror ./package.json patch`.
 
 ## Flag Syntax
 
@@ -329,7 +296,7 @@ Remote operations require explicit flags:
 --push-tags
 ```
 
-The v2 behavior of always pushing should not be the v3 default.
+Automatic pushing is not a v3 default.
 
 ## Configuration Format
 
@@ -406,7 +373,7 @@ Mirror resolves command settings in this order:
 
 CLI flags always win over configuration.
 
-Built-in defaults should be minimal. Required values like `from` and `set` should not be guessed in v3 unless the command is a compatibility alias with documented behavior.
+Built-in defaults should be minimal. Required values like `from` and `set` should not be guessed in v3.
 
 The package file path is an exception: when `package.json` is explicitly selected as a source, target, or name source, the default path is `package.json`.
 
@@ -438,7 +405,7 @@ The rewrite should split the current single-file implementation into focused mod
 
 Proposed modules:
 
-- `cli`: command definitions, help, aliases, and process exit behavior.
+- `cli`: command definitions, help, and process exit behavior.
 - `config`: config discovery, TOML parsing, schema validation, and merge rules.
 - `flags`: raw argument normalization.
 - `version`: semantic version validation and increment resolution.
@@ -467,7 +434,6 @@ Required coverage:
 - `mirror current`.
 - `mirror version <increment>`.
 - `mirror version <exact-version>`.
-- Compatibility aliases.
 - Dirty worktree handling.
 - Dry-run behavior.
 
@@ -477,10 +443,8 @@ Tests should use disposable temporary directories and repositories. Release-path
 
 These decisions should be resolved before implementation starts:
 
-1. Whether v3 should support the v2 hidden `package.build.json` update behavior, or require it to be modeled as an explicit extra target later.
-2. Whether prerelease increments should default to `1.0.1-0` exactly, or preserve v2's `alpha` prerelease behavior through a `--preid alpha` default.
-3. Whether `git commit` should be enabled by default when `set = ["git"]`, or only when `git.commit = true`.
-4. Whether detailed output should use a flag like `--format json` instead of human-readable multiline text.
+1. Whether `git commit` should be enabled by default when `set = ["git"]`, or only when `git.commit = true`.
+2. Whether detailed output should use a flag like `--format json` instead of human-readable multiline text.
 
 ## References
 
