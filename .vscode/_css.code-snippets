@@ -23,7 +23,7 @@
 "scope": "css",
 "body": [
   "/*!",
-  " * Copyright © ${CURRENT_YEAR} GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.",
+  " * Copyright (c) ${CURRENT_YEAR} GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.",
   " */",
   "",
   ".${TM_FILENAME_BASE/(\\.module)|-(.)/${2:/upcase}/g} {",
