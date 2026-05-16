@@ -111,7 +111,7 @@ describe('Mirror v3', () => {
   test('merges CLI overrides over config values', async () => {
     const cwd = await createPackageAndJsrFixture()
     await writeText(join(cwd, 'custom-package.json'), JSON.stringify({ name: 'custom-package', version: '2.0.0' }, null, 2))
-    await writeText(join(cwd, 'custom-jsr.json'), JSON.stringify({ name: 'custom-jsr', version: '3.0.0' }, null, 2))
+    await writeText(join(cwd, 'custom-jsr.json'), JSON.stringify({ name: 'custom-jsr', version: '2.3.0' }, null, 2))
     await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package'], preid: 'beta' }))
 
     const config = await loadMirrorConfig({
@@ -300,7 +300,7 @@ describe('Mirror v3', () => {
     const result = await runMirrorCli()
 
     expect(result.exitCode).toBe(0)
-    expect(result.stdout).toContain('mirror v3.0.0')
+    expect(result.stdout).toContain('mirror v2.3.0')
     expect(result.stdout).toContain('USAGE')
   })
 
