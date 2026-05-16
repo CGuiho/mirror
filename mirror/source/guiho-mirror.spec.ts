@@ -63,6 +63,13 @@ describe('Mirror v3', () => {
     })
   })
 
+  test('expands short flag aliases -dy and -y', () => {
+    const options = parseMirrorCliOptions(['-dy', '-y'])
+
+    expect(options.dryRun).toBe(true)
+    expect(options.yes).toBe(true)
+  })
+
   test('discovers explicit, root, and nested configs with root precedence', async () => {
     const cwd = await createTempDir()
     await mkdir(join(cwd, 'config'), { recursive: true })
