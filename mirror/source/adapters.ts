@@ -30,21 +30,21 @@ export const writeJsrVersion = async (config: MirrorConfig, nextVersion: string)
   writeVersionField(resolveMirrorPath(config.cwd, config.jsr.path), 'jsr.json', nextVersion)
 
 export const ensureAdapterFiles = async (config: MirrorConfig) => {
-  if (usesAdapter(config, 'package')) ensureFile(resolveMirrorPath(config.cwd, config.package.path), 'package.json')
-  if (usesAdapter(config, 'jsr')) ensureFile(resolveMirrorPath(config.cwd, config.jsr.path), 'jsr.json')
+  if (usesAdapter(config, 'package.json')) ensureFile(resolveMirrorPath(config.cwd, config.package.path), 'package.json')
+  if (usesAdapter(config, 'jsr.json')) ensureFile(resolveMirrorPath(config.cwd, config.jsr.path), 'jsr.json')
   if (usesAdapter(config, 'git')) await ensureGitRepository(config.cwd)
 }
 
 export const resolveProjectName = async (config: MirrorConfig) => {
   if (config.project.name) return config.project.name
-  if (config.project.nameSource === 'package') return readPackageName(config)
-  if (config.project.nameSource === 'jsr') return readJsrName(config)
+  if (config.project.nameSource === 'package.json') return readPackageName(config)
+  if (config.project.nameSource === 'jsr.json') return readJsrName(config)
   return undefined
 }
 
 export const readCurrentVersion = async (config: MirrorConfig, projectName?: string) => {
-  if (config.version.source === 'package') return readPackageVersion(config)
-  if (config.version.source === 'jsr') return readJsrVersion(config)
+  if (config.version.source === 'package.json') return readPackageVersion(config)
+  if (config.version.source === 'jsr.json') return readJsrVersion(config)
   return readGitVersion(config, projectName)
 }
 
@@ -170,7 +170,7 @@ const ensureGitRepository = async (cwd: string) => {
   if (!(await isGitRepository(cwd))) throw new MirrorError(`Not a Git repository: ${cwd}`)
 }
 
-const usesAdapter = (config: MirrorConfig, adapter: 'package' | 'jsr' | 'git') =>
+const usesAdapter = (config: MirrorConfig, adapter: 'package.json' | 'jsr.json' | 'git') =>
   config.version.source === adapter || config.version.output.includes(adapter)
 
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
