@@ -1,3 +1,7 @@
+/**
+ * @copyright Copyright (c) 2026 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
+ */
+
 import { defineCommand, runMain } from 'citty'
 import type { ArgsDef } from 'citty'
 import { readFileSync } from 'node:fs'
