@@ -1,0 +1,21 @@
+{
+  "autorun": true,
+  "autokill": true,
+  "terminals": [
+    {
+      "name": "GUIHO Mirror",
+      "description": "GUIHO Mirror",
+      "icon": "zap",
+      "color": "terminal.ansiWhite",
+      "open": true,
+      "focus": true,
+      "commands": [
+        "cd mirror",
+        "sleep 60",
+        "bun _gaa",
+        "bun install || bun clean-hard && bun install",
+        "bun run typecheck"
+      ]
+    }
+  ]
+}
