@@ -1,7 +1,7 @@
 # Repository Notes
 
 - The real package lives in `mirror/`; run package commands there unless editing root docs or `ci/`.
-- `@guiho40/mirror` is a Bun/TypeScript ESM CLI/library. The source and CLI entrypoint is `mirror/source/mirror.ts`; `tsc` emits `mirror/library/` for `main`/`types`, and Bun compiles `mirror/bin/` for the CLI binary.
+- `@guiho40/mirror` is a Bun/TypeScript ESM CLI/library. The library entrypoint is `mirror/source/guiho-mirror.ts` and the CLI entrypoint is `mirror/source/guiho-mirror-bin.ts`; `tsc` emits `mirror/library/` for `main`/`types`, and Bun compiles `mirror/bin/` for the CLI binary.
 - New library entrypoints must use the full library name instead of generic `index.ts` files. For Mirror v3, use `guiho-mirror.ts`.
 - Use Bun, not npm/pnpm/yarn. Install from `mirror/` with `bun install`. Private `@guiho40` packages use Google Artifact Registry from `mirror/.npmrc`; auth helper is `bun _gaa` or `bunx google-artifactregistry-auth`.
 
