@@ -1,3 +1,7 @@
+/**
+ * @copyright Copyright (c) 2026 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
+ */
+
 import { inc, rcompare, valid as validSemver } from 'semver'
 import type { ReleaseType } from 'semver'
 import { MirrorError } from './errors'
