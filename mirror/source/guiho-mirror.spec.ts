@@ -1,3 +1,7 @@
+/**
+ * @copyright Copyright (c) 2026 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
+ */
+
 import { afterEach, describe, expect, test } from 'bun:test'
 import { mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -459,6 +463,7 @@ const git = async (cwd: string, ...args: string[]) => {
   const exitCode = await result.exited
 
   if (exitCode !== 0) {
+    // @ts-expect-error
     throw new Error(`git ${args.join(' ')} failed: ${await result.stderr.text()}`)
   }
 }
@@ -466,9 +471,11 @@ const git = async (cwd: string, ...args: string[]) => {
 const gitText = async (cwd: string, ...args: string[]) => {
   const result = Bun.spawn(['git', ...args], { cwd, stdout: 'pipe', stderr: 'pipe' })
   const exitCode = await result.exited
+  // @ts-expect-error
   const stdout = await result.stdout.text()
 
   if (exitCode !== 0) {
+    // @ts-expect-error
     throw new Error(`git ${args.join(' ')} failed: ${await result.stderr.text()}`)
   }
 
@@ -480,6 +487,7 @@ const runMirrorCli = async (...args: string[]) => {
     stdout: 'pipe',
     stderr: 'pipe',
   })
+  // @ts-expect-error
   const [exitCode, stdout, stderr] = await Promise.all([result.exited, result.stdout.text(), result.stderr.text()])
 
   return { exitCode, stdout, stderr }
