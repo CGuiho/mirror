@@ -15,7 +15,7 @@ export const mirrorBanner = (configPath?: string) => {
   const reset = noColor ? '' : '\x1b[0m'
   const status = configPath ? configPath : '(none)'
 
-  return `\n${title}\n${dim}config: ${status}${reset}\n\n`
+  return `\n${title}\n\n${dim}config: ${status}${reset}\n\n`
 }
 
 export const reportValue = (value: unknown, format: MirrorFormat = 'text') => {
