@@ -82,10 +82,10 @@ export const runMirrorCli = async (rawArgs = process.argv.slice(2)) => {
         process.stdout.write([
           'EXAMPLES',
           '',
-          '  mirror version current                               Print the current version',
-          '  mirror version plan patch                            Preview a patch release plan',
-          '  mirror version apply minor --commit                  Apply a minor release with commit',
-          '  mirror version plan patch --output=package.json,git  Plan with package.json and git output',
+          '  mirror version current                 # Print the current version',
+          '  mirror version plan patch              # Preview a patch release plan',
+          '  mirror version apply minor --commit    # Apply a minor release with commit',
+          '  mirror version plan patch --output=package.json,jsr.json,git  # Plan with package, jsr, and git',
           '',
         ].join('\n') + '\n')
       })
