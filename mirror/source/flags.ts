@@ -8,13 +8,21 @@ import { MirrorError } from './errors'
 const booleanFlags = new Set(['dry-run', 'commit', 'push', 'allow-dirty', 'yes', 'no-color', 'help', 'version'])
 const adapterNames = new Set(['package', 'jsr', 'git'])
 
+const shortFlagAliases: Record<string, string> = {
+  '-dy': '--dry-run',
+  '-y': '--yes',
+}
+
 const normalizeKey = (key: string) => key.replace(/-([a-z])/g, (_match, letter: string) => letter.toUpperCase())
+
+const expandShortFlags = (rawArgs: string[]) => rawArgs.map((token) => shortFlagAliases[token] ?? token)
 
 export const parseMirrorCliOptions = (rawArgs: string[]): MirrorCliOptions => {
   const parsed: Record<string, string | boolean | string[]> = {}
+  const args = expandShortFlags(rawArgs)
 
-  for (let index = 0; index < rawArgs.length; index += 1) {
-    const token = rawArgs[index]
+  for (let index = 0; index < args.length; index += 1) {
+    const token = args[index]
 
     if (!token?.startsWith('--')) continue
 
@@ -31,8 +39,8 @@ export const parseMirrorCliOptions = (rawArgs: string[]): MirrorCliOptions => {
     const value =
       equalsIndex >= 0
         ? withoutPrefix.slice(equalsIndex + 1)
-        : rawArgs[index + 1] && !rawArgs[index + 1]?.startsWith('-')
-        ? rawArgs[++index] ?? ''
+        : args[index + 1] && !args[index + 1]?.startsWith('-')
+        ? args[++index] ?? ''
         : ''
 
     if (!value) throw new MirrorError(`Missing value for --${rawKey}`)
