@@ -1,114 +1,179 @@
-# Mirror
+# 🪞 GUIHO Mirror
 
-Mirror is an open source Bun and TypeScript CLI/library for semantic project versioning.
+**Open source project versioning for Bun, npm, JSR, and Git.**
 
-It reads one version source, calculates the next semantic version, builds a release plan, then applies that plan to configured outputs such as `package.json`, `jsr.json`, and Git tags.
+Mirror is a powerful, deterministic CLI and TypeScript library for semantic project versioning. It reads a single version source, calculates the next semantic version, builds a transparent release plan, and safely applies it to configured outputs like `package.json`, `jsr.json`, and Git tags.
 
 ```text
 source -> version engine -> plan -> outputs
 ```
 
-## Install
+---
 
-```sh
+## 🚀 Quick Start
+
+### Installation
+
+```bash
 bun add -d @guiho/mirror
 ```
 
-The package exposes the `mirror` executable and a TypeScript library entrypoint at `@guiho/mirror`.
+### Initializing
 
-## Commands
+Create a default configuration file for your project type:
 
-```sh
-mirror
-mirror init package
-mirror init jsr
+```bash
+mirror init package.json
+# or
+mirror init jsr.json
+# or
 mirror init git
-mirror config show
-mirror config check
-mirror version current
-mirror version next patch
-mirror version plan patch
-mirror version apply patch --yes
 ```
 
-`mirror version current`, `mirror version next`, and `mirror version plan` are read-only. `mirror version apply` is the only command that mutates files or Git state.
+### Typical Workflow
 
-## Configuration
+```bash
+# See current version
+mirror version current
 
-Mirror looks for configuration in this order:
+# Preview a patch release
+mirror version plan patch
 
-1. `--config <path>`
-2. `./mirror.config.toml`
-3. `./config/mirror.config.toml`
+# Apply a minor release and create a Git commit & tag
+mirror version apply minor --commit --yes
+```
 
-Package project example:
+---
+
+## 📖 Documentation
+
+Mirror's architecture is based on a predictable read-plan-apply lifecycle, making it safe and easy to automate. It is designed to be easily consumed by humans and AI agents.
+
+### Project Model
+
+Mirror uses a strict release model:
+- **Project:** The package, repository, application, or directory being versioned.
+- **Source:** The single adapter Mirror reads the current version from.
+- **Output:** The adapters Mirror writes the next version to.
+- **Plan:** The read-only description of all intended changes before any mutation occurs.
+
+### Adapters
+
+Adapters connect Mirror to different versioning ecosystems:
+- `package.json`: Reads/writes the `version` field in a `package.json` file.
+- `jsr.json`: Reads/writes the `version` field in a `jsr.json` file.
+- `git`: Reads versions from Git tags and creates release tags/commits.
+
+### CLI Commands
+
+Mirror provides a concise CLI with three main command groups:
+
+#### `mirror init`
+Creates a `mirror.config.toml` file in the current directory.
+- `mirror init package.json`
+- `mirror init jsr.json`
+- `mirror init git`
+
+#### `mirror config`
+Validates and inspects configuration.
+- `mirror config show`: Prints the resolved configuration.
+- `mirror config check`: Validates configuration without output.
+- `mirror config schema`: Prints the comprehensive configuration reference.
+
+#### `mirror version`
+Manages the version lifecycle.
+- `mirror version current`: Prints the current project version.
+- `mirror version next <target>`: Prints the next version without side-effects.
+- `mirror version plan <target>`: Builds and prints the release plan.
+- `mirror version apply <target>`: Applies the release plan.
+
+*Targets supported:* `major`, `premajor`, `minor`, `preminor`, `patch`, `prepatch`, `prerelease`, or an exact semantic version (e.g., `2.0.0`).
+
+### Configuration (`mirror.config.toml`)
+
+Mirror looks for configuration via the `--config <path>` flag, `./mirror.config.toml`, or `./config/mirror.config.toml`.
 
 ```toml
 schema = 1
 
 [project]
-name_source = "package"
+name = "my-project"                    # Optional. Explicit project name.
+name_source = "package.json"           # Optional. "package.json" or "jsr.json"
 
 [version]
-scheme = "semver"
-source = "package"
-output = ["package", "jsr", "git"]
-prerelease_id = ""
+scheme = "semver"                      # Required. Only "semver" is supported.
+source = "package.json"                # Required. "package.json", "jsr.json", or "git"
+output = ["package.json", "git"]       # Required. Adapters to write to.
+prerelease_id = "alpha"                # Optional. e.g., creates 1.0.1-alpha.0
 
 [package]
-path = "package.json"
+path = "package.json"                  # Optional. Override path to package.json
 
 [jsr]
-path = "jsr.json"
+path = "jsr.json"                      # Optional. Override path to jsr.json
 
 [git]
-tag_template = "{name}@{version}"
-commit = false
-push = false
-allow_dirty = false
+tag_template = "{name}@{version}"      # Optional. Supported: "v{version}", "{name}@{version}"
+commit = false                         # Optional. Create release commits. Default: false.
+push = false                           # Optional. Push release refs. Default: false.
+allow_dirty = false                    # Optional. Allow dirty Git worktree. Default: false.
 ```
 
-Supported adapters are `package`, `jsr`, and `git`.
+### Safety & Git Automation
 
-Supported Git tag templates are:
+By default, `mirror version apply` prevents accidental mutations:
+- Fails on a dirty Git worktree (unless `--allow-dirty` is used).
+- Requires `--yes` to skip interactive confirmation (non-interactive environments).
+- Never pushes release refs automatically unless configured or `--push` is passed.
 
-- `v{version}`
-- `{name}@{version}`
+When combining file outputs (`package.json`, `jsr.json`) with Git tag output, Mirror requires either `--commit` or `--push` so that the tag attaches to the release commit containing the updated files. For Git-only outputs, `--commit` will not create an empty commit; it simply tags `HEAD`.
 
-## Version Targets
+---
 
-Mirror supports exact semantic versions and these release targets:
+## 💻 API Reference
 
-- `major`
-- `premajor`
-- `minor`
-- `preminor`
-- `patch`
-- `prepatch`
-- `prerelease`
+Mirror exposes a fully-typed TypeScript API for custom automation scripts.
 
-Prerelease targets use numeric prereleases by default, such as `1.0.1-0`. Pass `--preid alpha` or set `version.prerelease_id = "alpha"` to produce versions such as `1.0.1-alpha.0`.
-
-## Safety
-
-`mirror version apply <target>` prints the plan before applying it. It requires `--yes` in non-interactive usage, fails on dirty Git worktrees by default, and never pushes release refs unless `--push` is passed or configured.
-
-When file outputs and Git tag output are combined, Mirror requires `--commit` or `--push` so the tag points at the release commit. For Git-only projects, `--commit` does not create an empty commit; Mirror tags the current `HEAD`.
-
-## Library
+### Core Lifecycle Methods
 
 ```ts
-import { buildVersionPlan, applyVersionPlan } from '@guiho/mirror'
+import { buildVersionPlan, applyVersionPlan, executeVersionPlan } from '@guiho/mirror'
 
+// 1. Build a read-only plan for a patch release
 const plan = await buildVersionPlan('patch', { cwd: process.cwd() })
-await applyVersionPlan('patch', { cwd: process.cwd(), yes: true })
+
+// 2. Inspect the plan
+console.log(plan.currentVersion) // "1.0.0"
+console.log(plan.nextVersion)    // "1.0.1"
+console.log(plan.actions)        // Array of actions (write-file, git-commit, etc.)
+
+// 3. Execute the plan manually
+const result = await executeVersionPlan(plan, { dryRun: false, yes: true })
+
+// OR: Build and apply in one step
+await applyVersionPlan('minor', { cwd: process.cwd(), yes: true })
 ```
 
-## Development
+### Reading State
 
-Run package commands from this directory.
+```ts
+import { loadMirrorConfig, readCurrentVersion } from '@guiho/mirror'
 
-```sh
+// Load resolved configuration
+const config = await loadMirrorConfig({ cwd: process.cwd() })
+
+// Read the current version using the configured source
+const version = await readCurrentVersion(config)
+```
+
+---
+
+## 🛠️ Development
+
+Development tasks require Bun and run from the `mirror/` directory:
+
+```bash
+cd mirror
 bun install
 bun run typecheck
 bun test
