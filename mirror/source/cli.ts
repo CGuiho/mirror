@@ -7,7 +7,7 @@ import type { ArgsDef } from 'citty'
 import { readFileSync } from 'node:fs'
 import { MirrorError } from './errors'
 import { readCurrentVersion, resolveProjectName } from './adapters'
-import { loadMirrorConfig, writeInitConfig } from './config'
+import { configPathForDisplay, loadMirrorConfig, writeInitConfig } from './config'
 import { executeVersionPlan } from './executor'
 import { parseMirrorCliOptions } from './flags'
 import { buildVersionPlan, validateMirrorConfig } from './plan'
@@ -116,8 +116,9 @@ const createConfigCommand = () =>
         args: overrideArgs,
         async run(context) {
           const options = cliOptions(context.rawArgs, context.args)
-          if (options.format !== 'json') process.stdout.write(mirrorBanner())
-          process.stdout.write(reportConfig(await loadMirrorConfig(options), options.format))
+          const config = await loadMirrorConfig(options)
+          if (options.format !== 'json') process.stdout.write(mirrorBanner(configPathForDisplay(config)))
+          process.stdout.write(reportConfig(config, options.format))
         },
       }),
       check: defineCommand({
@@ -162,8 +163,9 @@ const createVersionCommand = () =>
         args: { ...overrideArgs, ...targetArg },
         async run(context) {
           const options = cliOptions(context.rawArgs, context.args)
-          if (options.format !== 'json') process.stdout.write(mirrorBanner())
-          process.stdout.write(reportPlan(await buildVersionPlan(String(context.args['target']), options), options.format))
+          const plan = await buildVersionPlan(String(context.args['target']), options)
+          if (options.format !== 'json') process.stdout.write(mirrorBanner(plan.configPath ? plan.configPath : ''))
+          process.stdout.write(reportPlan(plan, options.format))
         },
       }),
       apply: defineCommand({
@@ -173,7 +175,7 @@ const createVersionCommand = () =>
           const options = cliOptions(context.rawArgs, context.args)
           const plan = await buildVersionPlan(String(context.args['target']), options)
 
-          if (options.format !== 'json') process.stdout.write(mirrorBanner())
+          if (options.format !== 'json') process.stdout.write(mirrorBanner(plan.configPath ? plan.configPath : ''))
           if (options.format !== 'json') process.stdout.write(reportPlan(plan, options.format))
 
           const result = await executeVersionPlan(plan, options)
