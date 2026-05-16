@@ -9,7 +9,7 @@ import { MirrorError } from './errors'
 import { assertValidSemver, sortSemverDescending } from './version'
 import { resolveMirrorPath } from './config'
 
-export const supportedGitTagTemplates = ['v{version}', '{name}@{version}'] as const
+export const supportedGitTagTemplates = ['v{version}', '{name}@{version}', '{name}/v{version}'] as const
 
 export const readPackageJson = async (path: string): Promise<MirrorJsonObject> => readJsonObject(path, 'package.json')
 export const readJsrJson = async (path: string): Promise<MirrorJsonObject> => readJsonObject(path, 'jsr.json')
@@ -96,7 +96,7 @@ export const versionFromTag = (template: string, tag: string, projectName?: stri
 
 export const assertSupportedGitTagTemplate = (template: string) => {
   if (!(supportedGitTagTemplates as readonly string[]).includes(template)) {
-    throw new MirrorError(`Unsupported Git tag template: ${template}. Expected v{version} or {name}@{version}.`)
+    throw new MirrorError(`Unsupported Git tag template: ${template}. Expected v{version}, {name}@{version}, or {name}/v{version}.`)
   }
 }
 
