@@ -68,7 +68,7 @@ export const reportConfigSchema = (format: MirrorFormat = 'text') => {
     '',
     '  [git]',
     '  tag_template = "<template>"               Optional. Git tag format. Default: "v{version}".',
-    '                                            Supported: "v{version}", "{name}@{version}".',
+    '                                            Supported: "v{version}", "{name}@{version}", "{name}/v{version}".',
     '  commit = true | false                     Optional. Create release commits. Default: false.',
     '  push = true | false                       Optional. Push release refs. Default: false.',
     '  allow_dirty = true | false                Optional. Allow dirty Git worktree. Default: false.',
