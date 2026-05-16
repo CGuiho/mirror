@@ -5,10 +5,17 @@
 import type { MirrorConfig, MirrorExecutionResult, MirrorFormat, MirrorVersionPlan } from './types'
 import { configPathForDisplay, relativeFromCwd } from './config'
 
-export const mirrorBanner = () => {
+export const mirrorBanner = (configPath?: string) => {
   const noColor = process.env['NO_COLOR'] === '1'
   const title = noColor ? '🪞  GUIHO Mirror' : '\x1b[1;36m🪞  GUIHO Mirror\x1b[0m'
-  return `\n${title}\n\n`
+
+  if (configPath === undefined) return `\n${title}\n\n`
+
+  const dim = noColor ? '' : '\x1b[2m'
+  const reset = noColor ? '' : '\x1b[0m'
+  const status = configPath ? configPath : '(none)'
+
+  return `\n${title}\n${dim}config: ${status}${reset}\n\n`
 }
 
 export const reportValue = (value: unknown, format: MirrorFormat = 'text') => {
