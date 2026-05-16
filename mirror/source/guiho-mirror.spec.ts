@@ -33,10 +33,10 @@ describe('Mirror v3', () => {
   test('parses operational and override flags', () => {
     const options = parseMirrorCliOptions([
       '--source',
-      'package',
+      'package.json',
       '--output',
-      'package',
-      '--output=jsr,git',
+      'package.json',
+      '--output=jsr.json,git',
       '--package-file=custom-package.json',
       '--jsr-file',
       'custom-jsr.json',
@@ -50,8 +50,8 @@ describe('Mirror v3', () => {
     ])
 
     expect(options).toMatchObject({
-      source: 'package',
-      output: ['package', 'jsr', 'git'],
+      source: 'package.json',
+      output: ['package.json', 'jsr.json', 'git'],
       packageFile: 'custom-package.json',
       jsrFile: 'custom-jsr.json',
       preid: 'alpha',
@@ -73,8 +73,8 @@ describe('Mirror v3', () => {
   test('discovers explicit, root, and nested configs with root precedence', async () => {
     const cwd = await createTempDir()
     await mkdir(join(cwd, 'config'), { recursive: true })
-    await writeText(join(cwd, 'explicit.toml'), packageConfig({ output: ['jsr'], source: 'jsr' }))
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package'] }))
+    await writeText(join(cwd, 'explicit.toml'), packageConfig({ output: ['jsr.json'], source: 'jsr.json' }))
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'] }))
     await writeText(join(cwd, 'config', 'mirror.config.toml'), gitConfig())
 
     const explicit = await loadMirrorConfig({ cwd, config: 'explicit.toml' })
@@ -84,9 +84,9 @@ describe('Mirror v3', () => {
     const nested = await loadMirrorConfig({ cwd })
 
     expect(explicit.configPath).toBe(join(cwd, 'explicit.toml'))
-    expect(explicit.version.source).toBe('jsr')
+    expect(explicit.version.source).toBe('jsr.json')
     expect(root.configPath).toBe(join(cwd, 'mirror.config.toml'))
-    expect(root.version.source).toBe('package')
+    expect(root.version.source).toBe('package.json')
     expect(nested.configPath).toBe(join(cwd, 'config', 'mirror.config.toml'))
     expect(nested.version.source).toBe('git')
   })
@@ -100,7 +100,7 @@ describe('Mirror v3', () => {
     await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['npm'] }))
     await expect(loadMirrorConfig({ cwd })).rejects.toThrow('version.output')
 
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package'], nameSource: 'git' }))
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'], nameSource: 'git' }))
     await expect(loadMirrorConfig({ cwd })).rejects.toThrow('project.name_source')
 
     await initializeGitRepository(cwd)
@@ -112,12 +112,12 @@ describe('Mirror v3', () => {
     const cwd = await createPackageAndJsrFixture()
     await writeText(join(cwd, 'custom-package.json'), JSON.stringify({ name: 'custom-package', version: '2.0.0' }, null, 2))
     await writeText(join(cwd, 'custom-jsr.json'), JSON.stringify({ name: 'custom-jsr', version: '2.3.0' }, null, 2))
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package'], preid: 'beta' }))
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'], preid: 'beta' }))
 
     const config = await loadMirrorConfig({
       cwd,
-      source: 'jsr',
-      output: ['jsr', 'git'],
+      source: 'jsr.json',
+      output: ['jsr.json', 'git'],
       packageFile: 'custom-package.json',
       jsrFile: 'custom-jsr.json',
       preid: 'alpha',
@@ -125,8 +125,8 @@ describe('Mirror v3', () => {
       allowDirty: true,
     })
 
-    expect(config.version.source).toBe('jsr')
-    expect(config.version.output).toEqual(['jsr', 'git'])
+    expect(config.version.source).toBe('jsr.json')
+    expect(config.version.output).toEqual(['jsr.json', 'git'])
     expect(config.package.path).toBe('custom-package.json')
     expect(config.jsr.path).toBe('custom-jsr.json')
     expect(config.version.prereleaseId).toBe('alpha')
@@ -137,7 +137,7 @@ describe('Mirror v3', () => {
 
   test('reads and writes package and JSR names and versions', async () => {
     const cwd = await createPackageAndJsrFixture()
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package', 'jsr'] }))
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json', 'jsr.json'] }))
     const config = await loadMirrorConfig({ cwd })
 
     expect(await readPackageName(config)).toBe('@guiho/mirror')
@@ -169,7 +169,7 @@ describe('Mirror v3', () => {
 
   test('plans package and JSR file outputs', async () => {
     const cwd = await createPackageAndJsrFixture()
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package', 'jsr'] }))
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json', 'jsr.json'] }))
 
     const plan = await buildVersionPlan('patch', { cwd })
 
@@ -180,7 +180,7 @@ describe('Mirror v3', () => {
 
   test('applies package and JSR file outputs outside Git', async () => {
     const cwd = await createPackageAndJsrFixture()
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package', 'jsr'] }))
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json', 'jsr.json'] }))
 
     const result = await applyVersionPlan('minor', { cwd, yes: true })
 
@@ -191,7 +191,7 @@ describe('Mirror v3', () => {
 
   test('dry-run apply does not mutate files and does not require confirmation', async () => {
     const cwd = await createPackageAndJsrFixture()
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package'] }))
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'] }))
 
     const result = await applyVersionPlan('patch', { cwd, dryRun: true })
 
@@ -216,7 +216,7 @@ describe('Mirror v3', () => {
   test('requires commit or push when file outputs and Git tag output are combined', async () => {
     const cwd = await createPackageAndJsrFixture()
     await initializeGitRepository(cwd)
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package', 'git'] }))
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json', 'git'] }))
 
     await expect(buildVersionPlan('patch', { cwd })).rejects.toThrow('requires --commit or --push')
 
@@ -227,7 +227,7 @@ describe('Mirror v3', () => {
   test('fails on dirty Git worktrees unless allow-dirty is set', async () => {
     const cwd = await createPackageAndJsrFixture()
     await initializeGitRepository(cwd)
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package'] }))
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'] }))
     await commitAll(cwd, 'Add Mirror config')
     await writeText(join(cwd, 'README.md'), '# dirty fixture\n')
 
@@ -242,7 +242,7 @@ describe('Mirror v3', () => {
   test('applies file output, release commit, and Git tag with --commit', async () => {
     const cwd = await createPackageAndJsrFixture()
     await initializeGitRepository(cwd)
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package', 'git'] }))
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json', 'git'] }))
     await commitAll(cwd, 'Add Mirror config')
 
     const result = await applyVersionPlan('patch', { cwd, commit: true, yes: true })
@@ -259,7 +259,7 @@ describe('Mirror v3', () => {
     await initializeGitRepository(cwd)
     await git(cwd, 'remote', 'add', 'origin', remote)
     await git(cwd, 'push', '-u', 'origin', 'HEAD')
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package', 'git'] }))
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json', 'git'] }))
     await commitAll(cwd, 'Add Mirror config')
 
     const result = await applyVersionPlan('patch', { cwd, push: true, yes: true })
@@ -314,7 +314,7 @@ describe('Mirror v3', () => {
 
   test('runs CLI version current, next, plan, and apply', async () => {
     const cwd = await createPackageAndJsrFixture()
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package'] }))
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'] }))
 
     const current = await runMirrorCli('version', 'current', '--cwd', cwd)
     const next = await runMirrorCli('version', 'next', 'patch', '--cwd', cwd)
@@ -335,7 +335,7 @@ describe('Mirror v3', () => {
 
   test('runs CLI source and repeated output overrides', async () => {
     const cwd = await createPackageAndJsrFixture()
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package'] }))
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'] }))
 
     const result = await runMirrorCli(
       'version',
@@ -344,15 +344,15 @@ describe('Mirror v3', () => {
       '--cwd',
       cwd,
       '--source',
-      'package',
+      'package.json',
       '--output',
-      'package',
+      'package.json',
       '--output',
-      'jsr',
+      'jsr.json',
     )
 
     expect(result.exitCode).toBe(0)
-    expect(result.stdout).toContain('output: package, jsr')
+    expect(result.stdout).toContain('output: package.json, jsr.json')
     expect(result.stdout).toContain('next: 1.0.1')
   })
 })
@@ -413,8 +413,8 @@ const writeJson = async (path: string, object: Record<string, unknown>) => {
 
 const packageConfig = ({
   output,
-  source = 'package',
-  nameSource = 'package',
+  source = 'package.json',
+  nameSource = 'package.json',
   tagTemplate = '{name}@{version}',
   preid = '',
 }: {
