@@ -27,7 +27,7 @@ const globalArgs = {
 
 const overrideArgs = {
   ...globalArgs,
-  source: { type: 'enum', options: ['package', 'jsr', 'git'], description: 'Override version source' },
+  source: { type: 'enum', options: ['package.json', 'jsr.json', 'git'], description: 'Override version source' },
   output: { type: 'string', description: 'Override version output. Repeat or comma-separate values.' },
   'package-file': { type: 'string', description: 'Override package.json path' },
   'jsr-file': { type: 'string', description: 'Override jsr.json path' },
@@ -82,10 +82,10 @@ export const runMirrorCli = async (rawArgs = process.argv.slice(2)) => {
         process.stdout.write([
           'EXAMPLES',
           '',
-          '  mirror version current              Print the current version',
-          '  mirror version plan patch            Preview a patch release plan',
-          '  mirror version apply minor --commit  Apply a minor release with commit',
-          '  mirror version plan patch --output=package,git  Plan with package and git output',
+          '  mirror version current                               Print the current version',
+          '  mirror version plan patch                            Preview a patch release plan',
+          '  mirror version apply minor --commit                  Apply a minor release with commit',
+          '  mirror version plan patch --output=package.json,git  Plan with package.json and git output',
           '',
         ].join('\n') + '\n')
       })
@@ -108,8 +108,8 @@ const createInitCommand = () =>
   defineCommand({
     meta: { name: 'init', description: 'Create a Mirror configuration file.' },
     subCommands: {
-      package: createInitKindCommand('package'),
-      jsr: createInitKindCommand('jsr'),
+      'package.json': createInitKindCommand('package.json'),
+      'jsr.json': createInitKindCommand('jsr.json'),
       git: createInitKindCommand('git'),
     },
   })
@@ -239,7 +239,7 @@ const cliOptions = (rawArgs: string[], args: Record<string, unknown>): MirrorCli
 const stringArg = (value: unknown) => (typeof value === 'string' ? value : undefined)
 
 const adapterArg = (value: unknown) => {
-  if (value === 'package' || value === 'jsr' || value === 'git') return value
+  if (value === 'package.json' || value === 'jsr.json' || value === 'git') return value
   return undefined
 }
 
