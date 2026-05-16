@@ -639,13 +639,13 @@ Required coverage:
 
 Tests should use disposable temporary directories and repositories. Release-path tests must not run against the Mirror repository itself.
 
-## Open Decisions
+## Resolved Implementation Decisions
 
-These decisions should be resolved before implementation starts:
+These decisions are resolved for the v3 implementation:
 
-1. Whether `mirror version apply` should require interactive confirmation by default or only for plans that touch Git.
-2. Whether `git.commit = true` should be allowed in config, or whether committing should only be controlled by `--commit` and `--push`.
-3. Whether JSON output should be supported in v3 for all commands or only read-only commands.
+1. `mirror version apply` requires explicit confirmation through `--yes` in non-interactive usage. The CLI prints the plan before applying it.
+2. `git.commit = true` and `git.push = true` are allowed in config. `--push` also implies commit behavior when file outputs changed.
+3. JSON output is supported for all commands through `--format json`.
 
 ## References
 
