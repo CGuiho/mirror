@@ -1,9 +1,9 @@
 import { relative } from 'node:path'
-import type { MirrorCliOptions, MirrorConfig, MirrorVersionPlan, MirrorVersionPlanAction } from './guiho-mirror-types'
-import { MirrorError } from './guiho-mirror-errors'
-import { loadMirrorConfig, relativeFromCwd, resolveMirrorPath } from './guiho-mirror-config'
-import { ensureAdapterFiles, readCurrentVersion, renderGitTag, resolveProjectName } from './guiho-mirror-adapters'
-import { resolveNextVersion } from './guiho-mirror-version'
+import type { MirrorCliOptions, MirrorConfig, MirrorVersionPlan, MirrorVersionPlanAction } from './types'
+import { MirrorError } from './errors'
+import { loadMirrorConfig, relativeFromCwd, resolveMirrorPath } from './config'
+import { ensureAdapterFiles, readCurrentVersion, renderGitTag, resolveProjectName } from './adapters'
+import { resolveNextVersion } from './version'
 
 export const validateMirrorConfig = async (options: MirrorCliOptions = {}): Promise<MirrorConfig> => {
   const config = await loadMirrorConfig(options)
