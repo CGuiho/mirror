@@ -19,4 +19,4 @@ path = "jsr.json"
 tag_template = "{name}@{version}"
 commit = true
 push = true
-allow_dirty = false
+allow_dirty = true
