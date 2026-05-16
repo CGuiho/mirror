@@ -1,19 +1,25 @@
-#### &copy; 2025 [GUIHO](https://guiho.co) as represented by [Cristóvão GUIHO](https://guiho.co/cguiho) All Rights Reserved.
-
 # GUIHO Mirror
-  - GUIHO Libraries
-  - G4000
 
-Semver compliant package version manager
+Mirror is an open source Bun and TypeScript CLI/library for semantic project versioning.
 
+The package source lives in [`mirror/`](mirror/). Read the package documentation at [`mirror/README.md`](mirror/README.md).
 
-### GUIHO
-- Production: [**`guiho.co`**](https://guiho.co) and  [**`www.guiho.co`**](https://www.guiho.co)
-- Staging: [**`stage.guiho.co`**](https://stage.guiho.co)
+## Development
 
-## Applications
+Run package commands from `mirror/`:
 
-## G4001 GUIHO Janitor
-  - Repository: [**`guiho-janitor`**]()
-  - Packages:
-    - [**`@guiho40/janitor`**]()
+```sh
+cd mirror
+bun install
+bun run typecheck
+bun test
+bun run build
+bun run binary
+```
+
+## Package
+
+- npm and CLI package: `@guiho/mirror`
+- JSR package: `@guiho/mirror`
+- Library entrypoint: `mirror/source/guiho-mirror.ts`
+- CLI entrypoint: `mirror/source/mirror.ts`
