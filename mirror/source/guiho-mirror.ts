@@ -40,5 +40,5 @@ export {
 } from './adapters'
 export { buildVersionPlan, releaseLabel, resolveFileOutputPaths, validateMirrorConfig } from './plan'
 export { applyVersionPlan, executeVersionPlan } from './executor'
-export { mirrorBanner, reportConfig, reportExecution, reportExecutionSummary, reportPlan, reportValue } from './reporter'
+export { mirrorBanner, reportConfig, reportConfigSchema, reportExecution, reportExecutionSummary, reportPlan, reportValue } from './reporter'
 export { createMirrorCommand, runMirrorCli } from './cli'
