@@ -2,19 +2,35 @@
 
 ## Purpose
 
-Mirror v3 is a full rewrite of Mirror as an open source Bun and TypeScript CLI/library for project versioning.
+Mirror v3 is a complete rewrite of Mirror as an open source Bun and TypeScript CLI/library for project versioning.
 
 The goal is open source readiness: predictable behavior, clear commands, safe defaults, documented configuration, testable internals, and publishing to npm and other public package registries.
 
-Mirror versions a subject. A subject is the application, package, repository, or generic directory being released. In TypeScript/Bun projects, the subject is usually the package described by `package.json`. In generic projects, the subject may only exist as a Git repository and its tags.
+Mirror versions a project. A project is the package, application, repository, or generic directory being released.
 
 ## Rewrite Boundary
 
 Mirror v3 is a clean break from the current implementation.
 
-No v2 behavior is preserved for compatibility. Existing commands, positional arguments, output text, implicit Git operations, file mutation behavior, and release flow can all be deleted or replaced during implementation.
+No existing command, positional argument, output format, Git behavior, file mutation behavior, or release flow is preserved for compatibility. The current codebase is historical context only. It is not a compatibility contract.
 
-The current codebase is useful only as historical context. It is not a compatibility contract.
+## Product Model
+
+Mirror should expose a small vocabulary:
+
+- **Project**: the thing being versioned.
+- **Source**: the single place Mirror reads the current version from.
+- **Output**: a place Mirror writes the new version to.
+- **Adapter**: the implementation that reads or writes a specific system, such as `package` or `git`.
+- **Plan**: the exact set of actions Mirror will perform before it mutates anything.
+
+The model is:
+
+```text
+source -> version engine -> plan -> outputs
+```
+
+Mirror reads the current version from one source, calculates the next version, builds a plan, then applies that plan to one or more outputs.
 
 ## V3 Scope
 
@@ -23,24 +39,12 @@ Version 3 supports two project categories:
 - Bun/TypeScript package projects that keep their version in `package.json`.
 - Generic Git projects that keep their version in Git tags.
 
-Version 3 supports two version source types:
+Version 3 supports two adapters:
 
-- `package.json`
-- `git`
+- `package`: reads and writes `package.json`.
+- `git`: reads Git tags, creates Git tags, creates release commits, and pushes release refs when requested.
 
-Version 3 supports two version target types:
-
-- `package.json`
-- `git`
-
-Version 3 supports two Git tag formats:
-
-- `vX.Y.Z`, for unnamed subjects.
-- `name@X.Y.Z`, for named subjects.
-
-## Non-Goals For V3
-
-The first open source rewrite should not try to support every language ecosystem.
+Version 3 supports semantic versioning only.
 
 Out of scope for v3:
 
@@ -53,8 +57,6 @@ Out of scope for v3:
 - registry publishing.
 - GitHub/GitLab release creation.
 - plugin systems.
-
-Those can be added after the core versioning model is stable.
 
 ## CLI Framework Decision
 
@@ -76,227 +78,250 @@ Alternatives considered:
 - Commander.js and yargs: mature, but Node-oriented and less aligned with a Bun-first design.
 - oclif: too heavy for v3 and explicitly Node-oriented.
 
-## Command Model
+## Command Design
 
 The executable is `mirror`.
 
-Running `mirror` with no arguments shows top-level help and the installed Mirror CLI version.
+Running `mirror` with no arguments prints top-level help and the installed Mirror CLI version.
 
-Global flags:
-
-```text
-mirror --help
-mirror -h
-mirror --version
-mirror -v
-```
-
-Global flag behavior:
-
-- `--help` and `-h` print help for the current command scope.
-- `--version` and `-v` print the installed Mirror CLI version.
-- `--config <path>` loads a specific configuration file.
-- `--cwd <path>` runs Mirror as if it started in that directory.
-- `--package-json <path>` selects the package file used by `package.json` sources, targets, and name resolution.
-
-`-v` is reserved for version output. Future verbose logging should use `--verbose`, not `-v`.
-
-## Commands
-
-### `mirror current`
-
-Shows the current version for the configured or flagged project.
-
-Examples:
+Commands:
 
 ```text
-mirror current
-mirror current --from package.json
-mirror current --from package.json --package-json package.json
-mirror current --from git
-mirror current --from package.json --name-from package.json
+mirror
+mirror init package
+mirror init git
+mirror config show
+mirror config check
+mirror version current
+mirror version next <target>
+mirror version plan <target>
+mirror version apply <target>
 ```
 
-Output should be stable and script-friendly by default:
+There are no root-level release aliases. Commands like `mirror patch`, `mirror minor`, and `mirror 1.2.3` are not part of v3.
+
+### `mirror init package`
+
+Creates `mirror.config.toml` for a Bun/TypeScript package project.
+
+The generated config uses:
+
+- `package` as the version source.
+- `package` as a version output.
+- `git` as an optional output only if the user confirms during init or edits the config later.
+- the package name from `package.json`.
+
+### `mirror init git`
+
+Creates `mirror.config.toml` for a generic Git-tagged project.
+
+The generated config uses:
+
+- `git` as the version source.
+- `git` as the only output.
+- an unnamed tag template by default.
+
+### `mirror config show`
+
+Prints the resolved configuration after defaults and CLI overrides.
+
+This command is read-only.
+
+### `mirror config check`
+
+Validates that Mirror can operate in the current project.
+
+Checks include:
+
+- config file exists and parses.
+- config schema version is supported.
+- source adapter is valid.
+- output adapters are valid.
+- package file exists when the package adapter is used.
+- Git repository exists when the Git adapter is used.
+- tag template is valid.
+- project name can be resolved when the tag template needs it.
+
+This command is read-only.
+
+### `mirror version current`
+
+Reads the current version from the configured source.
+
+Default output is script-friendly:
 
 ```text
 1.2.3
 ```
 
-If a name is available and the user asks for detailed output, Mirror can also show:
+Structured output can be requested with `--format json`.
 
-```text
-name: @scope/package
-version: 1.2.3
-tag: @scope/package@1.2.3
-```
+### `mirror version next <target>`
 
-### `mirror version <target>`
-
-Changes the project version.
-
-`<target>` can be a release increment or an exact semantic version.
-
-Increment targets:
-
-```text
-mirror version patch       # 1.0.0 -> 1.0.1
-mirror version minor       # 1.0.0 -> 1.1.0
-mirror version major       # 1.0.0 -> 2.0.0
-mirror version prerelease  # 1.0.0 -> 1.0.1-0
-mirror version prepatch    # 1.0.0 -> 1.0.1-0
-mirror version preminor    # 1.0.0 -> 1.1.0-0
-mirror version premajor    # 1.0.0 -> 2.0.0-0
-```
-
-Exact version target:
-
-```text
-mirror version 1.2.3
-```
-
-The canonical command is `mirror version <target>`. V3 does not support root-level version aliases such as `mirror patch` or positional package path forms such as `mirror ./package.json patch`.
-
-## Flag Syntax
-
-Mirror must support both value syntaxes:
-
-```text
---flag-name flag-value
---flag-name=flag-value
-```
-
-Mirror must also support boolean flags:
-
-```text
---dry-run
---push
---allow-dirty
-```
-
-Repeated list flags and comma-separated list flags should both work:
-
-```text
-mirror version patch --set git --set package.json
-mirror version patch --set=git,package.json
-```
-
-Internally, both forms normalize to the same array.
-
-## Version Source Flags
-
-`--from` tells Mirror where to read the current version.
-
-Allowed values:
-
-```text
---from package.json
---from git
-```
-
-Only one source is allowed in v3.
-
-If `--from package.json` is used, Mirror reads the version from a package file.
-
-If `--from git` is used, Mirror reads the version from Git tags matching the selected tag format.
-
-If no `--from` flag is passed, Mirror reads it from configuration. If neither flags nor configuration define it, the command fails with a clear error.
-
-When `package.json` is used as a source, the package file path comes from `--package-json`, `package_json.path`, or the built-in default `package.json`.
-
-## Version Target Flags
-
-`--set` tells Mirror where to write the new version.
-
-Allowed values:
-
-```text
---set package.json
---set git
-```
+Calculates the next version without checking output state and without writing anything.
 
 Examples:
 
 ```text
-mirror version patch --from package.json --set package.json
-mirror version patch --from package.json --set package.json --set git
-mirror version patch --from git --set git
+mirror version next patch
+mirror version next minor
+mirror version next major
+mirror version next prepatch
+mirror version next preminor
+mirror version next premajor
+mirror version next prerelease
+mirror version next 1.2.3
 ```
 
-If no `--set` flag is passed, Mirror reads it from configuration. If neither flags nor configuration define it, the command fails with a clear error.
+Supported targets:
 
-When `package.json` is used as a target, the package file path comes from `--package-json`, `package_json.path`, or the built-in default `package.json`.
+- `patch`
+- `minor`
+- `major`
+- `prepatch`
+- `preminor`
+- `premajor`
+- `prerelease`
+- exact semantic versions such as `1.2.3`
 
-## Subject Name Flags
+### `mirror version plan <target>`
 
-The subject name is optional for unnamed versioning and required for named Git tags.
+Builds the full release plan without writing anything.
 
-Name sources:
+The plan includes:
+
+- current version.
+- next version.
+- source used.
+- package files to update.
+- Git tags to create.
+- release commit that would be created when commit behavior is enabled.
+- refs that would be pushed when push behavior is enabled.
+
+This command is read-only and should be the safest way to inspect a release.
+
+### `mirror version apply <target>`
+
+Applies the release plan.
+
+This is the only command that mutates files, Git tags, commits, or remote refs.
+
+Examples:
 
 ```text
---name my-project
---name-from package.json
+mirror version apply patch
+mirror version apply patch --dry-run
+mirror version apply patch --commit
+mirror version apply patch --push
+mirror version apply 1.2.3 --commit
 ```
 
-Rules:
+## Operational Flags
 
-- `--name` provides the subject name directly.
-- `--name-from package.json` reads the subject name from the package file `name` field.
-- If both are provided, `--name` wins.
-- When `--name-from package.json` is used, the package file path comes from `--package-json`, `package_json.path`, or the built-in default `package.json`.
-- If `tag_format` is `named`, Mirror must resolve a name before creating or reading tags.
-- If `tag_format` is `version`, Mirror does not require a name.
+Mirror should keep normal release commands clean. Project policy belongs in `mirror.config.toml`; operational behavior belongs in flags.
 
-## Tag Format
-
-Mirror supports two tag formats in v3.
-
-Unnamed version tag:
+Global operational flags:
 
 ```text
-v1.2.3
+--help
+-h
+--version
+-v
+--config <path>
+--cwd <path>
+--format text|json
+--no-color
 ```
 
-Named version tag:
+Apply-only operational flags:
 
 ```text
-my-project@1.2.3
-@scope/package@1.2.3
+--dry-run
+--commit
+--push
+--allow-dirty
+--yes
 ```
 
-CLI flag:
+Configuration override flags:
 
 ```text
---tag-format version
---tag-format named
+--source package|git
+--output package|git
+--package-file <path>
 ```
 
-Rules:
+`--source` overrides `version.source`.
 
-- `version` creates and reads tags like `v1.2.3`.
-- `named` creates and reads tags like `name@1.2.3`.
-- `package.json` always stores plain semantic versions like `1.2.3`.
-- Git tag formatting must never leak into `package.json`.
+`--output` overrides `version.output`. It can be passed more than once:
 
-## Release Safety
+```text
+mirror version plan patch --source package --output package --output git
+mirror version apply patch --source package --output package --output git --commit
+```
+
+`--package-file` overrides `package.path`.
+
+Flag syntax must support both value forms:
+
+```text
+--config mirror.config.toml
+--config=mirror.config.toml
+--source package
+--source=package
+```
+
+Boolean flags do not require values:
+
+```text
+--dry-run
+--commit
+--push
+--allow-dirty
+```
+
+## Commit And Push Semantics
+
+Mirror does not create release commits by default.
+
+`--commit` means:
+
+- apply the version plan.
+- stage files that Mirror changed.
+- create a local release commit when file outputs changed.
+- create configured Git tags after the release commit exists.
+- do not push.
+
+`--push` means:
+
+- enable commit behavior when file outputs changed.
+- apply the version plan.
+- create the local release commit when needed.
+- create configured Git tags.
+- push the release commit and release tags created by Mirror.
+
+`--push` is therefore stronger than `--commit`. A user does not need to pass both.
+
+There is no raw push-only release mode. Pushing a release without creating the release commit would either push nothing useful or create a tag pointing at the wrong tree. Mirror should prevent that.
+
+If the configured outputs include both a file output and a Git tag output, Mirror must not create the Git tag until the file change is committed. In that case, `mirror version apply <target>` without `--commit` or `--push` fails before making changes.
+
+If the configured outputs are Git-only, `--commit` does not create an empty commit. Mirror creates the configured tag on the current `HEAD`. With `--push`, Mirror pushes the created tag.
+
+## Safety Semantics
 
 Open source defaults should be safe:
 
-- Do not push commits by default.
-- Do not push tags by default.
-- Do not modify files when `--dry-run` is passed.
-- Fail on a dirty Git worktree by default before changing versions.
-- Allow dirty worktrees only with `--allow-dirty`.
-- Print the planned actions before applying them.
+- `mirror version current`, `next`, and `plan` are always read-only.
+- `mirror version apply` is the only mutating command.
+- `--dry-run` makes `apply` read-only and prints the same plan that would be applied.
+- dirty Git worktrees fail by default.
+- `--allow-dirty` allows Mirror to continue in a dirty worktree.
+- remote pushes never happen unless `--push` is passed or configured.
+- Mirror prints the plan before applying it.
+- destructive or ambiguous plans fail before mutation.
 
-Remote operations require explicit flags:
-
-```text
---push
---push-tags
-```
-
-Automatic pushing is not a v3 default.
+`--yes` skips interactive confirmation. It does not weaken validation.
 
 ## Configuration Format
 
@@ -321,101 +346,136 @@ Lookup order:
 2. `./mirror.config.toml`.
 3. `./config/mirror.config.toml`.
 
-If both implicit config files exist, Mirror should fail and ask the user to choose one or pass `--config`. This avoids silently using stale configuration.
+The top-level configuration file takes precedence over the nested configuration file. If both `./mirror.config.toml` and `./config/mirror.config.toml` exist, Mirror uses `./mirror.config.toml`.
 
-## Configuration Example
+The nested configuration file is a fallback for projects that prefer to keep tool configuration under `config/`.
 
-Package project that reads from and writes to `package.json`, then creates a named Git tag:
+## Configuration Schema
+
+Package project:
 
 ```toml
-version = 1
+schema = 1
 
-from = "package.json"
-set = ["package.json", "git"]
+[project]
+name_source = "package"
 
-name_from = "package.json"
-tag_format = "named"
+[version]
+scheme = "semver"
+source = "package"
+output = ["package", "git"]
+prerelease_id = ""
 
-[package_json]
+[package]
 path = "package.json"
 
 [git]
-commit = true
-push = false
-push_tags = false
-allow_dirty = false
-```
-
-Generic Git-only project with unnamed tags:
-
-```toml
-version = 1
-
-from = "git"
-set = ["git"]
-
-tag_format = "version"
-
-[git]
+tag_template = "{name}@{version}"
 commit = false
 push = false
-push_tags = false
 allow_dirty = false
 ```
 
-## Configuration Merge Rules
+Generic Git project:
 
-Mirror resolves command settings in this order:
+```toml
+schema = 1
 
-1. CLI flags.
-2. Configuration file values.
-3. Built-in defaults.
+[project]
+name = "my-project"
 
-CLI flags always win over configuration.
+[version]
+scheme = "semver"
+source = "git"
+output = ["git"]
+prerelease_id = ""
 
-Built-in defaults should be minimal. Required values like `from` and `set` should not be guessed in v3.
+[git]
+tag_template = "v{version}"
+commit = false
+push = false
+allow_dirty = false
+```
 
-The package file path is an exception: when `package.json` is explicitly selected as a source, target, or name source, the default path is `package.json`.
+Config rules:
+
+- `schema` is required.
+- `version.source` must name exactly one adapter.
+- `version.output` must contain at least one adapter.
+- `project.name` provides a literal project name.
+- `project.name_source = "package"` reads the project name from `package.json`.
+- `git.tag_template` supports `{name}` and `{version}`.
+- a template containing `{name}` requires a resolved project name.
+- `git.push = true` implies `git.commit = true` when file outputs changed.
+- CLI flags override config values.
+
+## Tag Templates
+
+Mirror should use tag templates instead of a small enum like `named` or `version`.
+
+Supported v3 templates:
+
+```text
+v{version}
+{name}@{version}
+```
+
+Examples:
+
+```text
+v1.2.3
+my-project@1.2.3
+@scope/package@1.2.3
+```
+
+`package.json` always stores plain semantic versions like `1.2.3`. Git tag formatting must never leak into package metadata.
 
 ## Version Operation Flow
 
-`mirror version <target>` should execute in this order:
+`mirror version apply <target>` should execute in this order:
 
 1. Resolve `cwd`.
-2. Load configuration.
-3. Parse and normalize flags.
+2. Discover and load configuration.
+3. Parse operational flags.
 4. Merge flags with configuration.
-5. Validate `from`, `set`, `name`, and `tag_format`.
-6. Read the current version from the selected source.
+5. Validate source, outputs, project name, and tag template.
+6. Read the current version from the source.
 7. Validate that the current version is semantic.
-8. Resolve the desired version from `<target>`.
-9. Build an action plan.
-10. Print the action plan.
-11. Stop if `--dry-run` is set.
-12. Check Git worktree safety.
-13. Apply file updates.
-14. Create a Git commit if configured.
-15. Create Git tags if configured.
-16. Push only if `--push` or `--push-tags` is explicitly set.
-17. Print the final version and affected targets.
+8. Resolve the next version from `<target>`.
+9. Build a complete plan.
+10. Validate safety preconditions.
+11. Print the plan.
+12. Stop if `--dry-run` is set.
+13. Ask for confirmation unless `--yes` is set.
+14. Apply file outputs.
+15. Create a release commit when commit behavior is enabled and file outputs changed.
+16. Create Git tags.
+17. Push release refs only when push behavior is enabled.
+18. Print the final version and affected outputs.
 
 ## Internal Architecture
 
-The rewrite should split the current single-file implementation into focused modules.
-
-Proposed modules:
+The rewrite should split the implementation into focused modules:
 
 - `cli`: command definitions, help, and process exit behavior.
-- `config`: config discovery, TOML parsing, schema validation, and merge rules.
-- `flags`: raw argument normalization.
+- `config`: discovery, TOML parsing, schema validation, and merge rules.
 - `version`: semantic version validation and increment resolution.
-- `sources`: version readers such as package JSON and Git tags.
-- `targets`: version writers such as package JSON and Git tags.
-- `git`: Git status, commit, tag, and push operations.
-- `plan`: dry-run action plan generation.
+- `adapters/package`: package name/version reads and package version writes.
+- `adapters/git`: tag discovery, tag creation, commit creation, and push behavior.
+- `plan`: action plan generation.
+- `executor`: the only layer allowed to mutate files or Git state.
+- `reporter`: text and JSON output.
 - `errors`: typed user-facing errors with stable exit codes.
 
 The CLI should call library functions rather than holding business logic directly in command handlers.
+
+Architectural rule:
+
+```text
+Only the executor mutates the world.
+```
+
+Everything before execution should be pure planning, validation, or reporting when practical.
 
 ## Testing Requirements
 
@@ -423,19 +483,27 @@ Version 3 needs tests before public release.
 
 Required coverage:
 
-- Flag parsing for `--flag value`, `--flag=value`, booleans, repeated flags, and comma-separated list flags.
-- Config lookup for root config, nested config, explicit config, and duplicate config failure.
-- Config merge precedence.
-- `package.json` version reading.
-- `package.json` version writing in temporary fixtures.
+- config lookup for explicit config, root config, nested config, and root-over-nested precedence.
+- config schema validation.
+- config merge precedence.
+- operational flags for `--dry-run`, `--commit`, `--push`, `--allow-dirty`, and `--yes`.
+- package version reading.
+- package version writing in temporary fixtures.
+- package name reading.
 - Git tag version reading in temporary repositories.
 - Git tag creation in temporary repositories.
-- Named and unnamed tag formats.
-- `mirror current`.
-- `mirror version <increment>`.
-- `mirror version <exact-version>`.
-- Dirty worktree handling.
-- Dry-run behavior.
+- tag templates for `v{version}` and `{name}@{version}`.
+- `mirror config show`.
+- `mirror config check`.
+- `mirror version current`.
+- `mirror version next <target>`.
+- `mirror version plan <target>`.
+- `mirror version apply <target>`.
+- dirty worktree handling.
+- dry-run behavior.
+- commit behavior.
+- push-implies-commit behavior.
+- Git-only release behavior without empty commits.
 
 Tests should use disposable temporary directories and repositories. Release-path tests must not run against the Mirror repository itself.
 
@@ -443,8 +511,10 @@ Tests should use disposable temporary directories and repositories. Release-path
 
 These decisions should be resolved before implementation starts:
 
-1. Whether `git commit` should be enabled by default when `set = ["git"]`, or only when `git.commit = true`.
-2. Whether detailed output should use a flag like `--format json` instead of human-readable multiline text.
+1. Whether `mirror version apply` should require interactive confirmation by default or only for plans that touch Git.
+2. Whether `git.commit = true` should be allowed in config, or whether committing should only be controlled by `--commit` and `--push`.
+3. Whether JSON output should be supported in v3 for all commands or only read-only commands.
+4. Whether `prerelease_id` should default to an empty prerelease identifier or a named identifier such as `alpha`.
 
 ## References
 
