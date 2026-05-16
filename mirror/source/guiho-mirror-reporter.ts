@@ -1,0 +1,74 @@
+import type { MirrorConfig, MirrorExecutionResult, MirrorFormat, MirrorVersionPlan } from './guiho-mirror-types'
+import { configPathForDisplay, relativeFromCwd } from './guiho-mirror-config'
+
+export const reportValue = (value: unknown, format: MirrorFormat = 'text') => {
+  if (format === 'json') return `${JSON.stringify(value, null, 2)}\n`
+  return `${String(value)}\n`
+}
+
+export const reportConfig = (config: MirrorConfig, format: MirrorFormat = 'text') => {
+  if (format === 'json') return `${JSON.stringify(config, null, 2)}\n`
+
+  return [
+    `config: ${configPathForDisplay(config)}`,
+    `source: ${config.version.source}`,
+    `output: ${config.version.output.join(', ')}`,
+    `package: ${config.package.path}`,
+    `jsr: ${config.jsr.path}`,
+    `tag_template: ${config.git.tagTemplate}`,
+    `commit: ${String(config.git.commit)}`,
+    `push: ${String(config.git.push)}`,
+    `allow_dirty: ${String(config.git.allowDirty)}`,
+    '',
+  ].join('\n')
+}
+
+export const reportPlan = (plan: MirrorVersionPlan, format: MirrorFormat = 'text') => {
+  if (format === 'json') return `${JSON.stringify(plan, null, 2)}\n`
+
+  const lines = [
+    `current: ${plan.currentVersion}`,
+    `next: ${plan.nextVersion}`,
+    `source: ${plan.source}`,
+    `output: ${plan.output.join(', ')}`,
+  ]
+
+  if (plan.project.name) lines.push(`project: ${plan.project.name}`)
+  if (plan.configPath) lines.push(`config: ${relativeFromCwd(plan.cwd, plan.configPath)}`)
+  if (plan.fileOutputPaths.length > 0) lines.push(`files: ${plan.fileOutputPaths.map((path) => relativeFromCwd(plan.cwd, path)).join(', ')}`)
+  if (plan.gitTag) lines.push(`tag: ${plan.gitTag}`)
+
+  lines.push('actions:')
+
+  for (const action of plan.actions) {
+    if (action.type === 'write-file') lines.push(`- write ${relativeFromCwd(plan.cwd, action.path)}: ${action.currentVersion} -> ${action.nextVersion}`)
+    if (action.type === 'git-commit') lines.push(`- commit ${action.message}`)
+    if (action.type === 'git-tag') lines.push(`- tag ${action.tag}`)
+    if (action.type === 'git-push') lines.push(`- push commit=${String(action.includeCommit)} tags=${String(action.includeTags)}`)
+  }
+
+  return `${lines.join('\n')}\n`
+}
+
+export const reportExecution = (result: MirrorExecutionResult, format: MirrorFormat = 'text') => {
+  if (format === 'json') return `${JSON.stringify(result, null, 2)}\n`
+  return `${reportPlan(result.plan, 'text')}applied: ${String(result.applied)}\ndry_run: ${String(result.dryRun)}\n`
+}
+
+export const reportExecutionSummary = (result: MirrorExecutionResult, format: MirrorFormat = 'text') => {
+  if (format === 'json') return `${JSON.stringify(result, null, 2)}\n`
+
+  const outputs = result.plan.output.join(', ')
+  const files = result.plan.fileOutputPaths.map((path) => relativeFromCwd(result.plan.cwd, path)).join(', ')
+  const lines = [
+    `applied: ${String(result.applied)}`,
+    `dry_run: ${String(result.dryRun)}`,
+    `version: ${result.plan.nextVersion}`,
+    `outputs: ${outputs}`,
+  ]
+
+  if (files) lines.push(`files: ${files}`)
+  if (result.plan.gitTag) lines.push(`tag: ${result.plan.gitTag}`)
+
+  return `${lines.join('\n')}\n`
+}
