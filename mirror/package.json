@@ -43,7 +43,7 @@
     "typecheck": "tsc -p . --noEmit",
     "test": "bun test source",
     "clean": "rm -rf .temp",
-    "clean-build": "rm -rf build library bundle",
+    "clean-build": "rm -rf build library bundle bin",
     "clean-installation": "rm -rf node_modules bun.lock",
     "_tc": "bun run typecheck",
     "_ci": "bun clean && bun clean-build && bun clean-installation",
