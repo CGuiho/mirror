@@ -5,6 +5,12 @@
 import type { MirrorConfig, MirrorExecutionResult, MirrorFormat, MirrorVersionPlan } from './types'
 import { configPathForDisplay, relativeFromCwd } from './config'
 
+export const mirrorBanner = () => {
+  const noColor = process.env['NO_COLOR'] === '1'
+  const title = noColor ? '🪞 GUIHO Mirror' : '\x1b[1;36m🪞 GUIHO Mirror\x1b[0m'
+  return `\n${title}\n\n`
+}
+
 export const reportValue = (value: unknown, format: MirrorFormat = 'text') => {
   if (format === 'json') return `${JSON.stringify(value, null, 2)}\n`
   return `${String(value)}\n`
