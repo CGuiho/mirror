@@ -7,7 +7,7 @@ name_source = "package"
 scheme = "semver"
 source = "package"
 output = ["package", "jsr", "git"]
-prerelease_id = ""
+prerelease_id = "alpha"
 
 [package]
 path = "package.json"
