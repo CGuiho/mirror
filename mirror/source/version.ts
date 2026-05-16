@@ -1,6 +1,6 @@
 import { inc, rcompare, valid as validSemver } from 'semver'
 import type { ReleaseType } from 'semver'
-import { MirrorError } from './guiho-mirror-errors'
+import { MirrorError } from './errors'
 
 export const mirrorReleaseTargets = [
   'major',
