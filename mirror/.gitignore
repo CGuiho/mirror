@@ -1,6 +1,6 @@
 
 # Environment-related
-.env
+*.env
 
 # Application-related
 **/.temp/
