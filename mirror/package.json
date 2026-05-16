@@ -41,7 +41,6 @@
     "binary": "bun build source/guiho-mirror-bin.ts --compile --outfile bin/mirror",
     "bundle": "rm -rf bundle && bun build source/guiho-mirror-bin.ts --outdir bundle --target node --sourcemap=linked",
     "typecheck": "tsc -p . --noEmit",
-    "test": "bun test source",
     "clean": "rm -rf .temp",
     "clean-build": "rm -rf build library bundle bin",
     "clean-installation": "rm -rf node_modules bun.lock",
