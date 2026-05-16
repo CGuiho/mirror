@@ -23,6 +23,7 @@ jobs:
       - run: bun test
       - run: bun run build
       - run: bun run binary
+      - run: cp ../README.md .
       - run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
