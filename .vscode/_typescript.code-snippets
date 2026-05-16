@@ -20,7 +20,7 @@
     "prefix": "-copyright-ts-elysia",
     "body": [
       "/**",
-      " * @copyright Copyright © ${CURRENT_YEAR} GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.",
+      " * @copyright Copyright (c) ${CURRENT_YEAR} GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.",
       " */",
       "",
       "import { Elysia } from 'elysia'",
@@ -39,7 +39,7 @@
     "prefix": "-copyright-ts-elysia-dependency-injection",
     "body": [
       "/**",
-      " * @copyright Copyright © ${CURRENT_YEAR} GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.",
+      " * @copyright Copyright (c) ${CURRENT_YEAR} GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.",
       " */",
       "",
       "import type { DependencyInjection } from '#guiho/app/guiho-core'",
