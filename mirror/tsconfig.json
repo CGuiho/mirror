@@ -8,7 +8,6 @@
     "target": "ESNext",
     "module": "ESNext",
     "moduleDetection": "force",
-    "jsx": "react-jsx",
     "allowJs": false,
     "resolveJsonModule": true,
 
