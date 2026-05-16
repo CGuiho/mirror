@@ -1,3 +1,7 @@
+/**
+ * @copyright Copyright (c) 2026 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
+ */
+
 import { $ } from 'bun'
 import { existsSync } from 'node:fs'
 import type { MirrorConfig, MirrorJsonObject } from './types'
