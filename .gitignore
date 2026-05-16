@@ -1,52 +1,21 @@
-#me 
-published/
-.env
-secure/
-*.env.json
-
-google-cloud-sdk
-
-.temp
-
-#me TanStack Start
-.output
-.vinxi
-build/
-
-flashpost
-
-#me
-.env.sh
-
-#me Yarn
-**/.yarn/cache/
-**/.yarn/unplugged/
-**/.yarn/build-state.yml
-**/install-state.gz
-**/.pnp.*
-
+# Dependencies
 **/node_modules/
 
-# Secrets
+# Environment
 .env
 .env.local
-.env.production.local
-.env.development.local
+.env.*.local
 
-# Frontend assets compiled code
-public/assets
+# Build outputs
+.temp
 
-# Build tools specific
+# Platform
+.DS_Store
+
+# Logs
 npm-debug.log
 yarn-error.log
 
-# Editors specific
-# .fleet
+# Editors
 # .idea
-
-# Platform specific
-.DS_Store
-
-install-state.gz
-web40/.yarn/install-state.gz
-install-state.gz
+# .fleet
