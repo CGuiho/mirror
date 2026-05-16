@@ -36,7 +36,7 @@ export const buildVersionPlan = async (target: string, options: MirrorCliOptions
   for (const path of fileOutputPaths) {
     actions.push({
       type: 'write-file',
-      adapter: path.endsWith(config.package.path) ? 'package' : 'jsr',
+      adapter: path.endsWith(config.package.path) ? 'package.json' : 'jsr.json',
       path,
       currentVersion,
       nextVersion,
@@ -87,8 +87,8 @@ export const buildVersionPlan = async (target: string, options: MirrorCliOptions
 export const resolveFileOutputPaths = (config: MirrorConfig) => {
   const paths: string[] = []
 
-  if (config.version.output.includes('package')) paths.push(resolveMirrorPath(config.cwd, config.package.path))
-  if (config.version.output.includes('jsr')) paths.push(resolveMirrorPath(config.cwd, config.jsr.path))
+  if (config.version.output.includes('package.json')) paths.push(resolveMirrorPath(config.cwd, config.package.path))
+  if (config.version.output.includes('jsr.json')) paths.push(resolveMirrorPath(config.cwd, config.jsr.path))
 
   return paths
 }
