@@ -1,8 +1,8 @@
-import type { MirrorCliOptions, MirrorExecutionResult } from './guiho-mirror-types'
-import { MirrorError } from './guiho-mirror-errors'
-import { createGitCommit, createGitTag, isGitDirty, isGitRepository, pushGitRefs, writeJsrVersion, writePackageVersion } from './guiho-mirror-adapters'
-import { loadMirrorConfig } from './guiho-mirror-config'
-import { buildVersionPlan } from './guiho-mirror-plan'
+import type { MirrorCliOptions, MirrorExecutionResult } from './types'
+import { MirrorError } from './errors'
+import { createGitCommit, createGitTag, isGitDirty, isGitRepository, pushGitRefs, writeJsrVersion, writePackageVersion } from './adapters'
+import { loadMirrorConfig } from './config'
+import { buildVersionPlan } from './plan'
 
 export const applyVersionPlan = async (target: string, options: MirrorCliOptions = {}): Promise<MirrorExecutionResult> => {
   const plan = await buildVersionPlan(target, options)
