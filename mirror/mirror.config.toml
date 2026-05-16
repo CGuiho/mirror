@@ -1,12 +1,12 @@
 schema = 1
 
 [project]
-name_source = "package"
+name_source = "package.json"
 
 [version]
 scheme = "semver"
-source = "package"
-output = ["package", "jsr", "git"]
+source = "package.json"
+output = ["package.json", "jsr.json", "git"]
 prerelease_id = "alpha"
 
 [package]
