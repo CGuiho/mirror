@@ -30,16 +30,16 @@
     "./source": "./source/guiho-mirror.ts"
   },
   "bin": {
-    "mirror": "./library/mirror.js"
+    "mirror": "./library/bin.js"
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "dev": "bun run --watch source/mirror.ts",
+    "dev": "bun run --watch source/guiho-mirror-bin.ts",
     "build": "rm -rf library && tsc -p .",
-    "binary": "bun build source/mirror.ts --compile --outfile bin/mirror",
-    "bundle": "rm -rf bundle && bun build source/mirror.ts --outdir bundle --target node --sourcemap=linked",
+    "binary": "bun build source/guiho-mirror-bin.ts --compile --outfile bin/mirror",
+    "bundle": "rm -rf bundle && bun build source/guiho-mirror-bin.ts --outdir bundle --target node --sourcemap=linked",
     "typecheck": "tsc -p . --noEmit",
     "test": "bun test source",
     "clean": "rm -rf .temp",
