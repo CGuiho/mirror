@@ -35,11 +35,11 @@ const overrideArgs = {
 
 const applyArgs = {
   ...overrideArgs,
-  'dry-run': { type: 'boolean', description: 'Build and print the plan without applying it' },
+  'dry-run': { type: 'boolean', alias: 'dy', description: 'Build and print the plan without applying it' },
   commit: { type: 'boolean', description: 'Create a release commit when file outputs changed' },
   push: { type: 'boolean', description: 'Create the release commit when needed, then push release refs' },
   'allow-dirty': { type: 'boolean', description: 'Allow release in a dirty Git worktree' },
-  yes: { type: 'boolean', description: 'Apply without interactive confirmation' },
+  yes: { type: 'boolean', alias: 'y', description: 'Apply without interactive confirmation' },
 } satisfies ArgsDef
 
 const targetArg = {
