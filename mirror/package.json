@@ -44,7 +44,12 @@
     "clean": "rm -rf .temp",
     "clean-build": "rm -rf build library bundle bin",
     "clean-installation": "rm -rf node_modules bun.lock",
-    "_tc": "bun run typecheck"
+    "_tc": "bun run typecheck",
+    "_ci": "bun clean && bun clean-build && bun clean-installation",
+    "_up": "bun _gaa && bun x taze --install --write --interactive",
+    "_upb": "bun _gaa && bun update --interactive",
+    "_uid": "bun nanoid --alphabet abcdefghijklmnopqrstuvwxyz-_0123456789",
+    "_gaa": "npx google-artifactregistry-auth"
   },
   "repository": {
     "type": "git",
