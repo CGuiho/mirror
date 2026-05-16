@@ -34,14 +34,16 @@ Mirror reads the current version from one source, calculates the next version, b
 
 ## V3 Scope
 
-Version 3 supports two project categories:
+Version 3 supports three project categories:
 
 - Bun/TypeScript package projects that keep their version in `package.json`.
+- JSR TypeScript package projects that keep their version in `jsr.json`.
 - Generic Git projects that keep their version in Git tags.
 
-Version 3 supports two adapters:
+Version 3 supports three adapters:
 
 - `package`: reads and writes `package.json`.
+- `jsr`: reads and writes `jsr.json`.
 - `git`: reads Git tags, creates Git tags, creates release commits, and pushes release refs when requested.
 
 Version 3 supports semantic versioning only.
@@ -54,9 +56,81 @@ Out of scope for v3:
 - Java/Maven/Gradle files.
 - changelog generation.
 - release notes generation.
-- registry publishing.
 - GitHub/GitLab release creation.
 - plugin systems.
+
+Registry publishing is in scope for Mirror's own release pipeline, but generic registry publishing commands are out of scope for the first v3 implementation.
+
+## Distribution Targets
+
+Mirror v3 will be published as an open source package to npm and JSR.
+
+Package identity:
+
+```text
+@guiho/mirror
+```
+
+Registries:
+
+- npm package under the `@guiho` scope: https://www.npmjs.com/~guiho
+- JSR package under the `@guiho` scope: https://jsr.io/@guiho
+
+The npm package is the primary CLI distribution because npm-compatible package managers support executable package bins.
+
+The JSR package is the primary TypeScript source distribution for users who want to import Mirror as a library from JSR-compatible tooling.
+
+Mirror's release metadata must keep these files in sync:
+
+- `package.json`
+- `jsr.json`
+- Git tags
+
+The release version must be identical across npm, JSR, and Git.
+
+## Publishing Metadata
+
+The npm package must use the scoped public package name:
+
+```json
+{
+  "name": "@guiho/mirror",
+  "publishConfig": {
+    "access": "public"
+  }
+}
+```
+
+Scoped npm packages need explicit public access when published publicly. The release path should use either `publishConfig.access = "public"` or `npm publish --access public`.
+
+The JSR package must include `jsr.json`:
+
+```json
+{
+  "name": "@guiho/mirror",
+  "version": "0.0.0",
+  "exports": "./source/guiho-mirror.ts"
+}
+```
+
+`jsr.json.version` must be updated during release just like `package.json.version`.
+
+JSR supports publishing TypeScript source directly. The v3 implementation should keep the public library entrypoint in TypeScript and avoid requiring generated `.js` and `.d.ts` files for JSR publishing.
+
+Library entrypoints must use the full library name instead of generic `index.ts` files. For Mirror v3, the public source entrypoint is `source/guiho-mirror.ts`.
+
+Recommended publish commands:
+
+```text
+npm publish --access public
+npx jsr publish
+```
+
+Recommended CI direction:
+
+- use GitHub Actions for npm publishing with provenance when configured.
+- use GitHub Actions OIDC for JSR publishing after linking the JSR package to the GitHub repository.
+- do not use local machines as the normal release path once CI publishing is configured.
 
 ## CLI Framework Decision
 
@@ -89,6 +163,7 @@ Commands:
 ```text
 mirror
 mirror init package
+mirror init jsr
 mirror init git
 mirror config show
 mirror config check
@@ -110,6 +185,17 @@ The generated config uses:
 - `package` as a version output.
 - `git` as an optional output only if the user confirms during init or edits the config later.
 - the package name from `package.json`.
+
+### `mirror init jsr`
+
+Creates `mirror.config.toml` for a JSR TypeScript package project.
+
+The generated config uses:
+
+- `jsr` as the version source.
+- `jsr` as a version output.
+- `git` as an optional output only if the user confirms during init or edits the config later.
+- the package name from `jsr.json`.
 
 ### `mirror init git`
 
@@ -138,6 +224,7 @@ Checks include:
 - source adapter is valid.
 - output adapters are valid.
 - package file exists when the package adapter is used.
+- JSR config file exists when the JSR adapter is used.
 - Git repository exists when the Git adapter is used.
 - tag template is valid.
 - project name can be resolved when the tag template needs it.
@@ -170,6 +257,7 @@ mirror version next prepatch
 mirror version next preminor
 mirror version next premajor
 mirror version next prerelease
+mirror version next prepatch --preid alpha
 mirror version next 1.2.3
 ```
 
@@ -246,9 +334,11 @@ Apply-only operational flags:
 Configuration override flags:
 
 ```text
---source package|git
---output package|git
+--source package|jsr|git
+--output package|jsr|git
 --package-file <path>
+--jsr-file <path>
+--preid <id>
 ```
 
 `--source` overrides `version.source`.
@@ -262,6 +352,10 @@ mirror version apply patch --source package --output package --output git --comm
 
 `--package-file` overrides `package.path`.
 
+`--jsr-file` overrides `jsr.path`.
+
+`--preid` overrides `version.prerelease_id`.
+
 Flag syntax must support both value forms:
 
 ```text
@@ -269,6 +363,8 @@ Flag syntax must support both value forms:
 --config=mirror.config.toml
 --source package
 --source=package
+--preid alpha
+--preid=alpha
 ```
 
 Boolean flags do not require values:
@@ -363,11 +459,38 @@ name_source = "package"
 [version]
 scheme = "semver"
 source = "package"
-output = ["package", "git"]
+output = ["package", "jsr", "git"]
 prerelease_id = ""
 
 [package]
 path = "package.json"
+
+[jsr]
+path = "jsr.json"
+
+[git]
+tag_template = "{name}@{version}"
+commit = false
+push = false
+allow_dirty = false
+```
+
+JSR package project:
+
+```toml
+schema = 1
+
+[project]
+name_source = "jsr"
+
+[version]
+scheme = "semver"
+source = "jsr"
+output = ["jsr", "git"]
+prerelease_id = ""
+
+[jsr]
+path = "jsr.json"
 
 [git]
 tag_template = "{name}@{version}"
@@ -402,8 +525,13 @@ Config rules:
 - `schema` is required.
 - `version.source` must name exactly one adapter.
 - `version.output` must contain at least one adapter.
+- `version.prerelease_id` is optional.
+- `--preid` overrides `version.prerelease_id`.
+- if no prerelease identifier is configured or passed, prerelease targets use numeric prerelease versions such as `1.0.1-0`.
+- if a prerelease identifier is configured or passed, prerelease targets use named prerelease versions such as `1.0.1-alpha.0`.
 - `project.name` provides a literal project name.
 - `project.name_source = "package"` reads the project name from `package.json`.
+- `project.name_source = "jsr"` reads the project name from `jsr.json`.
 - `git.tag_template` supports `{name}` and `{version}`.
 - a template containing `{name}` requires a resolved project name.
 - `git.push = true` implies `git.commit = true` when file outputs changed.
@@ -461,6 +589,7 @@ The rewrite should split the implementation into focused modules:
 - `config`: discovery, TOML parsing, schema validation, and merge rules.
 - `version`: semantic version validation and increment resolution.
 - `adapters/package`: package name/version reads and package version writes.
+- `adapters/jsr`: JSR package name/version reads and JSR version writes.
 - `adapters/git`: tag discovery, tag creation, commit creation, and push behavior.
 - `plan`: action plan generation.
 - `executor`: the only layer allowed to mutate files or Git state.
@@ -486,10 +615,13 @@ Required coverage:
 - config lookup for explicit config, root config, nested config, and root-over-nested precedence.
 - config schema validation.
 - config merge precedence.
-- operational flags for `--dry-run`, `--commit`, `--push`, `--allow-dirty`, and `--yes`.
+- operational and override flags for `--dry-run`, `--commit`, `--push`, `--allow-dirty`, `--yes`, `--source`, `--output`, `--package-file`, `--jsr-file`, and `--preid`.
 - package version reading.
 - package version writing in temporary fixtures.
 - package name reading.
+- JSR version reading.
+- JSR version writing in temporary fixtures.
+- JSR package name reading.
 - Git tag version reading in temporary repositories.
 - Git tag creation in temporary repositories.
 - tag templates for `v{version}` and `{name}@{version}`.
@@ -514,7 +646,6 @@ These decisions should be resolved before implementation starts:
 1. Whether `mirror version apply` should require interactive confirmation by default or only for plans that touch Git.
 2. Whether `git.commit = true` should be allowed in config, or whether committing should only be controlled by `--commit` and `--push`.
 3. Whether JSON output should be supported in v3 for all commands or only read-only commands.
-4. Whether `prerelease_id` should default to an empty prerelease identifier or a named identifier such as `alpha`.
 
 ## References
 
@@ -525,3 +656,8 @@ These decisions should be resolved before implementation starts:
 - Commander.js: https://tj.github.io/commander.js/
 - yargs: https://yargs.js.org/
 - oclif: https://oclif.io/docs/introduction/
+- npm scoped public packages: https://docs.npmjs.com/creating-and-publishing-scoped-public-packages/
+- npm package scope, access, and visibility: https://docs.npmjs.com/package-scope-access-level-and-visibility/
+- npm provenance: https://docs.npmjs.com/generating-provenance-statements
+- JSR publishing packages: https://jsr.io/docs/publishing-packages
+- JSR package configuration: https://jsr.io/docs/package-configuration
