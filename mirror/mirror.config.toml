@@ -18,5 +18,5 @@ path = "jsr.json"
 [git]
 tag_template = "{name}@{version}"
 commit = true
-push = false
+push = true
 allow_dirty = true
