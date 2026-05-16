@@ -1,4 +1,6 @@
-MIT License
+@guiho/mirror
+
+The MIT License (MIT)
 
 Copyright (c) 2026 Cristóvão GUIHO
 
