@@ -1,6 +1,6 @@
 {
   "name": "@guiho/mirror",
-  "version": "3.0.0-alpha.4",
+  "version": "3.0.0-alpha.5",
   "exports": "./source/guiho-mirror.ts",
   "publish": {
     "include": [
