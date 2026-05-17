@@ -71,6 +71,7 @@ export type MirrorCliOptions = {
   push?: boolean
   allowDirty?: boolean
   yes?: boolean
+  verbose?: boolean
 }
 
 export type MirrorConfigDiscovery = {
