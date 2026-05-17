@@ -23,6 +23,7 @@ const globalArgs = {
   cwd: { type: 'string', description: 'Run as if Mirror started in this directory' },
   format: { type: 'enum', options: ['text', 'json'], default: 'text', description: 'Output format' },
   'no-color': { type: 'boolean', description: 'Disable color output' },
+  verbose: { type: 'boolean', description: 'Show full error details and stack traces' },
 } satisfies ArgsDef
 
 const overrideArgs = {
@@ -64,6 +65,7 @@ export const createMirrorCommand = () =>
 
 export const runMirrorCli = async (rawArgs = process.argv.slice(2)) => {
   const effectiveArgs = rawArgs.length === 0 ? ['--help'] : rawArgs
+  const verbose = effectiveArgs.includes('--verbose')
   const restoreColorOutput = effectiveArgs.includes('--no-color') ? stripColorFromProcessOutput() : () => {}
 
   try {
@@ -92,17 +94,66 @@ export const runMirrorCli = async (rawArgs = process.argv.slice(2)) => {
       })
     }
 
-    await runMain(createMirrorCommand(), { rawArgs: effectiveArgs })
-  } catch (error) {
-    if (error instanceof MirrorError) {
-      console.error(error.message)
-      process.exit(error.exitCode)
+    // Intercept console.error during runMain to suppress citty's default
+    // ugly error dump (it does console.error(error, "\n") for non-CLIErrors).
+    // We capture the error object and handle it ourselves below.
+    let capturedError: unknown = undefined
+    const originalConsoleError = console.error
+    console.error = (...args: unknown[]) => {
+      // citty prints CLIError messages as strings — let those through
+      // citty prints non-CLIError errors as objects — capture those
+      if (args.length > 0 && args[0] instanceof Error) {
+        capturedError = args[0]
+        return
+      }
+      originalConsoleError(...args)
     }
 
-    throw error
+    const originalProcessExit = process.exit
+    let exitCode: number | undefined
+    process.exit = ((code?: number) => {
+      // If runMain calls process.exit(1) after an error, intercept it
+      // so we can handle the error ourselves. Let exit(0) through (--help).
+      if (code !== 0 && capturedError) {
+        exitCode = code
+        return undefined as never
+      }
+      originalProcessExit(code)
+    }) as typeof process.exit
+
+    try {
+      await runMain(createMirrorCommand(), { rawArgs: effectiveArgs })
+    } finally {
+      console.error = originalConsoleError
+      process.exit = originalProcessExit
+    }
+
+    if (capturedError) {
+      handleCliError(capturedError, verbose, exitCode)
+    }
+  } catch (error) {
+    handleCliError(error, verbose)
   } finally {
     restoreColorOutput()
   }
+}
+
+const handleCliError = (error: unknown, verbose: boolean, exitCode?: number): never => {
+  if (error instanceof MirrorError) {
+    console.error(`error: ${error.message}`)
+    if (verbose) console.error(error.stack)
+    process.exit(error.exitCode)
+  }
+
+  if (error instanceof Error) {
+    console.error(`error: ${error.message}`)
+    if (verbose) console.error(error.stack)
+  } else {
+    console.error('error: An unexpected error occurred.')
+    if (verbose) console.error(error)
+  }
+
+  process.exit(exitCode ?? 1)
 }
 
 const createInitCommand = () =>
@@ -234,6 +285,7 @@ const cliOptions = (rawArgs: string[], args: Record<string, unknown>): MirrorCli
     push: parsed.push || args['push'] === true,
     allowDirty: parsed.allowDirty || args['allowDirty'] === true,
     yes: parsed.yes || args['yes'] === true,
+    verbose: parsed.verbose || args['verbose'] === true,
   }
 }
 
