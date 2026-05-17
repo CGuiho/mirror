@@ -5,7 +5,7 @@
 import type { MirrorAdapterName, MirrorCliOptions, MirrorFormat } from './types'
 import { MirrorError } from './errors'
 
-const booleanFlags = new Set(['dry-run', 'commit', 'push', 'allow-dirty', 'yes', 'no-color', 'help', 'version'])
+const booleanFlags = new Set(['dry-run', 'commit', 'push', 'allow-dirty', 'yes', 'no-color', 'verbose', 'help', 'version'])
 const adapterNames = new Set(['package.json', 'jsr.json', 'git'])
 
 const shortFlagAliases: Record<string, string> = {
@@ -70,6 +70,7 @@ export const parseMirrorCliOptions = (rawArgs: string[]): MirrorCliOptions => {
     push: parsed['push'] === true,
     allowDirty: parsed['allowDirty'] === true,
     yes: parsed['yes'] === true,
+    verbose: parsed['verbose'] === true,
   }
 }
 
