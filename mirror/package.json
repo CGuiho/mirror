@@ -24,6 +24,7 @@
     "LICENSE.md",
     "docs.md"
   ],
+  
   "keywords": [
     "bun",
     "cli",
