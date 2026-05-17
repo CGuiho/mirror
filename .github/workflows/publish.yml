@@ -37,6 +37,7 @@ jobs:
       - run: bun run build
 
       - run: cp ../README.md .
+      - run: cp ../CHANGELOG.md .
 
       - run: npm config delete always-auth || true
 
