@@ -28,11 +28,16 @@ jobs:
           registry-url: https://registry.npmjs.org
           cache: ''
 
+      - run: npm --version
+      - run: node --version
+
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
       - run: bun test
       - run: bun run build
 
       - run: cp ../README.md .
+
+      - run: npm config delete always-auth || true
 
       - run: npm publish --access public
