@@ -40,4 +40,32 @@ jobs:
 
       - run: npm config delete always-auth || true
 
-      - run: npm publish --access public
+      - name: Publish to npm
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+
+          TAG=$(node <<'NODE'
+          const version = require("./package.json").version;
+
+          const prereleaseMatch = version.match(/^\d+\.\d+\.\d+-([^+]+)/);
+
+          if (!prereleaseMatch) {
+            console.log("latest");
+            process.exit(0);
+          }
+
+          const prerelease = prereleaseMatch[1];
+          const firstIdentifier = prerelease.split(".")[0];
+
+          if (/[A-Za-z]/.test(firstIdentifier)) {
+            console.log(firstIdentifier);
+          } else {
+            console.log("prerelease");
+          }
+          NODE
+          )
+
+          echo "Package version: $VERSION"
+          echo "Publishing with npm dist-tag: $TAG"
+
+          npm publish --access public --tag "$TAG"
