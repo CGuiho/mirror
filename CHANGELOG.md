@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.0.0-alpha.9] - 2026-05-17
+## [3.0.0] - 2026-05-17
 
 This release marks a major milestone as we prepare for the **initial open-source release** of GUIHO Mirror. We have completely overhauled the error handling experience, modernized the CI/CD publishing pipeline, and hardened the CLI commands for public usage.
 
