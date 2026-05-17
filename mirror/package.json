@@ -4,7 +4,7 @@
   "version": "3.0.0-alpha.4",
   "main": "library/guiho-mirror.js",
   "types": "library/guiho-mirror.d.ts",
-  "module": "source/guiho-mirror.ts",
+  "module": "source/guiho-mirror.js",
   "type": "module",
   "readmeFilename": "README.md",
   "keywords": [
@@ -27,7 +27,7 @@
       "types": "./library/guiho-mirror.d.ts",
       "import": "./library/guiho-mirror.js"
     },
-    "./source": "./source/guiho-mirror.ts"
+    "./source": "./source/guiho-mirror.js"
   },
   "bin": {
     "mirror": "./library/guiho-mirror-bin.js"
@@ -51,17 +51,16 @@
     "_uid": "bun nanoid --alphabet abcdefghijklmnopqrstuvwxyz-_0123456789",
     "_gaa": "npx google-artifactregistry-auth"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+ssh://git@github.com/CGuiho/mirror.git",
-    "directory": "mirror"
-  },
+"repository": {
+  "type": "git",
+  "url": "git+https://github.com/CGuiho/mirror.git",
+  "directory": "mirror"
+},
   "homepage": "https://github.com/CGuiho/mirror#readme",
   "bugs": "https://github.com/CGuiho/mirror/issues",
   "files": [
     "README.md",
     "library/",
-    "source/",
     "docs/",
     "bin/",
     "jsr.json",
