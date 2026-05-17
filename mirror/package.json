@@ -2,11 +2,28 @@
   "name": "@guiho/mirror",
   "description": "Open source project versioning for Bun, npm, JSR, and Git.",
   "version": "3.0.0-alpha.4",
-  "main": "library/guiho-mirror.js",
-  "types": "library/guiho-mirror.d.ts",
-  "module": "source/guiho-mirror.js",
   "type": "module",
-  "readmeFilename": "README.md",
+  "main": "./library/guiho-mirror.js",
+  "types": "./library/guiho-mirror.d.ts",
+  "exports": {
+    ".": {
+      "types": "./library/guiho-mirror.d.ts",
+      "import": "./library/guiho-mirror.js"
+    }
+  },
+  "bin": {
+    "mirror": "./library/guiho-mirror-bin.js"
+  },
+  "files": [
+    "README.md",
+    "library/",
+    "docs/",
+    "bin/",
+    "jsr.json",
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "docs.md"
+  ],
   "keywords": [
     "bun",
     "cli",
@@ -22,16 +39,6 @@
     "url": "https://guiho.co/cg"
   },
   "sideEffects": false,
-  "exports": {
-    ".": {
-      "types": "./library/guiho-mirror.d.ts",
-      "import": "./library/guiho-mirror.js"
-    },
-    "./source": "./source/guiho-mirror.js"
-  },
-  "bin": {
-    "mirror": "./library/guiho-mirror-bin.js"
-  },
   "publishConfig": {
     "access": "public"
   },
@@ -51,23 +58,15 @@
     "_uid": "bun nanoid --alphabet abcdefghijklmnopqrstuvwxyz-_0123456789",
     "_gaa": "npx google-artifactregistry-auth"
   },
-"repository": {
-  "type": "git",
-  "url": "git+https://github.com/CGuiho/mirror.git",
-  "directory": "mirror"
-},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CGuiho/mirror.git",
+    "directory": "mirror"
+  },
   "homepage": "https://github.com/CGuiho/mirror#readme",
-  "bugs": "https://github.com/CGuiho/mirror/issues",
-  "files": [
-    "README.md",
-    "library/",
-    "docs/",
-    "bin/",
-    "jsr.json",
-    "CHANGELOG.md",
-    "LICENSE.md",
-    "docs.md"
-  ],
+  "bugs": {
+    "url": "https://github.com/CGuiho/mirror/issues"
+  },
   "dependencies": {
     "citty": "^0.2.2",
     "semver": "^7.8.0"
