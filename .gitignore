@@ -1,21 +1,15 @@
-# Dependencies
+
+# Environment-related
+*.env
+
+# Application-related
+**/.temp/
+**/build/
+**/dist/
 **/node_modules/
 
-# Environment
-.env
-.env.local
-.env.*.local
 
-# Build outputs
-.temp
-
-# Platform
-.DS_Store
-
-# Logs
-npm-debug.log
-yarn-error.log
-
-# Editors
-# .idea
-# .fleet
+# Library-related
+**/library/
+**/bundle/
+**/bin/
