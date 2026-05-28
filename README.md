@@ -8,6 +8,8 @@ Mirror is a powerful, deterministic CLI and TypeScript library for semantic proj
 source -> version engine -> plan -> outputs
 ```
 
+Mirror runs on **Node >= 20** at runtime. Bun is the recommended development tool (build, test, typecheck). Git is required **only** for Git-based workflows (`source: "git"`, `output: ["git"]`, or commit/tag/push operations).
+
 ---
 
 ## 🚀 Quick Start
@@ -15,6 +17,8 @@ source -> version engine -> plan -> outputs
 ### Installation
 
 ```bash
+npm install -D @guiho/mirror
+# or
 bun add -d @guiho/mirror
 ```
 
@@ -62,7 +66,7 @@ Mirror uses a strict release model:
 Adapters connect Mirror to different versioning ecosystems:
 - `package.json`: Reads/writes the `version` field in a `package.json` file.
 - `jsr.json`: Reads/writes the `version` field in a `jsr.json` file.
-- `git`: Reads versions from Git tags and creates release tags/commits.
+- `git`: Reads versions from Git tags and creates release tags/commits. Requires Git to be installed and accessible in `PATH`.
 
 ### CLI Commands
 
@@ -170,7 +174,7 @@ const version = await readCurrentVersion(config)
 
 ## 🛠️ Development
 
-Development tasks require Bun and run from the `mirror/` directory:
+Development tasks require Bun and Node >= 20. Run from the `mirror/` directory:
 
 ```bash
 cd mirror
