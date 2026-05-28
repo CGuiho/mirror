@@ -2,8 +2,8 @@
  * @copyright Copyright (c) 2026 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
  */
 
-import type { MirrorAdapterName, MirrorCliOptions, MirrorFormat } from './types'
-import { MirrorError } from './errors'
+import type { MirrorAdapterName, MirrorCliOptions, MirrorFormat } from './types.js'
+import { MirrorError } from './errors.js'
 
 const booleanFlags = new Set(['dry-run', 'commit', 'push', 'allow-dirty', 'yes', 'no-color', 'verbose', 'help', 'version'])
 const adapterNames = new Set(['package.json', 'jsr.json', 'git'])
