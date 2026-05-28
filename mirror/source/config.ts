@@ -3,7 +3,9 @@
  */
 
 import { existsSync } from 'node:fs'
+import { readFile, writeFile } from 'node:fs/promises'
 import { basename, isAbsolute, join, relative, resolve } from 'node:path'
+import { parse as parseToml } from 'smol-toml'
 import type {
   MirrorAdapterName,
   MirrorCliOptions,
@@ -11,8 +13,8 @@ import type {
   MirrorConfigDiscovery,
   MirrorProjectNameSource,
   MirrorRawConfig,
-} from './types'
-import { MirrorError } from './errors'
+} from './types.js'
+import { MirrorError } from './errors.js'
 
 const adapters = new Set(['package.json', 'jsr.json', 'git'])
 const projectNameSources = new Set(['package.json', 'jsr.json'])
@@ -42,7 +44,14 @@ export const discoverMirrorConfig = async (cwd: string, explicitPath?: string): 
 export const readConfigFile = async (path: string): Promise<MirrorRawConfig> => {
   if (!existsSync(path)) throw new MirrorError(`Configuration file not found: ${path}`)
 
-  const parsed = Bun.TOML.parse(await Bun.file(path).text())
+  const content = await readFile(path, 'utf8')
+  let parsed: unknown
+  try {
+    parsed = parseToml(content)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    throw new MirrorError(`Invalid TOML in configuration file: ${path}\n${message}`)
+  }
 
   if (!isRecord(parsed)) throw new MirrorError(`Configuration file must contain a TOML object: ${path}`)
 
@@ -186,7 +195,7 @@ export const writeInitConfig = async (kind: MirrorAdapterName, cwd: string, over
 
   if (existsSync(path) && !overwrite) throw new MirrorError(`Configuration already exists: ${path}`)
 
-  await Bun.write(path, createInitConfig(kind, cwd))
+  await writeFile(path, createInitConfig(kind, cwd), 'utf8')
   return path
 }
 
