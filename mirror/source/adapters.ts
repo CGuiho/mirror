@@ -28,15 +28,22 @@ const checkGitAvailable = async () => {
   return gitExists
 }
 
-const runGit = async (cwd: string, args: string[], options?: { quiet?: boolean }) => {
+export const ensureGitAvailable = async () => {
   if (!(await checkGitAvailable())) {
     throw new MirrorError('Git executable not found. Git is required when using git as a source or output.')
+  }
+}
+
+const gitNotFoundMessage = 'Git executable not found. Git is required when using git as a source or output.'
+
+const runGit = async (cwd: string, args: string[]) => {
+  if (!(await checkGitAvailable())) {
+    throw new MirrorError(gitNotFoundMessage)
   }
   try {
     const { stdout } = await execFileAsync('git', args, { cwd })
     return stdout
   } catch (error: unknown) {
-    if (options?.quiet) return ''
     const message = error instanceof Error ? error.message : String(error)
     throw new MirrorError(`Git command failed: git ${args.join(' ')}\n${message}`)
   }
@@ -82,6 +89,7 @@ export const readCurrentVersion = async (config: MirrorConfig, projectName?: str
 }
 
 export const readGitVersion = async (config: MirrorConfig, projectName?: string) => {
+  await ensureGitAvailable()
   await ensureGitRepository(config.cwd)
 
   const tagsOutput = await runGit(config.cwd, ['-C', config.cwd, 'tag', '--list'])
@@ -144,20 +152,23 @@ export const isGitRepository = async (cwd: string) => {
 }
 
 export const isGitDirty = async (cwd: string) => {
-  const output = await runGit(cwd, ['-C', cwd, 'status', '--porcelain'], { quiet: true })
+  const output = await runGit(cwd, ['-C', cwd, 'status', '--porcelain'])
   return output.trim().length > 0
 }
 
 export const createGitCommit = async (cwd: string, paths: string[], message: string) => {
+  await ensureGitAvailable()
   for (const path of paths) await runGit(cwd, ['-C', cwd, 'add', path])
   await runGit(cwd, ['-C', cwd, 'commit', '-m', message])
 }
 
 export const createGitTag = async (cwd: string, tag: string) => {
+  await ensureGitAvailable()
   await runGit(cwd, ['-C', cwd, 'tag', tag, '-m', `Release ${tag}`])
 }
 
 export const pushGitRefs = async (cwd: string, includeCommit: boolean, includeTags: boolean) => {
+  await ensureGitAvailable()
   if (includeCommit) await runGit(cwd, ['-C', cwd, 'push'])
   if (includeTags) await runGit(cwd, ['-C', cwd, 'push', '--tags'])
 }
@@ -207,6 +218,7 @@ const ensureFile = (path: string, label: string) => {
 }
 
 const ensureGitRepository = async (cwd: string) => {
+  await ensureGitAvailable()
   if (!(await isGitRepository(cwd))) throw new MirrorError(`Not a Git repository: ${cwd}`)
 }
 
