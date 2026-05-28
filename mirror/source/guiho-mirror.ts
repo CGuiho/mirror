@@ -12,12 +12,12 @@ export type {
   MirrorVersionPlan,
   MirrorVersionPlanAction,
   MirrorVersionTarget,
-} from './types'
+} from './types.js'
 
-export { MirrorError, invariant } from './errors'
-export { parseMirrorCliOptions } from './flags'
-export { createInitConfig, discoverMirrorConfig, loadMirrorConfig, normalizeMirrorConfig, writeInitConfig } from './config'
-export { assertValidSemver, isMirrorReleaseTarget, mirrorReleaseTargets, resolveNextVersion, sortSemverDescending } from './version'
+export { MirrorError, invariant } from './errors.js'
+export { parseMirrorCliOptions } from './flags.js'
+export { createInitConfig, discoverMirrorConfig, loadMirrorConfig, normalizeMirrorConfig, writeInitConfig } from './config.js'
+export { assertValidSemver, isMirrorReleaseTarget, mirrorReleaseTargets, resolveNextVersion, sortSemverDescending } from './version.js'
 export {
   createGitCommit,
   createGitTag,
@@ -37,8 +37,8 @@ export {
   versionFromTag,
   writeJsrVersion,
   writePackageVersion,
-} from './adapters'
-export { buildVersionPlan, releaseLabel, resolveFileOutputPaths, validateMirrorConfig } from './plan'
-export { applyVersionPlan, executeVersionPlan } from './executor'
-export { mirrorBanner, reportConfig, reportConfigSchema, reportExecution, reportExecutionSummary, reportPlan, reportValue } from './reporter'
-export { createMirrorCommand, runMirrorCli } from './cli'
+} from './adapters.js'
+export { buildVersionPlan, releaseLabel, resolveFileOutputPaths, validateMirrorConfig } from './plan.js'
+export { applyVersionPlan, executeVersionPlan } from './executor.js'
+export { mirrorBanner, reportConfig, reportConfigSchema, reportExecution, reportExecutionSummary, reportPlan, reportValue } from './reporter.js'
+export { createMirrorCommand, runMirrorCli } from './cli.js'
