@@ -1,8 +1,8 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 /**
  * @copyright Copyright (c) 2026 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
  */
 
-import { runMirrorCli } from './guiho-mirror'
+import { runMirrorCli } from './guiho-mirror.js'
 
 await runMirrorCli()
