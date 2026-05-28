@@ -18,12 +18,14 @@
     "README.md",
     "library/",
     "docs/",
-    "bin/",
     "jsr.json",
     "CHANGELOG.md",
     "LICENSE.md",
     "docs.md"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "keywords": [
     "bun",
     "cli",
@@ -44,7 +46,7 @@
   },
   "scripts": {
     "dev": "bun run --watch source/guiho-mirror-bin.ts",
-    "build": "rm -rf library && tsc -p .",
+    "build": "rm -rf library && tsc -p tsconfig.build.json",
     "binary": "bun build source/guiho-mirror-bin.ts --compile --outfile bin/mirror",
     "bundle": "rm -rf bundle && bun build source/guiho-mirror-bin.ts --outdir bundle --target node --sourcemap=linked",
     "typecheck": "tsc -p . --noEmit",
@@ -69,11 +71,13 @@
   },
   "dependencies": {
     "citty": "^0.2.2",
-    "semver": "^7.8.0"
+    "semver": "^7.8.0",
+    "smol-toml": "^1.6.1"
   },
   "devDependencies": {
     "@guiho/mirror": "^3.0.0-alpha.9",
     "@types/bun": "1.3.3",
+    "@types/node": "^25.9.1",
     "@types/semver": "^7.7.1",
     "typescript": "5.8.2"
   }
