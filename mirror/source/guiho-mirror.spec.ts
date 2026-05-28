@@ -221,7 +221,7 @@ describe('Mirror v3', () => {
     await expect(buildVersionPlan('patch', { cwd })).rejects.toThrow('requires --commit or --push')
 
     const packageJson = JSON.parse(await readFile(join(cwd, 'package.json'), 'utf8')) as Record<string, unknown>
-    expect(packageJson.version).toBe('1.0.0')
+    expect(packageJson['version']).toBe('1.0.0')
   })
 
   test('fails on dirty Git worktrees unless allow-dirty is set', async () => {
@@ -489,7 +489,6 @@ const git = async (cwd: string, ...args: string[]) => {
   const exitCode = await result.exited
 
   if (exitCode !== 0) {
-    // @ts-expect-error
     throw new Error(`git ${args.join(' ')} failed: ${await result.stderr.text()}`)
   }
 }
@@ -497,11 +496,9 @@ const git = async (cwd: string, ...args: string[]) => {
 const gitText = async (cwd: string, ...args: string[]) => {
   const result = Bun.spawn(['git', ...args], { cwd, stdout: 'pipe', stderr: 'pipe' })
   const exitCode = await result.exited
-  // @ts-expect-error
   const stdout = await result.stdout.text()
 
   if (exitCode !== 0) {
-    // @ts-expect-error
     throw new Error(`git ${args.join(' ')} failed: ${await result.stderr.text()}`)
   }
 
@@ -513,7 +510,6 @@ const runMirrorCli = async (...args: string[]) => {
     stdout: 'pipe',
     stderr: 'pipe',
   })
-  // @ts-expect-error
   const [exitCode, stdout, stderr] = await Promise.all([result.exited, result.stdout.text(), result.stderr.text()])
 
   return { exitCode, stdout, stderr }
