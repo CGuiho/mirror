@@ -6,15 +6,15 @@ import { defineCommand, runMain } from 'citty'
 import type { ArgsDef } from 'citty'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { MirrorError } from './errors'
-import { readCurrentVersion, resolveProjectName } from './adapters'
-import { configPathForDisplay, discoverMirrorConfig, loadMirrorConfig, relativeFromCwd, writeInitConfig } from './config'
-import { executeVersionPlan } from './executor'
-import { parseMirrorCliOptions } from './flags'
-import { buildVersionPlan, validateMirrorConfig } from './plan'
-import { mirrorBanner, reportConfig, reportConfigSchema, reportExecution, reportExecutionSummary, reportPlan, reportValue } from './reporter'
-import type { MirrorAdapterName, MirrorCliOptions } from './types'
-import { resolveNextVersion } from './version'
+import { MirrorError } from './errors.js'
+import { readCurrentVersion, resolveProjectName } from './adapters.js'
+import { configPathForDisplay, discoverMirrorConfig, loadMirrorConfig, relativeFromCwd, writeInitConfig } from './config.js'
+import { executeVersionPlan } from './executor.js'
+import { parseMirrorCliOptions } from './flags.js'
+import { buildVersionPlan, validateMirrorConfig } from './plan.js'
+import { mirrorBanner, reportConfig, reportConfigSchema, reportExecution, reportExecutionSummary, reportPlan, reportValue } from './reporter.js'
+import type { MirrorAdapterName, MirrorCliOptions } from './types.js'
+import { resolveNextVersion } from './version.js'
 
 const mirrorVersion = readInstalledVersion()
 
@@ -94,14 +94,9 @@ export const runMirrorCli = async (rawArgs = process.argv.slice(2)) => {
       })
     }
 
-    // Intercept console.error during runMain to suppress citty's default
-    // ugly error dump (it does console.error(error, "\n") for non-CLIErrors).
-    // We capture the error object and handle it ourselves below.
     let capturedError: unknown = undefined
     const originalConsoleError = console.error
     console.error = (...args: unknown[]) => {
-      // citty prints CLIError messages as strings — let those through
-      // citty prints non-CLIError errors as objects — capture those
       if (args.length > 0 && args[0] instanceof Error) {
         capturedError = args[0]
         return
@@ -112,8 +107,6 @@ export const runMirrorCli = async (rawArgs = process.argv.slice(2)) => {
     const originalProcessExit = process.exit
     let exitCode: number | undefined
     process.exit = ((code?: number) => {
-      // If runMain calls process.exit(1) after an error, intercept it
-      // so we can handle the error ourselves. Let exit(0) through (--help).
       if (code !== 0 && capturedError) {
         exitCode = code
         return undefined as never
