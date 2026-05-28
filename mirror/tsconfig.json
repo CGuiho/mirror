@@ -1,38 +1,32 @@
 {
   "include": ["source/**/*"],
-  "exclude": ["node_modules", "build", "bundle", "library", "source/**/*.spec.ts"],
+  "exclude": ["node_modules", "build", "bundle", "library"],
 
   "compilerOptions": {
-    // Environment setup & latest features
     "lib": ["esnext"],
     "target": "ESNext",
-    "module": "ESNext",
-    "moduleDetection": "force",
-    // "jsx": "react-jsx",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "allowJs": false,
     "resolveJsonModule": true,
 
-    // Library Build
     "rootDir": "source",
     "outDir": "library",
-    
+
     "declaration": true,
     "declarationMap": true,
-    // "declarationDir": "build/types",
 
-    // Bundler mode
-    "moduleResolution": "bundler",
     "verbatimModuleSyntax": true,
 
-    // Best practices
     "strict": true,
     "skipLibCheck": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
 
-    // Some stricter flags (disabled by default)
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noPropertyAccessFromIndexSignature": true
+    "noPropertyAccessFromIndexSignature": true,
+
+    "types": ["bun", "node"]
   }
 }
