@@ -374,6 +374,28 @@ describe('Mirror v3', () => {
 
     await expect(validateMirrorConfig({ cwd })).rejects.toThrow(/Not a Git repository/)
   })
+
+  test('Git flows fail with "Git executable not found" when Git binary is unavailable', async () => {
+    const cwd = await createPackageAndJsrFixture()
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['git'], tagTemplate: 'v{version}' }))
+
+    const originalPath = process.env['Path'] ?? process.env['PATH'] ?? ''
+    const allEntries = originalPath.split(';')
+    const bunEntries = allEntries.filter((p) => p.toLowerCase().includes('bun'))
+    const systemEntries = ['C:\\Windows\\System32', 'C:\\Windows']
+    const minimalPath = [...bunEntries, ...systemEntries].filter(Boolean).join(';')
+
+    const result = await runMirrorCliWithEnv(
+      { ...process.env, Path: minimalPath, PATH: minimalPath },
+      'config',
+      'check',
+      '--cwd',
+      cwd,
+    )
+
+    expect(result.exitCode).not.toBe(0)
+    expect(result.stderr).toMatch(/Git executable not found/)
+  })
 })
 
 const createTempDir = async () => {
@@ -509,6 +531,17 @@ const runMirrorCli = async (...args: string[]) => {
   const result = Bun.spawn(['bun', join(import.meta.dir, 'guiho-mirror-bin.ts'), ...args], {
     stdout: 'pipe',
     stderr: 'pipe',
+  })
+  const [exitCode, stdout, stderr] = await Promise.all([result.exited, result.stdout.text(), result.stderr.text()])
+
+  return { exitCode, stdout, stderr }
+}
+
+const runMirrorCliWithEnv = async (env: Record<string, string | undefined>, ...args: string[]) => {
+  const result = Bun.spawn(['bun', join(import.meta.dir, 'guiho-mirror-bin.ts'), ...args], {
+    stdout: 'pipe',
+    stderr: 'pipe',
+    env,
   })
   const [exitCode, stdout, stderr] = await Promise.all([result.exited, result.stdout.text(), result.stderr.text()])
 
