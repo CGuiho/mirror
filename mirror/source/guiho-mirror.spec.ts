@@ -4,8 +4,8 @@
 
 import { afterEach, describe, expect, test } from 'bun:test'
 import { mkdir, mkdtemp, rm, readFile, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { platform, tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
 import {
   applyVersionPlan,
   buildVersionPlan,
@@ -379,19 +379,26 @@ describe('Mirror v3', () => {
     const cwd = await createPackageAndJsrFixture()
     await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['git'], tagTemplate: 'v{version}' }))
 
-    const originalPath = process.env['Path'] ?? process.env['PATH'] ?? ''
-    const allEntries = originalPath.split(';')
-    const bunEntries = allEntries.filter((p) => p.toLowerCase().includes('bun'))
-    const systemEntries = ['C:\\Windows\\System32', 'C:\\Windows']
-    const minimalPath = [...bunEntries, ...systemEntries].filter(Boolean).join(';')
+    const plat = platform()
+    let minimalPath: string
 
-    const result = await runMirrorCliWithEnv(
-      { ...process.env, Path: minimalPath, PATH: minimalPath },
-      'config',
-      'check',
-      '--cwd',
-      cwd,
-    )
+    if (plat === 'win32') {
+      const originalPath = process.env['Path'] ?? process.env['PATH'] ?? ''
+      const allEntries = originalPath.split(';')
+      const bunEntries = allEntries.filter((p) => p.toLowerCase().includes('bun'))
+      const systemEntries = ['C:\\Windows\\System32', 'C:\\Windows']
+      minimalPath = [...bunEntries, ...systemEntries].filter(Boolean).join(';')
+    } else {
+      const bunBin = Bun.which('bun')
+      minimalPath = bunBin ? dirname(bunBin) : ''
+    }
+
+    const envKey = plat === 'win32' ? 'Path' : 'PATH'
+    const env: Record<string, string> = { ...process.env as Record<string, string> }
+    env[envKey] = minimalPath
+    if (plat === 'win32') env['PATH'] = minimalPath
+
+    const result = await runMirrorCliWithEnv(env, 'config', 'check', '--cwd', cwd)
 
     expect(result.exitCode).not.toBe(0)
     expect(result.stderr).toMatch(/Git executable not found/)
