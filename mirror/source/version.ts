@@ -4,7 +4,7 @@
 
 import { inc, rcompare, valid as validSemver } from 'semver'
 import type { ReleaseType } from 'semver'
-import { MirrorError } from './errors'
+import { MirrorError } from './errors.js'
 
 export const mirrorReleaseTargets = [
   'major',
