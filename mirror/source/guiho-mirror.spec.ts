@@ -3,7 +3,7 @@
  */
 
 import { afterEach, describe, expect, test } from 'bun:test'
-import { mkdir, mkdtemp, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -21,7 +21,7 @@ import {
   versionFromTag,
   writeJsrVersion,
   writePackageVersion,
-} from './guiho-mirror'
+} from './guiho-mirror.js'
 
 const temporaryDirectories: string[] = []
 
@@ -220,7 +220,7 @@ describe('Mirror v3', () => {
 
     await expect(buildVersionPlan('patch', { cwd })).rejects.toThrow('requires --commit or --push')
 
-    const packageJson = await Bun.file(join(cwd, 'package.json')).json()
+    const packageJson = JSON.parse(await readFile(join(cwd, 'package.json'), 'utf8')) as Record<string, unknown>
     expect(packageJson.version).toBe('1.0.0')
   })
 
@@ -355,6 +355,25 @@ describe('Mirror v3', () => {
     expect(result.stdout).toContain('output: package.json, jsr.json')
     expect(result.stdout).toContain('next: 1.0.1')
   })
+
+  test('package-only and JSR-only flows work without Git installed', async () => {
+    const cwd = await createPackageAndJsrFixture()
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json', 'jsr.json'] }))
+
+    const plan = await buildVersionPlan('patch', { cwd })
+    expect(plan.currentVersion).toBe('1.0.0')
+    expect(plan.nextVersion).toBe('1.0.1')
+
+    const result = await applyVersionPlan('patch', { cwd, yes: true })
+    expect(result.applied).toBe(true)
+  })
+
+  test('Git flows fail with clear error when Git is unavailable', async () => {
+    const cwd = await createPackageAndJsrFixture()
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['git'], tagTemplate: 'v{version}' }))
+
+    await expect(validateMirrorConfig({ cwd })).rejects.toThrow(/Not a Git repository/)
+  })
 })
 
 const createTempDir = async () => {
@@ -404,7 +423,7 @@ const commitAll = async (cwd: string, message: string) => {
 }
 
 const writeText = async (path: string, content: string) => {
-  await Bun.write(path, content)
+  await writeFile(path, content, 'utf8')
 }
 
 const writeJson = async (path: string, object: Record<string, unknown>) => {
