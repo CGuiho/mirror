@@ -3,11 +3,11 @@
  */
 
 import { relative } from 'node:path'
-import type { MirrorCliOptions, MirrorConfig, MirrorVersionPlan, MirrorVersionPlanAction } from './types'
-import { MirrorError } from './errors'
-import { loadMirrorConfig, relativeFromCwd, resolveMirrorPath } from './config'
-import { ensureAdapterFiles, readCurrentVersion, renderGitTag, resolveProjectName } from './adapters'
-import { resolveNextVersion } from './version'
+import type { MirrorCliOptions, MirrorConfig, MirrorVersionPlan, MirrorVersionPlanAction } from './types.js'
+import { MirrorError } from './errors.js'
+import { loadMirrorConfig, relativeFromCwd, resolveMirrorPath } from './config.js'
+import { ensureAdapterFiles, readCurrentVersion, renderGitTag, resolveProjectName } from './adapters.js'
+import { resolveNextVersion } from './version.js'
 
 export const validateMirrorConfig = async (options: MirrorCliOptions = {}): Promise<MirrorConfig> => {
   const config = await loadMirrorConfig(options)
