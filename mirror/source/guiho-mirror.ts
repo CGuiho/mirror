@@ -22,6 +22,7 @@ export {
   createGitCommit,
   createGitTag,
   ensureAdapterFiles,
+  ensureGitAvailable,
   assertSupportedGitTagTemplate,
   isGitDirty,
   isGitRepository,
