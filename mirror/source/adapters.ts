@@ -2,12 +2,45 @@
  * @copyright Copyright (c) 2026 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
  */
 
-import { $ } from 'bun'
+import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import type { MirrorConfig, MirrorJsonObject } from './types'
-import { MirrorError } from './errors'
-import { assertValidSemver, sortSemverDescending } from './version'
-import { resolveMirrorPath } from './config'
+import { readFile, writeFile } from 'node:fs/promises'
+import { promisify } from 'node:util'
+import type { MirrorConfig, MirrorJsonObject } from './types.js'
+import { MirrorError } from './errors.js'
+import { assertValidSemver, sortSemverDescending } from './version.js'
+import { resolveMirrorPath } from './config.js'
+
+const execFileAsync = promisify(execFile)
+
+let gitChecked = false
+let gitExists = false
+
+const checkGitAvailable = async () => {
+  if (gitChecked) return gitExists
+  gitChecked = true
+  try {
+    await execFileAsync('git', ['--version'])
+    gitExists = true
+  } catch {
+    gitExists = false
+  }
+  return gitExists
+}
+
+const runGit = async (cwd: string, args: string[], options?: { quiet?: boolean }) => {
+  if (!(await checkGitAvailable())) {
+    throw new MirrorError('Git executable not found. Git is required when using git as a source or output.')
+  }
+  try {
+    const { stdout } = await execFileAsync('git', args, { cwd })
+    return stdout
+  } catch (error: unknown) {
+    if (options?.quiet) return ''
+    const message = error instanceof Error ? error.message : String(error)
+    throw new MirrorError(`Git command failed: git ${args.join(' ')}\n${message}`)
+  }
+}
 
 export const supportedGitTagTemplates = ['v{version}', '{name}@{version}', '{name}/v{version}'] as const
 
@@ -15,7 +48,7 @@ export const readPackageJson = async (path: string): Promise<MirrorJsonObject> =
 export const readJsrJson = async (path: string): Promise<MirrorJsonObject> => readJsonObject(path, 'jsr.json')
 
 export const writeJsonObject = async (path: string, object: MirrorJsonObject) => {
-  await Bun.write(path, `${JSON.stringify(object, null, 2)}\n`)
+  await writeFile(path, `${JSON.stringify(object, null, 2)}\n`, 'utf8')
 }
 
 export const readPackageVersion = async (config: MirrorConfig) => readVersionField(resolveMirrorPath(config.cwd, config.package.path), 'package.json')
@@ -51,7 +84,7 @@ export const readCurrentVersion = async (config: MirrorConfig, projectName?: str
 export const readGitVersion = async (config: MirrorConfig, projectName?: string) => {
   await ensureGitRepository(config.cwd)
 
-  const tagsOutput = await $`git -C ${config.cwd} tag --list`.text()
+  const tagsOutput = await runGit(config.cwd, ['-C', config.cwd, 'tag', '--list'])
   const versions = tagsOutput
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -101,8 +134,9 @@ export const assertSupportedGitTagTemplate = (template: string) => {
 }
 
 export const isGitRepository = async (cwd: string) => {
+  if (!(await checkGitAvailable())) return false
   try {
-    await $`git -C ${cwd} rev-parse --is-inside-work-tree`.quiet()
+    await execFileAsync('git', ['-C', cwd, 'rev-parse', '--is-inside-work-tree'])
     return true
   } catch {
     return false
@@ -110,27 +144,33 @@ export const isGitRepository = async (cwd: string) => {
 }
 
 export const isGitDirty = async (cwd: string) => {
-  const output = await $`git -C ${cwd} status --porcelain`.quiet().text()
+  const output = await runGit(cwd, ['-C', cwd, 'status', '--porcelain'], { quiet: true })
   return output.trim().length > 0
 }
 
 export const createGitCommit = async (cwd: string, paths: string[], message: string) => {
-  for (const path of paths) await $`git -C ${cwd} add ${path}`.quiet()
-  await $`git -C ${cwd} commit -m ${message}`.quiet()
+  for (const path of paths) await runGit(cwd, ['-C', cwd, 'add', path])
+  await runGit(cwd, ['-C', cwd, 'commit', '-m', message])
 }
 
 export const createGitTag = async (cwd: string, tag: string) => {
-  await $`git -C ${cwd} tag ${tag} -m ${`Release ${tag}`}`.quiet()
+  await runGit(cwd, ['-C', cwd, 'tag', tag, '-m', `Release ${tag}`])
 }
 
 export const pushGitRefs = async (cwd: string, includeCommit: boolean, includeTags: boolean) => {
-  if (includeCommit) await $`git -C ${cwd} push`.quiet()
-  if (includeTags) await $`git -C ${cwd} push --tags`.quiet()
+  if (includeCommit) await runGit(cwd, ['-C', cwd, 'push'])
+  if (includeTags) await runGit(cwd, ['-C', cwd, 'push', '--tags'])
 }
 
 const readJsonObject = async (path: string, label: string): Promise<MirrorJsonObject> => {
   ensureFile(path, label)
-  const json = await Bun.file(path).json()
+  const content = await readFile(path, 'utf8')
+  let json: unknown
+  try {
+    json = JSON.parse(content)
+  } catch {
+    throw new MirrorError(`${label} must contain valid JSON: ${path}`)
+  }
 
   if (typeof json !== 'object' || json === null || Array.isArray(json)) throw new MirrorError(`${label} must contain a JSON object: ${path}`)
 
