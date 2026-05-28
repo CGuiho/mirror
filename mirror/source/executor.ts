@@ -2,11 +2,11 @@
  * @copyright Copyright (c) 2026 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
  */
 
-import type { MirrorCliOptions, MirrorExecutionResult } from './types'
-import { MirrorError } from './errors'
-import { createGitCommit, createGitTag, isGitDirty, isGitRepository, pushGitRefs, writeJsrVersion, writePackageVersion } from './adapters'
-import { loadMirrorConfig } from './config'
-import { buildVersionPlan } from './plan'
+import type { MirrorCliOptions, MirrorExecutionResult } from './types.js'
+import { MirrorError } from './errors.js'
+import { createGitCommit, createGitTag, isGitDirty, isGitRepository, pushGitRefs, writeJsrVersion, writePackageVersion } from './adapters.js'
+import { loadMirrorConfig } from './config.js'
+import { buildVersionPlan } from './plan.js'
 
 export const applyVersionPlan = async (target: string, options: MirrorCliOptions = {}): Promise<MirrorExecutionResult> => {
   const plan = await buildVersionPlan(target, options)
