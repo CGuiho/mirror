@@ -23,9 +23,6 @@
     "LICENSE.md",
     "docs.md"
   ],
-  "engines": {
-    "node": ">=20"
-  },
   "keywords": [
     "bun",
     "cli",
