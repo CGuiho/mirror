@@ -90,6 +90,7 @@ export const normalizeMirrorConfig = (
   const gitPush = optionalBoolean(raw.git?.push, 'git.push') === true
   const gitAllowDirty = optionalBoolean(raw.git?.allow_dirty, 'git.allow_dirty') === true
   const writeChangelog = optionalBoolean(raw.agents?.write_changelog, 'agents.write_changelog') !== false
+  const changelogPath = optionalString(raw.agents?.changelog_path, 'agents.changelog_path') ?? 'CHANGELOG.md'
   const autoAgentsMd = optionalBoolean(raw.agents?.auto_agents_md, 'agents.auto_agents_md') !== false
   const autoSkillInstall = optionalBoolean(raw.agents?.auto_skill_install, 'agents.auto_skill_install') !== false
 
@@ -121,6 +122,7 @@ export const normalizeMirrorConfig = (
     },
     agents: {
       writeChangelog,
+      changelogPath,
       autoAgentsMd,
       autoSkillInstall,
     },
@@ -156,6 +158,7 @@ allow_dirty = false
 
 [agents]
 write_changelog = true
+changelog_path = "CHANGELOG.md"
 auto_agents_md = true
 auto_skill_install = true
 `
@@ -184,6 +187,7 @@ allow_dirty = false
 
 [agents]
 write_changelog = true
+changelog_path = "CHANGELOG.md"
 auto_agents_md = true
 auto_skill_install = true
 `
@@ -208,6 +212,7 @@ allow_dirty = false
 
 [agents]
 write_changelog = true
+changelog_path = "CHANGELOG.md"
 auto_agents_md = true
 auto_skill_install = true
 `
