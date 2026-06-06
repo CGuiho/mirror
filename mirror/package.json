@@ -22,7 +22,7 @@
     "jsr.json",
     "CHANGELOG.md",
     "LICENSE.md",
-    "docs.md"
+    "DOCS.md"
   ],
   "keywords": [
     "bun",
