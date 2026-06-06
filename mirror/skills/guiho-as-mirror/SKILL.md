@@ -67,7 +67,8 @@ When the user asks to bump, release, tag, or version a project, follow this sequ
 
 8. Update the changelog if present and enabled.
    - If `[agents].write_changelog = false`, skip changelog edits even when `CHANGELOG.md` exists.
-   - If changelog writing is enabled or absent, and the project has `CHANGELOG.md` or an equivalent changelog, add an entry headed by the planned `nextVersion`.
+   - If changelog writing is enabled or absent, use the changelog file path specified by the project instructions or release configuration; if no path is specified, use `CHANGELOG.md` in the project root.
+   - Add an entry headed by the planned `nextVersion`.
    - Summarize the actual release changes; do not invent changes that are not in the repository history or current diff.
 
 9. Commit release-preparation changes before applying the bump.
