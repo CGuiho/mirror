@@ -147,7 +147,7 @@ auto_skill_install = true
 
 Supported version sources and outputs are `package.json`, `jsr.json`, and `git`. Supported Git tag templates are `v{version}`, `{name}@{version}`, and `{name}/v{version}`.
 
-Agent automation options default to true. Set `write_changelog = false` to tell agents to skip changelog edits, `changelog_path = "docs/CHANGELOG.md"` to specify the changelog file, `auto_agents_md = false` to stop Mirror from inserting its AGENTS.md section, and `auto_skill_install = false` to stop Mirror from installing `guiho-as-mirror` when missing.
+Agent automation options default to true. Set `write_changelog = false` to tell agents to skip changelog edits, `changelog_path = "docs/CHANGELOG.md"` to specify the changelog file, `auto_agents_md = false` to stop Mirror from inserting its AGENTS.md section, and `auto_skill_install = false` to stop Mirror from installing `guiho-as-mirror` globally when missing.
 
 ## CLI Reference
 

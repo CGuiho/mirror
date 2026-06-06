@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.1] - 2026-06-07
+
+### Changed
+
+- Changed Mirror skill installation paths to the standard `.agents/skills` and `~/.agents/skills` directories.
+- Changed automatic skill installation to global-only by default while keeping explicit local installation available through `mirror agents install local`.
+- Updated documentation, schema text, and tests to describe the standard agent skill directories.
+
 ## [3.1.0] - 2026-06-07
 
 ### Added

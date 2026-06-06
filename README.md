@@ -86,8 +86,8 @@ Validates and inspects configuration.
 
 #### `mirror agents`
 Installs Mirror-aware agent guidance for projects that use AI coding agents.
-- `mirror agents install local`: Installs the bundled `guiho-as-mirror` skill at `.opencode/skills/guiho-as-mirror/SKILL.md`.
-- `mirror agents install global`: Installs the bundled `guiho-as-mirror` skill at `~/.config/opencode/skills/guiho-as-mirror/SKILL.md`.
+- `mirror agents install local`: Installs the bundled `guiho-as-mirror` skill at `.agents/skills/guiho-as-mirror/SKILL.md`.
+- `mirror agents install global`: Installs the bundled `guiho-as-mirror` skill at `~/.agents/skills/guiho-as-mirror/SKILL.md`.
 - `mirror agents instructions`: Creates or updates `AGENTS.md` with the GUIHO Mirror semantic versioning section.
 
 #### `mirror version`
@@ -132,14 +132,14 @@ allow_dirty = false                    # Optional. Allow dirty Git worktree. Def
 write_changelog = true                 # Optional. Tell agents changelog edits are allowed. Default: true.
 changelog_path = "CHANGELOG.md"         # Optional. Changelog file path for agents. Default: "CHANGELOG.md".
 auto_agents_md = true                  # Optional. Insert Mirror guidance into AGENTS.md when present. Default: true.
-auto_skill_install = true              # Optional. Install guiho-as-mirror when missing. Default: true.
+auto_skill_install = true              # Optional. Install guiho-as-mirror globally when missing. Default: true.
 ```
 
 ### Agent Automation
 
 Mirror is designed to be safely used by AI agents. Project commands automatically check for `AGENTS.md` and the `guiho-as-mirror` skill, then add the Mirror guidance or install the missing skill when automation is enabled.
 
-Set `write_changelog = false` when agents should skip changelog edits during release preparation. Set `changelog_path = "docs/CHANGELOG.md"` when the changelog is not at the project root. Set `auto_agents_md = false` or `auto_skill_install = false` to opt out of automatic guidance insertion or skill installation.
+Set `write_changelog = false` when agents should skip changelog edits during release preparation. Set `changelog_path = "docs/CHANGELOG.md"` when the changelog is not at the project root. Set `auto_agents_md = false` to opt out of automatic guidance insertion, or `auto_skill_install = false` to opt out of automatic global skill installation.
 
 ### Safety & Git Automation
 

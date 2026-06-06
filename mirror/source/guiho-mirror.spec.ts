@@ -226,6 +226,8 @@ describe('Mirror v3', () => {
     expect(localAgain.installed).toBe(false)
     expect(local.path).toBe(resolveMirrorSkillPath('local', { cwd, homeDirectory }))
     expect(global.path).toBe(resolveMirrorSkillPath('global', { cwd, homeDirectory }))
+    expect(local.path).toBe(join(cwd, '.agents', 'skills', 'guiho-as-mirror', 'SKILL.md'))
+    expect(global.path).toBe(join(homeDirectory, '.agents', 'skills', 'guiho-as-mirror', 'SKILL.md'))
     expect(await readFile(local.path, 'utf8')).toContain('name: guiho-as-mirror')
     expect(await readFile(global.path, 'utf8')).toContain('name: guiho-as-mirror')
   })
@@ -262,11 +264,11 @@ describe('Mirror v3', () => {
     const result = await runMirrorAgentAutomation({ cwd, homeDirectory }, (message) => notices.push(message))
 
     expect(result.agentsMd?.changed).toBe(true)
-    expect(result.localSkill?.installed).toBe(true)
     expect(result.globalSkill?.installed).toBe(true)
-    expect(notices).toHaveLength(2)
+    expect(result.localSkill).toBeUndefined()
+    expect(notices).toHaveLength(1)
     expect(await readFile(join(cwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
-    expect(existsSync(resolveMirrorSkillPath('local', { cwd, homeDirectory }))).toBe(true)
+    expect(existsSync(resolveMirrorSkillPath('local', { cwd, homeDirectory }))).toBe(false)
     expect(existsSync(resolveMirrorSkillPath('global', { cwd, homeDirectory }))).toBe(true)
 
     const disabledCwd = await createPackageAndJsrFixture()

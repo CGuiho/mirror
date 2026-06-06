@@ -88,7 +88,7 @@ export const reportConfigSchema = (format: MirrorFormat = 'text') => {
     '  write_changelog = true | false            Optional. Tell agents to write changelog entries. Default: true.',
     '  changelog_path = "<path>"                 Optional. Changelog file path for agents. Default: "CHANGELOG.md".',
     '  auto_agents_md = true | false             Optional. Insert Mirror guidance into AGENTS.md when present. Default: true.',
-    '  auto_skill_install = true | false         Optional. Install guiho-as-mirror when missing. Default: true.',
+    '  auto_skill_install = true | false         Optional. Install guiho-as-mirror globally when missing. Default: true.',
     '',
   ].join('\n')
 }

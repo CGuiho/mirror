@@ -50,9 +50,9 @@ type MirrorAgentAutomationOptions = MirrorCliOptions & {
 }
 
 export const resolveMirrorSkillPath = (scope: MirrorSkillInstallScope, options: MirrorSkillPathOptions = {}) => {
-  if (scope === 'local') return resolve(options.cwd ?? process.cwd(), '.opencode', 'skills', mirrorSkillName, 'SKILL.md')
+  if (scope === 'local') return resolve(options.cwd ?? process.cwd(), '.agents', 'skills', mirrorSkillName, 'SKILL.md')
 
-  return resolve(resolveMirrorAgentHome(options.homeDirectory), '.config', 'opencode', 'skills', mirrorSkillName, 'SKILL.md')
+  return resolve(resolveMirrorAgentHome(options.homeDirectory), '.agents', 'skills', mirrorSkillName, 'SKILL.md')
 }
 
 export const isMirrorSkillInstalled = (scope: MirrorSkillInstallScope, options: MirrorSkillPathOptions = {}) =>
@@ -137,14 +137,12 @@ export const runMirrorAgentAutomation = async (
   if (settings.autoAgentsMd) result.agentsMd = await ensureMirrorAgentsInstructions(cwd, false)
 
   if (settings.autoSkillInstall) {
-    for (const scope of ['local', 'global'] as const) {
-      if (isMirrorSkillInstalled(scope, { cwd, homeDirectory: options.homeDirectory })) continue
+    const scope = 'global'
 
+    if (!isMirrorSkillInstalled(scope, { cwd, homeDirectory: options.homeDirectory })) {
       const path = resolveMirrorSkillPath(scope, { cwd, homeDirectory: options.homeDirectory })
       notify(`notice: ${mirrorSkillName} skill not found ${scope}; Mirror is installing it at ${path}`)
-      const installed = await installMirrorSkill(scope, { cwd, homeDirectory: options.homeDirectory, overwrite: false })
-      if (scope === 'local') result.localSkill = installed
-      if (scope === 'global') result.globalSkill = installed
+      result.globalSkill = await installMirrorSkill(scope, { cwd, homeDirectory: options.homeDirectory, overwrite: false })
     }
   }
 
@@ -228,7 +226,7 @@ const embeddedMirrorSkillContent = [
   '',
   'Common configuration keys: `[version].source`, `[version].output`, `[version].prerelease_id`, `[git].tag_template`, `[git].commit`, `[git].push`, `[git].allow_dirty`, `[agents].write_changelog`, `[agents].changelog_path`, `[agents].auto_agents_md`, and `[agents].auto_skill_install`.',
   '',
-  'Agent automation options default to true. Set `write_changelog = false` to tell agents to skip changelog edits, `changelog_path = "docs/CHANGELOG.md"` to specify the changelog file, `auto_agents_md = false` to stop Mirror from inserting its AGENTS.md section, and `auto_skill_install = false` to stop Mirror from installing `guiho-as-mirror` when missing.',
+  'Agent automation options default to true. Set `write_changelog = false` to tell agents to skip changelog edits, `changelog_path = "docs/CHANGELOG.md"` to specify the changelog file, `auto_agents_md = false` to stop Mirror from inserting its AGENTS.md section, and `auto_skill_install = false` to stop Mirror from installing `guiho-as-mirror` globally when missing.',
   '',
   '## CLI Reference',
   '',

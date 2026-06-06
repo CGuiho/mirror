@@ -194,11 +194,13 @@ mirror agents install global
 mirror agents instructions
 ```
 
-- `install local`: Writes `.opencode/skills/guiho-as-mirror/SKILL.md` in the project.
-- `install global`: Writes `~/.config/opencode/skills/guiho-as-mirror/SKILL.md`.
+- `install local`: Writes `.agents/skills/guiho-as-mirror/SKILL.md` in the project.
+- `install global`: Writes `~/.agents/skills/guiho-as-mirror/SKILL.md`.
 - `instructions`: Creates or updates `AGENTS.md` with the GUIHO Mirror semantic versioning section.
 
 Global skill installation uses the user home directory. Tests and automation can override that home root with `MIRROR_AGENT_HOME`.
+
+Automatic skill installation is global-only by default. Use `mirror agents install local` when a project-local `.agents/skills/guiho-as-mirror/SKILL.md` copy is intentionally needed.
 
 ### `mirror version`
 
@@ -304,24 +306,29 @@ Agent settings tell AI coding agents how to prepare release documentation and wh
 - `write_changelog`: Optional. Tell agents whether changelog edits are allowed. Default: `true`.
 - `changelog_path`: Optional. Changelog file path for agents. Default: `CHANGELOG.md`.
 - `auto_agents_md`: Optional. Insert Mirror guidance into `AGENTS.md` when present. Default: `true`.
-- `auto_skill_install`: Optional. Install `guiho-as-mirror` when missing. Default: `true`.
+- `auto_skill_install`: Optional. Install `guiho-as-mirror` globally when missing. Default: `true`.
 
 Set `write_changelog = false` when agents must skip changelog edits, even if a changelog exists. Set `changelog_path` when the changelog is not at the project root or when a package inside a monorepo writes release notes elsewhere.
 
+Mirror uses standard agent skill directories:
+
+- Local: `.agents/skills/<skill-name>/SKILL.md`
+- Global: `~/.agents/skills/<skill-name>/SKILL.md`
+
 ## Agent Automation
 
-Mirror can self-provision AI-agent instructions for projects that use opencode-compatible skills.
+Mirror can self-provision AI-agent instructions for projects that use standard agent skill directories.
 
-When automation is enabled, project commands check for `AGENTS.md` and for local/global `guiho-as-mirror` skill installation. If guidance is missing, Mirror notifies the user and writes the missing skill or AGENTS section.
+When automation is enabled, project commands check for `AGENTS.md` and for global `guiho-as-mirror` skill installation. If guidance is missing, Mirror notifies the user and writes the missing global skill or AGENTS section. Mirror does not automatically write a local skill file; local installation is explicit.
 
 Automation is controlled by `[agents]`.
 
 - Disable AGENTS.md insertion with `auto_agents_md = false`.
-- Disable local/global skill installation with `auto_skill_install = false`.
+- Disable automatic global skill installation with `auto_skill_install = false`.
 - Disable changelog edits by agents with `write_changelog = false`.
 - Direct agents to the correct changelog with `changelog_path = "path/to/CHANGELOG.md"`.
 
-The generated AGENTS section instructs agents to invoke `guiho-as-mirror` for versioning work, inspect `mirror.config.toml`, respect `write_changelog`, and use `changelog_path` for changelog edits.
+The generated AGENTS section instructs agents to invoke `guiho-as-mirror` for versioning work, inspect `mirror.config.toml`, respect `write_changelog`, and use `changelog_path` for changelog edits. Use `mirror agents install local` only when a project-local skill copy is desired explicitly.
 
 ## Release Safety Rules
 
