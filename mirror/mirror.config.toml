@@ -20,3 +20,8 @@ tag_template = "{name}@{version}"
 commit = true
 push = true
 allow_dirty = true
+
+[agents]
+write_changelog = true
+auto_agents_md = true
+auto_skill_install = true
