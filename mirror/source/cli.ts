@@ -6,13 +6,24 @@ import { defineCommand, runMain } from 'citty'
 import type { ArgsDef } from 'citty'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { ensureMirrorAgentsInstructions, installMirrorSkill, runMirrorAgentAutomation } from './agents.js'
 import { MirrorError } from './errors.js'
 import { readCurrentVersion, resolveProjectName } from './adapters.js'
 import { configPathForDisplay, discoverMirrorConfig, loadMirrorConfig, relativeFromCwd, writeInitConfig } from './config.js'
 import { executeVersionPlan } from './executor.js'
 import { parseMirrorCliOptions } from './flags.js'
 import { buildVersionPlan, validateMirrorConfig } from './plan.js'
-import { mirrorBanner, reportConfig, reportConfigSchema, reportExecution, reportExecutionSummary, reportPlan, reportValue } from './reporter.js'
+import {
+  mirrorBanner,
+  reportAgentsInstructions,
+  reportConfig,
+  reportConfigSchema,
+  reportExecution,
+  reportExecutionSummary,
+  reportPlan,
+  reportSkillInstall,
+  reportValue,
+} from './reporter.js'
 import type { MirrorAdapterName, MirrorCliOptions } from './types.js'
 import { resolveNextVersion } from './version.js'
 
@@ -59,6 +70,7 @@ export const createMirrorCommand = () =>
     subCommands: {
       init: createInitCommand(),
       config: createConfigCommand(),
+      agents: createAgentsCommand(),
       version: createVersionCommand(),
     },
   })
@@ -88,6 +100,8 @@ export const runMirrorCli = async (rawArgs = process.argv.slice(2)) => {
           '  mirror version plan patch              # Preview a patch release plan',
           '  mirror version apply minor --commit    # Apply a minor release with commit',
           '  mirror version plan patch --output=package.json,jsr.json,git  # Plan with package, jsr, and git',
+          '  mirror agents install local            # Install guiho-as-mirror in this project',
+          '  mirror agents instructions             # Insert Mirror guidance into AGENTS.md',
           '  mirror config schema                   # Print the configuration file reference',
           '',
         ].join('\n') + '\n')
@@ -182,6 +196,7 @@ const createConfigCommand = () =>
         args: overrideArgs,
         async run(context) {
           const options = cliOptions(context.rawArgs, context.args)
+          await prepareAgents(options)
           const config = await loadMirrorConfig(options)
           if (options.format !== 'json') process.stdout.write(mirrorBanner(configPathForDisplay(config)))
           process.stdout.write(reportConfig(config, options.format))
@@ -192,6 +207,7 @@ const createConfigCommand = () =>
         args: overrideArgs,
         async run(context) {
           const options = cliOptions(context.rawArgs, context.args)
+          await prepareAgents(options)
           await validateMirrorConfig(options)
           process.stdout.write(reportValue('ok', options.format))
         },
@@ -208,6 +224,40 @@ const createConfigCommand = () =>
     },
   })
 
+const createAgentsCommand = () =>
+  defineCommand({
+    meta: { name: 'agents', description: 'Install Mirror agent skills and AGENTS.md instructions.' },
+    subCommands: {
+      install: defineCommand({
+        meta: { name: 'install', description: 'Install the guiho-as-mirror agent skill.' },
+        subCommands: {
+          local: createInstallSkillCommand('local'),
+          global: createInstallSkillCommand('global'),
+        },
+      }),
+      instructions: defineCommand({
+        meta: { name: 'instructions', description: 'Insert GUIHO Mirror semantic versioning guidance into AGENTS.md.' },
+        args: globalArgs,
+        async run(context) {
+          const options = cliOptions(context.rawArgs, context.args)
+          const result = await ensureMirrorAgentsInstructions(resolve(options.cwd ?? process.cwd()), true)
+          process.stdout.write(reportAgentsInstructions(result, options.format))
+        },
+      }),
+    },
+  })
+
+const createInstallSkillCommand = (scope: 'local' | 'global') =>
+  defineCommand({
+    meta: { name: scope, description: `Install the guiho-as-mirror skill ${scope}.` },
+    args: globalArgs,
+    async run(context) {
+      const options = cliOptions(context.rawArgs, context.args)
+      const result = await installMirrorSkill(scope, { cwd: resolve(options.cwd ?? process.cwd()) })
+      process.stdout.write(reportSkillInstall(result, options.format))
+    },
+  })
+
 const createVersionCommand = () =>
   defineCommand({
     meta: { name: 'version', description: 'Read, plan, and apply version changes.' },
@@ -217,6 +267,7 @@ const createVersionCommand = () =>
         args: overrideArgs,
         async run(context) {
           const options = cliOptions(context.rawArgs, context.args)
+          await prepareAgents(options)
           const config = await loadMirrorConfig(options)
           const projectName = await resolveProjectName(config)
           process.stdout.write(reportValue(await readCurrentVersion(config, projectName), options.format))
@@ -227,6 +278,7 @@ const createVersionCommand = () =>
         args: { ...overrideArgs, ...targetArg },
         async run(context) {
           const options = cliOptions(context.rawArgs, context.args)
+          await prepareAgents(options)
           const config = await loadMirrorConfig(options)
           const projectName = await resolveProjectName(config)
           const currentVersion = await readCurrentVersion(config, projectName)
@@ -238,6 +290,7 @@ const createVersionCommand = () =>
         args: { ...overrideArgs, ...targetArg },
         async run(context) {
           const options = cliOptions(context.rawArgs, context.args)
+          await prepareAgents(options)
           const plan = await buildVersionPlan(String(context.args['target']), options)
           if (options.format !== 'json') process.stdout.write(mirrorBanner(plan.configPath ? plan.configPath : ''))
           process.stdout.write(reportPlan(plan, options.format))
@@ -248,6 +301,7 @@ const createVersionCommand = () =>
         args: { ...applyArgs, ...targetArg },
         async run(context) {
           const options = cliOptions(context.rawArgs, context.args)
+          await prepareAgents(options)
           const plan = await buildVersionPlan(String(context.args['target']), options)
 
           if (options.format !== 'json') process.stdout.write(mirrorBanner(plan.configPath ? plan.configPath : ''))
@@ -301,6 +355,10 @@ const outputArg = (value: unknown): MirrorCliOptions['output'] => {
     if (!adapter) throw new MirrorError(`Invalid --output value: ${item}`)
     return adapter
   })
+}
+
+const prepareAgents = async (options: MirrorCliOptions) => {
+  await runMirrorAgentAutomation(options, (message) => console.error(message))
 }
 
 function readInstalledVersion() {
