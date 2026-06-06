@@ -38,6 +38,7 @@ When the user asks to bump, release, tag, or version a project, follow this sequ
    - Run `<mirror> config show`.
    - Read the resolved `[git] allow_dirty` value.
    - Read the resolved `[agents] write_changelog` value.
+   - Read the resolved `[agents] changelog_path` value.
    - If config loading fails, stop and report the configuration problem instead of improvising a release.
 
 3. Verify Git cleanliness when required.
@@ -67,7 +68,7 @@ When the user asks to bump, release, tag, or version a project, follow this sequ
 
 8. Update the changelog if present and enabled.
    - If `[agents].write_changelog = false`, skip changelog edits even when `CHANGELOG.md` exists.
-   - If changelog writing is enabled or absent, use the changelog file path specified by the project instructions or release configuration; if no path is specified, use `CHANGELOG.md` in the project root.
+   - If changelog writing is enabled or absent, use `[agents].changelog_path` as the changelog file path; if it is missing, use `CHANGELOG.md` in the project root.
    - Add an entry headed by the planned `nextVersion`.
    - Summarize the actual release changes; do not invent changes that are not in the repository history or current diff.
 
@@ -139,13 +140,14 @@ allow_dirty = false
 
 [agents]
 write_changelog = true
+changelog_path = "CHANGELOG.md"
 auto_agents_md = true
 auto_skill_install = true
 ```
 
 Supported version sources and outputs are `package.json`, `jsr.json`, and `git`. Supported Git tag templates are `v{version}`, `{name}@{version}`, and `{name}/v{version}`.
 
-Agent automation options default to true. Set `write_changelog = false` to tell agents to skip changelog edits, `auto_agents_md = false` to stop Mirror from inserting its AGENTS.md section, and `auto_skill_install = false` to stop Mirror from installing `guiho-as-mirror` when missing.
+Agent automation options default to true. Set `write_changelog = false` to tell agents to skip changelog edits, `changelog_path = "docs/CHANGELOG.md"` to specify the changelog file, `auto_agents_md = false` to stop Mirror from inserting its AGENTS.md section, and `auto_skill_install = false` to stop Mirror from installing `guiho-as-mirror` when missing.
 
 ## CLI Reference
 
