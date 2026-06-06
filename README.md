@@ -130,6 +130,7 @@ allow_dirty = false                    # Optional. Allow dirty Git worktree. Def
 
 [agents]
 write_changelog = true                 # Optional. Tell agents changelog edits are allowed. Default: true.
+changelog_path = "CHANGELOG.md"         # Optional. Changelog file path for agents. Default: "CHANGELOG.md".
 auto_agents_md = true                  # Optional. Insert Mirror guidance into AGENTS.md when present. Default: true.
 auto_skill_install = true              # Optional. Install guiho-as-mirror when missing. Default: true.
 ```
@@ -138,7 +139,7 @@ auto_skill_install = true              # Optional. Install guiho-as-mirror when 
 
 Mirror is designed to be safely used by AI agents. Project commands automatically check for `AGENTS.md` and the `guiho-as-mirror` skill, then add the Mirror guidance or install the missing skill when automation is enabled.
 
-Set `write_changelog = false` when agents should skip changelog edits during release preparation. Set `auto_agents_md = false` or `auto_skill_install = false` to opt out of automatic guidance insertion or skill installation.
+Set `write_changelog = false` when agents should skip changelog edits during release preparation. Set `changelog_path = "docs/CHANGELOG.md"` when the changelog is not at the project root. Set `auto_agents_md = false` or `auto_skill_install = false` to opt out of automatic guidance insertion or skill installation.
 
 ### Safety & Git Automation
 
