@@ -180,6 +180,7 @@ describe('Mirror v3', () => {
     expect(inserted.changed).toBe(true)
     expect(repeated.changed).toBe(false)
     expect(await readFile(agentsPath, 'utf8')).toContain(mirrorAgentsSectionHeading)
+    expect(await readFile(agentsPath, 'utf8')).toContain('use CHANGELOG.md in the project root')
   })
 
   test('finds AGENTS.md in ancestor directories', async () => {
