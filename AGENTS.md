@@ -26,3 +26,12 @@
 - Generated outputs (`mirror/library/`, `mirror/bundle/`, `mirror/bin/`, `*.tgz`) are ignored; do not hand-edit them.
 - `ci/build-test-publish.sh` clones to `.temp/mirror`, checks out an `@guiho40/mirror@...` tag, authenticates Artifact Registry, then runs `typecheck -> bun test -> build -> binary -> bun publish`. Its explicit-argument branch currently builds `_tag` from undefined `_version`; verify before relying on it.
 - `.vscode/terminals.json` references `bun clean-hard`, but `mirror/package.json` does not define that script.
+
+## Semantic Project Versioning -- GUIHO Mirror
+
+Invoke the guiho-as-mirror agent skill every time the user wants to bump, tag, release, plan, initialize, configure, or troubleshoot semantic project versioning with GUIHO Mirror.
+
+Before editing release docs or changelogs, inspect mirror.config.toml. If [agents].write_changelog is false, skip changelog edits. If it is missing or true, changelog edits are allowed when the project has a changelog.
+
+Use [agents].changelog_path as the changelog file path. If it is missing, use CHANGELOG.md in the project root.
+
