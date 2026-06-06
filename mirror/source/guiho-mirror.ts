@@ -8,7 +8,12 @@ export type {
   MirrorConfig,
   MirrorExecutionResult,
   MirrorFormat,
+  MirrorAgentAutomationResult,
+  MirrorAgentSettings,
+  MirrorAgentsInstructionsResult,
   MirrorRawConfig,
+  MirrorSkillInstallResult,
+  MirrorSkillInstallScope,
   MirrorVersionPlan,
   MirrorVersionPlanAction,
   MirrorVersionTarget,
@@ -16,6 +21,19 @@ export type {
 
 export { MirrorError, invariant } from './errors.js'
 export { parseMirrorCliOptions } from './flags.js'
+export {
+  defaultMirrorAgentSettings,
+  ensureMirrorAgentsInstructions,
+  findAgentsFile,
+  installMirrorSkill,
+  isMirrorSkillInstalled,
+  mirrorAgentsSection,
+  mirrorAgentsSectionHeading,
+  mirrorSkillName,
+  resolveMirrorAgentSettings,
+  resolveMirrorSkillPath,
+  runMirrorAgentAutomation,
+} from './agents.js'
 export { createInitConfig, discoverMirrorConfig, loadMirrorConfig, normalizeMirrorConfig, writeInitConfig } from './config.js'
 export { assertValidSemver, isMirrorReleaseTarget, mirrorReleaseTargets, resolveNextVersion, sortSemverDescending } from './version.js'
 export {
@@ -41,5 +59,15 @@ export {
 } from './adapters.js'
 export { buildVersionPlan, releaseLabel, resolveFileOutputPaths, validateMirrorConfig } from './plan.js'
 export { applyVersionPlan, executeVersionPlan } from './executor.js'
-export { mirrorBanner, reportConfig, reportConfigSchema, reportExecution, reportExecutionSummary, reportPlan, reportValue } from './reporter.js'
+export {
+  mirrorBanner,
+  reportAgentsInstructions,
+  reportConfig,
+  reportConfigSchema,
+  reportExecution,
+  reportExecutionSummary,
+  reportPlan,
+  reportSkillInstall,
+  reportValue,
+} from './reporter.js'
 export { createMirrorCommand, runMirrorCli } from './cli.js'
