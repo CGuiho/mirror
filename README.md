@@ -84,6 +84,12 @@ Validates and inspects configuration.
 - `mirror config check`: Validates configuration without output.
 - `mirror config schema`: Prints the comprehensive configuration reference.
 
+#### `mirror agents`
+Installs Mirror-aware agent guidance for projects that use AI coding agents.
+- `mirror agents install local`: Installs the bundled `guiho-as-mirror` skill at `.opencode/skills/guiho-as-mirror/SKILL.md`.
+- `mirror agents install global`: Installs the bundled `guiho-as-mirror` skill at `~/.config/opencode/skills/guiho-as-mirror/SKILL.md`.
+- `mirror agents instructions`: Creates or updates `AGENTS.md` with the GUIHO Mirror semantic versioning section.
+
 #### `mirror version`
 Manages the version lifecycle.
 - `mirror version current`: Prints the current project version.
@@ -121,7 +127,18 @@ tag_template = "{name}@{version}"      # Optional. Supported: "v{version}", "{na
 commit = false                         # Optional. Create release commits. Default: false.
 push = false                           # Optional. Push release refs. Default: false.
 allow_dirty = false                    # Optional. Allow dirty Git worktree. Default: false.
+
+[agents]
+write_changelog = true                 # Optional. Tell agents changelog edits are allowed. Default: true.
+auto_agents_md = true                  # Optional. Insert Mirror guidance into AGENTS.md when present. Default: true.
+auto_skill_install = true              # Optional. Install guiho-as-mirror when missing. Default: true.
 ```
+
+### Agent Automation
+
+Mirror is designed to be safely used by AI agents. Project commands automatically check for `AGENTS.md` and the `guiho-as-mirror` skill, then add the Mirror guidance or install the missing skill when automation is enabled.
+
+Set `write_changelog = false` when agents should skip changelog edits during release preparation. Set `auto_agents_md = false` or `auto_skill_install = false` to opt out of automatic guidance insertion or skill installation.
 
 ### Safety & Git Automation
 
