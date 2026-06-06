@@ -89,6 +89,9 @@ export const normalizeMirrorConfig = (
   const gitCommit = optionalBoolean(raw.git?.commit, 'git.commit') === true
   const gitPush = optionalBoolean(raw.git?.push, 'git.push') === true
   const gitAllowDirty = optionalBoolean(raw.git?.allow_dirty, 'git.allow_dirty') === true
+  const writeChangelog = optionalBoolean(raw.agents?.write_changelog, 'agents.write_changelog') !== false
+  const autoAgentsMd = optionalBoolean(raw.agents?.auto_agents_md, 'agents.auto_agents_md') !== false
+  const autoSkillInstall = optionalBoolean(raw.agents?.auto_skill_install, 'agents.auto_skill_install') !== false
 
   return {
     schema: 1,
@@ -115,6 +118,11 @@ export const normalizeMirrorConfig = (
       commit: options.commit === true || options.push === true || gitCommit || gitPush,
       push: options.push === true || gitPush,
       allowDirty: options.allowDirty === true || gitAllowDirty,
+    },
+    agents: {
+      writeChangelog,
+      autoAgentsMd,
+      autoSkillInstall,
     },
   }
 }
@@ -145,6 +153,11 @@ tag_template = "{name}@{version}"
 commit = false
 push = false
 allow_dirty = false
+
+[agents]
+write_changelog = true
+auto_agents_md = true
+auto_skill_install = true
 `
   }
 
@@ -168,6 +181,11 @@ tag_template = "{name}@{version}"
 commit = false
 push = false
 allow_dirty = false
+
+[agents]
+write_changelog = true
+auto_agents_md = true
+auto_skill_install = true
 `
   }
 
@@ -187,6 +205,11 @@ tag_template = "v{version}"
 commit = false
 push = false
 allow_dirty = false
+
+[agents]
+write_changelog = true
+auto_agents_md = true
+auto_skill_install = true
 `
 }
 
