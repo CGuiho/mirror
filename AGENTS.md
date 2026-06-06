@@ -27,6 +27,12 @@
 - `ci/build-test-publish.sh` clones to `.temp/mirror`, checks out an `@guiho40/mirror@...` tag, authenticates Artifact Registry, then runs `typecheck -> bun test -> build -> binary -> bun publish`. Its explicit-argument branch currently builds `_tag` from undefined `_version`; verify before relying on it.
 - `.vscode/terminals.json` references `bun clean-hard`, but `mirror/package.json` does not define that script.
 
+## Documentation Discipline
+
+- `mirror/DOCS.md` is the full package documentation and must describe the behavior that ships.
+- Every time code, configuration, CLI behavior, API behavior, packaging, release automation, agent automation, or user-facing workflow is modified, update `mirror/DOCS.md` before publishing a new version.
+- If a change genuinely does not require documentation, state that explicitly during release preparation before publishing.
+
 ## Semantic Project Versioning -- GUIHO Mirror
 
 Invoke the guiho-as-mirror agent skill every time the user wants to bump, tag, release, plan, initialize, configure, or troubleshoot semantic project versioning with GUIHO Mirror.
@@ -34,4 +40,3 @@ Invoke the guiho-as-mirror agent skill every time the user wants to bump, tag, r
 Before editing release docs or changelogs, inspect mirror.config.toml. If [agents].write_changelog is false, skip changelog edits. If it is missing or true, changelog edits are allowed when the project has a changelog.
 
 Use [agents].changelog_path as the changelog file path. If it is missing, use CHANGELOG.md in the project root.
-
