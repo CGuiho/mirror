@@ -2,7 +2,14 @@
  * @copyright Copyright (c) 2026 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
  */
 
-import type { MirrorConfig, MirrorExecutionResult, MirrorFormat, MirrorVersionPlan } from './types.js'
+import type {
+  MirrorAgentsInstructionsResult,
+  MirrorConfig,
+  MirrorExecutionResult,
+  MirrorFormat,
+  MirrorSkillInstallResult,
+  MirrorVersionPlan,
+} from './types.js'
 import { configPathForDisplay, relativeFromCwd } from './config.js'
 
 export const mirrorBanner = (configPath?: string) => {
@@ -36,6 +43,9 @@ export const reportConfig = (config: MirrorConfig, format: MirrorFormat = 'text'
     `commit: ${String(config.git.commit)}`,
     `push: ${String(config.git.push)}`,
     `allow_dirty: ${String(config.git.allowDirty)}`,
+    `write_changelog: ${String(config.agents.writeChangelog)}`,
+    `auto_agents_md: ${String(config.agents.autoAgentsMd)}`,
+    `auto_skill_install: ${String(config.agents.autoSkillInstall)}`,
     '',
   ].join('\n')
 }
@@ -72,6 +82,35 @@ export const reportConfigSchema = (format: MirrorFormat = 'text') => {
     '  commit = true | false                     Optional. Create release commits. Default: false.',
     '  push = true | false                       Optional. Push release refs. Default: false.',
     '  allow_dirty = true | false                Optional. Allow dirty Git worktree. Default: false.',
+    '',
+    '  [agents]',
+    '  write_changelog = true | false            Optional. Tell agents to write changelog entries. Default: true.',
+    '  auto_agents_md = true | false             Optional. Insert Mirror guidance into AGENTS.md when present. Default: true.',
+    '  auto_skill_install = true | false         Optional. Install guiho-as-mirror when missing. Default: true.',
+    '',
+  ].join('\n')
+}
+
+export const reportSkillInstall = (result: MirrorSkillInstallResult, format: MirrorFormat = 'text') => {
+  if (format === 'json') return `${JSON.stringify(result, null, 2)}\n`
+
+  return [
+    'skill: guiho-as-mirror',
+    `scope: ${result.scope}`,
+    `path: ${result.path}`,
+    `installed: ${String(result.installed)}`,
+    `updated: ${String(result.updated)}`,
+    '',
+  ].join('\n')
+}
+
+export const reportAgentsInstructions = (result: MirrorAgentsInstructionsResult, format: MirrorFormat = 'text') => {
+  if (format === 'json') return `${JSON.stringify(result, null, 2)}\n`
+
+  return [
+    `agents_md: ${result.path}`,
+    `exists: ${String(result.exists)}`,
+    `changed: ${String(result.changed)}`,
     '',
   ].join('\n')
 }
