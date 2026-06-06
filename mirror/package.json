@@ -17,6 +17,7 @@
   "files": [
     "README.md",
     "library/",
+    "skills/",
     "docs/",
     "jsr.json",
     "CHANGELOG.md",
