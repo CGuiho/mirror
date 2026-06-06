@@ -33,6 +33,7 @@ export type MirrorRawConfig = Partial<{
   }>
   agents: Partial<{
     write_changelog: boolean
+    changelog_path: string
     auto_agents_md: boolean
     auto_skill_install: boolean
   }>
@@ -65,6 +66,7 @@ export type MirrorConfig = {
 
 export type MirrorAgentSettings = {
   writeChangelog: boolean
+  changelogPath: string
   autoAgentsMd: boolean
   autoSkillInstall: boolean
 }
