@@ -9,6 +9,7 @@ export type MirrorProjectNameSource = 'package.json' | 'jsr.json'
 export type MirrorFormat = 'text' | 'json'
 export type MirrorVersionTarget = ReleaseType | string
 export type MirrorJsonObject = Record<string, unknown>
+export type MirrorSkillInstallScope = 'local' | 'global'
 
 export type MirrorRawConfig = Partial<{
   schema: number
@@ -29,6 +30,11 @@ export type MirrorRawConfig = Partial<{
     commit: boolean
     push: boolean
     allow_dirty: boolean
+  }>
+  agents: Partial<{
+    write_changelog: boolean
+    auto_agents_md: boolean
+    auto_skill_install: boolean
   }>
 }>
 
@@ -54,6 +60,13 @@ export type MirrorConfig = {
     push: boolean
     allowDirty: boolean
   }
+  agents: MirrorAgentSettings
+}
+
+export type MirrorAgentSettings = {
+  writeChangelog: boolean
+  autoAgentsMd: boolean
+  autoSkillInstall: boolean
 }
 
 export type MirrorCliOptions = {
@@ -77,6 +90,26 @@ export type MirrorCliOptions = {
 export type MirrorConfigDiscovery = {
   path?: string
   raw?: MirrorRawConfig
+}
+
+export type MirrorSkillInstallResult = {
+  scope: MirrorSkillInstallScope
+  path: string
+  installed: boolean
+  updated: boolean
+}
+
+export type MirrorAgentsInstructionsResult = {
+  path: string
+  exists: boolean
+  changed: boolean
+}
+
+export type MirrorAgentAutomationResult = {
+  settings: MirrorAgentSettings
+  agentsMd?: MirrorAgentsInstructionsResult
+  localSkill?: MirrorSkillInstallResult
+  globalSkill?: MirrorSkillInstallResult
 }
 
 export type MirrorProject = {
