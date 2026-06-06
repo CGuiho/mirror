@@ -22,6 +22,7 @@ export const mirrorAgentsSectionHeading = '## Semantic Project Versioning -- GUI
 
 export const defaultMirrorAgentSettings: MirrorAgentSettings = {
   writeChangelog: true,
+  changelogPath: 'CHANGELOG.md',
   autoAgentsMd: true,
   autoSkillInstall: true,
 }
@@ -32,7 +33,7 @@ Invoke the guiho-as-mirror agent skill every time the user wants to bump, tag, r
 
 Before editing release docs or changelogs, inspect mirror.config.toml. If [agents].write_changelog is false, skip changelog edits. If it is missing or true, changelog edits are allowed when the project has a changelog.
 
-Use the changelog file path specified by the project instructions or release configuration; if no path is specified, use CHANGELOG.md in the project root.
+Use [agents].changelog_path as the changelog file path. If it is missing, use CHANGELOG.md in the project root.
 `
 
 type MirrorSkillPathOptions = {
@@ -119,6 +120,7 @@ export const resolveMirrorAgentSettings = async (options: MirrorCliOptions = {})
 
   return {
     writeChangelog: optionalBoolean(discovered.raw.agents?.write_changelog, 'agents.write_changelog') !== false,
+    changelogPath: optionalString(discovered.raw.agents?.changelog_path, 'agents.changelog_path') ?? 'CHANGELOG.md',
     autoAgentsMd: optionalBoolean(discovered.raw.agents?.auto_agents_md, 'agents.auto_agents_md') !== false,
     autoSkillInstall: optionalBoolean(discovered.raw.agents?.auto_skill_install, 'agents.auto_skill_install') !== false,
   }
@@ -168,6 +170,12 @@ const optionalBoolean = (value: unknown, key: string) => {
   return value
 }
 
+const optionalString = (value: unknown, key: string) => {
+  if (value === undefined) return undefined
+  if (typeof value !== 'string') throw new MirrorError(`Invalid ${key}. Expected a string.`)
+  return value
+}
+
 const embeddedMirrorSkillContent = [
   '---',
   'name: guiho-as-mirror',
@@ -191,13 +199,13 @@ const embeddedMirrorSkillContent = [
   'When the user asks to bump, release, tag, or version a project, follow this sequence:',
   '',
   '1. Confirm the target and project root. Supported targets are `major`, `premajor`, `minor`, `preminor`, `patch`, `prepatch`, `prerelease`, or an exact semver like `2.0.0`.',
-  '2. Run `<mirror> config show` and read `[git].allow_dirty` plus `[agents].write_changelog`.',
+  '2. Run `<mirror> config show` and read `[git].allow_dirty`, `[agents].write_changelog`, and `[agents].changelog_path`.',
   '3. If `allow_dirty = false` or absent, check `git status --short` and stop if the worktree is dirty.',
   '4. Run the project type checker, commonly `bun run typecheck`.',
   '5. Run the project test suite, commonly `bun test`.',
   '6. Run `<mirror> version plan <target>` and use the planned next version as the source of truth.',
   '7. Update release documentation only when it is part of the project release process.',
-  '8. If `[agents].write_changelog = false`, skip changelog edits. Otherwise update the configured changelog file path when present, defaulting to `CHANGELOG.md` in the project root, and summarize only real changes.',
+  '8. If `[agents].write_changelog = false`, skip changelog edits. Otherwise update `[agents].changelog_path`, defaulting to `CHANGELOG.md` in the project root, and summarize only real changes.',
   '9. Commit release-preparation changes before applying the version bump.',
   '10. Run `<mirror> version apply <target> --yes`. Include `--commit` when file outputs and Git tag output are combined unless config already enables commits or push.',
   '',
@@ -218,9 +226,9 @@ const embeddedMirrorSkillContent = [
   '',
   'Mirror searches for configuration via `--config <path>`, `./mirror.config.toml`, or `./config/mirror.config.toml`.',
   '',
-  'Common configuration keys: `[version].source`, `[version].output`, `[version].prerelease_id`, `[git].tag_template`, `[git].commit`, `[git].push`, `[git].allow_dirty`, `[agents].write_changelog`, `[agents].auto_agents_md`, and `[agents].auto_skill_install`.',
+  'Common configuration keys: `[version].source`, `[version].output`, `[version].prerelease_id`, `[git].tag_template`, `[git].commit`, `[git].push`, `[git].allow_dirty`, `[agents].write_changelog`, `[agents].changelog_path`, `[agents].auto_agents_md`, and `[agents].auto_skill_install`.',
   '',
-  'Agent automation options default to true. Set `write_changelog = false` to tell agents to skip changelog edits, `auto_agents_md = false` to stop Mirror from inserting its AGENTS.md section, and `auto_skill_install = false` to stop Mirror from installing `guiho-as-mirror` when missing.',
+  'Agent automation options default to true. Set `write_changelog = false` to tell agents to skip changelog edits, `changelog_path = "docs/CHANGELOG.md"` to specify the changelog file, `auto_agents_md = false` to stop Mirror from inserting its AGENTS.md section, and `auto_skill_install = false` to stop Mirror from installing `guiho-as-mirror` when missing.',
   '',
   '## CLI Reference',
   '',
