@@ -31,6 +31,8 @@ export const mirrorAgentsSection = `${mirrorAgentsSectionHeading}
 Invoke the guiho-as-mirror agent skill every time the user wants to bump, tag, release, plan, initialize, configure, or troubleshoot semantic project versioning with GUIHO Mirror.
 
 Before editing release docs or changelogs, inspect mirror.config.toml. If [agents].write_changelog is false, skip changelog edits. If it is missing or true, changelog edits are allowed when the project has a changelog.
+
+Use the changelog file path specified by the project instructions or release configuration; if no path is specified, use CHANGELOG.md in the project root.
 `
 
 type MirrorSkillPathOptions = {
@@ -195,7 +197,7 @@ const embeddedMirrorSkillContent = [
   '5. Run the project test suite, commonly `bun test`.',
   '6. Run `<mirror> version plan <target>` and use the planned next version as the source of truth.',
   '7. Update release documentation only when it is part of the project release process.',
-  '8. If `[agents].write_changelog = false`, skip changelog edits. Otherwise update `CHANGELOG.md` when present and summarize only real changes.',
+  '8. If `[agents].write_changelog = false`, skip changelog edits. Otherwise update the configured changelog file path when present, defaulting to `CHANGELOG.md` in the project root, and summarize only real changes.',
   '9. Commit release-preparation changes before applying the version bump.',
   '10. Run `<mirror> version apply <target> --yes`. Include `--commit` when file outputs and Git tag output are combined unless config already enables commits or push.',
   '',
