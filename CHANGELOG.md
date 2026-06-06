@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-06-07
+
+### Added
+
+- Added Mirror agent automation commands for installing the bundled `guiho-as-mirror` skill locally or globally.
+- Added `mirror agents instructions` to create or update `AGENTS.md` with Mirror semantic versioning guidance.
+- Added `[agents]` configuration for changelog behavior, changelog path selection, AGENTS.md insertion, and automatic skill installation.
+- Added the bundled `guiho-as-mirror` skill to the published package.
+- Added full package documentation in `mirror/DOCS.md` and repository guidance requiring documentation updates before publishing new versions.
+
+### Changed
+
+- Mirror project commands now auto-check Mirror agent guidance and install missing `guiho-as-mirror` skills when enabled.
+- Configuration reports and schemas now include resolved agent automation settings.
+
 ## [3.0.0] - 2026-05-17
 
 This release marks a major milestone as we prepare for the **initial open-source release** of GUIHO Mirror. We have completely overhauled the error handling experience, modernized the CI/CD publishing pipeline, and hardened the CLI commands for public usage.
