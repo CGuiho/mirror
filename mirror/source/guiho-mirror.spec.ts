@@ -149,6 +149,7 @@ describe('Mirror v3', () => {
 
     expect(defaults.agents).toEqual({
       writeChangelog: true,
+      changelogPath: 'CHANGELOG.md',
       autoAgentsMd: true,
       autoSkillInstall: true,
     })
@@ -156,6 +157,7 @@ describe('Mirror v3', () => {
     await writeText(join(cwd, 'mirror.config.toml'), packageConfig({
       output: ['package.json'],
       writeChangelog: false,
+      changelogPath: 'docs/CHANGELOG.md',
       autoAgentsMd: false,
       autoSkillInstall: false,
     }))
@@ -164,6 +166,7 @@ describe('Mirror v3', () => {
 
     expect(disabled.agents).toEqual({
       writeChangelog: false,
+      changelogPath: 'docs/CHANGELOG.md',
       autoAgentsMd: false,
       autoSkillInstall: false,
     })
@@ -180,7 +183,7 @@ describe('Mirror v3', () => {
     expect(inserted.changed).toBe(true)
     expect(repeated.changed).toBe(false)
     expect(await readFile(agentsPath, 'utf8')).toContain(mirrorAgentsSectionHeading)
-    expect(await readFile(agentsPath, 'utf8')).toContain('use CHANGELOG.md in the project root')
+    expect(await readFile(agentsPath, 'utf8')).toContain('[agents].changelog_path')
   })
 
   test('finds AGENTS.md in ancestor directories', async () => {
@@ -442,8 +445,21 @@ describe('Mirror v3', () => {
     expect(show.exitCode).toBe(0)
     expect(show.stdout).toContain('source: git')
     expect(show.stdout).toContain('write_changelog: true')
+    expect(show.stdout).toContain('changelog_path: CHANGELOG.md')
     expect(check.exitCode).toBe(0)
     expect(check.stdout.trim()).toBe('ok')
+  })
+
+  test('prints changelog path in generated config and schema', async () => {
+    const cwd = await createTempDir()
+
+    const config = await runMirrorCli('init', 'package.json', '--cwd', cwd)
+    const schema = await runMirrorCli('config', 'schema', '--cwd', cwd)
+
+    expect(config.exitCode).toBe(0)
+    expect(await readFile(join(cwd, 'mirror.config.toml'), 'utf8')).toContain('changelog_path = "CHANGELOG.md"')
+    expect(schema.exitCode).toBe(0)
+    expect(schema.stdout).toContain('changelog_path = "<path>"')
   })
 
   test('runs CLI agent installation and AGENTS.md commands', async () => {
@@ -638,6 +654,7 @@ const packageConfig = ({
   tagTemplate = '{name}@{version}',
   preid = '',
   writeChangelog,
+  changelogPath,
   autoAgentsMd,
   autoSkillInstall,
 }: {
@@ -647,6 +664,7 @@ const packageConfig = ({
   tagTemplate?: string
   preid?: string
   writeChangelog?: boolean
+  changelogPath?: string
   autoAgentsMd?: boolean
   autoSkillInstall?: boolean
 }) => `${agentConfig(`schema = 1
@@ -671,10 +689,11 @@ tag_template = "${tagTemplate}"
 commit = false
 push = false
 allow_dirty = false
-`, { writeChangelog, autoAgentsMd, autoSkillInstall })}`
+`, { writeChangelog, changelogPath, autoAgentsMd, autoSkillInstall })}`
 
 const gitConfig = (options: {
   writeChangelog?: boolean
+  changelogPath?: string
   autoAgentsMd?: boolean
   autoSkillInstall?: boolean
 } = {}) => `${agentConfig(`schema = 1
@@ -699,6 +718,7 @@ const agentConfig = (
   content: string,
   options: {
     writeChangelog?: boolean
+    changelogPath?: string
     autoAgentsMd?: boolean
     autoSkillInstall?: boolean
   },
@@ -706,6 +726,7 @@ const agentConfig = (
   const lines: string[] = []
 
   if (options.writeChangelog !== undefined) lines.push(`write_changelog = ${String(options.writeChangelog)}`)
+  if (options.changelogPath !== undefined) lines.push(`changelog_path = "${options.changelogPath}"`)
   if (options.autoAgentsMd !== undefined) lines.push(`auto_agents_md = ${String(options.autoAgentsMd)}`)
   if (options.autoSkillInstall !== undefined) lines.push(`auto_skill_install = ${String(options.autoSkillInstall)}`)
 
