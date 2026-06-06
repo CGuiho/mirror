@@ -23,5 +23,6 @@ allow_dirty = true
 
 [agents]
 write_changelog = true
+changelog_path = "../CHANGELOG.md"
 auto_agents_md = true
 auto_skill_install = true
