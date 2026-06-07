@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Added auxiliary package outputs via `[package].auxiliary_paths` so extra `package.json` files mirror the main package version.
+- Added an interactive `mirror init` wizard (TTY-only) with defaults you accept by pressing Enter, plus flags for every answer and `--non-interactive` for automation.
+- Added new `mirror init` flags: `--output`, `--auxiliary`, `--tag-template`, `--name`, `--commit`, `--push`, `--non-interactive`.
+- Added a JSON Schema for `mirror.config.toml`, shipped at `schema/mirror.config.schema.json` and printable via `mirror config schema --format json`.
+- Generated config files now include a `#:schema` directive for editor autocomplete.
+
+### Changed
+
+- `mirror init` now reconciles an existing `mirror.config.toml` (adds missing defaults) instead of failing, and `--yes` overwrites with generated defaults.
+
 ## [3.1.1] - 2026-06-07
 
 ### Changed

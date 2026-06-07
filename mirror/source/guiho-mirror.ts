@@ -11,6 +11,9 @@ export type {
   MirrorAgentAutomationResult,
   MirrorAgentSettings,
   MirrorAgentsInstructionsResult,
+  MirrorInitAnswers,
+  MirrorInitFlags,
+  MirrorInitPrompter,
   MirrorRawConfig,
   MirrorSkillInstallResult,
   MirrorSkillInstallScope,
@@ -34,7 +37,19 @@ export {
   resolveMirrorSkillPath,
   runMirrorAgentAutomation,
 } from './agents.js'
-export { createInitConfig, discoverMirrorConfig, loadMirrorConfig, normalizeMirrorConfig, reconcileInitConfig, writeInitConfig } from './config.js'
+export {
+  createInitConfig,
+  defaultInitAnswersForSource,
+  discoverMirrorConfig,
+  generateInitConfig,
+  loadMirrorConfig,
+  normalizeMirrorConfig,
+  reconcileInitConfig,
+  writeInitConfig,
+  writeInitConfigFromAnswers,
+} from './config.js'
+export { createReadlineInitPrompter, isInteractiveInit, parseAdapterList, resolveInitAnswers } from './init.js'
+export { mirrorConfigJsonSchema, mirrorConfigSchemaReference, renderMirrorConfigJsonSchema } from './schema.js'
 export { assertValidSemver, isMirrorReleaseTarget, mirrorReleaseTargets, resolveNextVersion, sortSemverDescending } from './version.js'
 export {
   createGitCommit,

@@ -5,7 +5,7 @@
 import type { MirrorAdapterName, MirrorCliOptions, MirrorFormat } from './types.js'
 import { MirrorError } from './errors.js'
 
-const booleanFlags = new Set(['dry-run', 'commit', 'push', 'allow-dirty', 'yes', 'no-color', 'verbose', 'help', 'version'])
+const booleanFlags = new Set(['dry-run', 'commit', 'push', 'allow-dirty', 'non-interactive', 'yes', 'no-color', 'verbose', 'help', 'version'])
 const adapterNames = new Set(['package.json', 'jsr.json', 'git'])
 
 const shortFlagAliases: Record<string, string> = {
@@ -52,6 +52,13 @@ export const parseMirrorCliOptions = (rawArgs: string[]): MirrorCliOptions => {
       continue
     }
 
+    if (key === 'auxiliary') {
+      const nextValues = value.split(',').map((item) => item.trim()).filter(Boolean)
+      const current = parsed['auxiliary']
+      parsed['auxiliary'] = [...(Array.isArray(current) ? current : current ? [String(current)] : []), ...nextValues]
+      continue
+    }
+
     parsed[key] = value
   }
 
@@ -64,11 +71,15 @@ export const parseMirrorCliOptions = (rawArgs: string[]): MirrorCliOptions => {
     output: Array.isArray(parsed['output']) ? parsed['output'].map((value) => assertAdapter(value, '--output')) : undefined,
     packageFile: typeof parsed['packageFile'] === 'string' ? parsed['packageFile'] : undefined,
     jsrFile: typeof parsed['jsrFile'] === 'string' ? parsed['jsrFile'] : undefined,
+    auxiliary: Array.isArray(parsed['auxiliary']) ? parsed['auxiliary'].map((value) => String(value)) : undefined,
+    tagTemplate: typeof parsed['tagTemplate'] === 'string' ? parsed['tagTemplate'] : undefined,
+    name: typeof parsed['name'] === 'string' ? parsed['name'] : undefined,
     preid: typeof parsed['preid'] === 'string' ? parsed['preid'] : undefined,
     dryRun: parsed['dryRun'] === true,
     commit: parsed['commit'] === true,
     push: parsed['push'] === true,
     allowDirty: parsed['allowDirty'] === true,
+    nonInteractive: parsed['nonInteractive'] === true,
     yes: parsed['yes'] === true,
     verbose: parsed['verbose'] === true,
   }

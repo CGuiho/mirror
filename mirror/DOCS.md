@@ -162,6 +162,14 @@ Version and config commands accept runtime overrides.
 
 Creates `mirror.config.toml` in the current working directory. When a configuration file already exists, `mirror init` reconciles missing default keys into it without overwriting user-configured values. Use `--yes` only when you intentionally want to replace the file with freshly generated defaults.
 
+On an interactive terminal, `mirror init` runs a step-by-step wizard for the core fields (version source, outputs, package path, auxiliary package paths, jsr path, git tag template, commit, push). Each prompt shows a default that you accept by pressing Enter. Defaults are source `package.json` and outputs `package.json` + `git`.
+
+Every answer also has a flag, so the command runs fully non-interactively when flags are provided. In non-TTY environments (CI, AI agents) or with `--non-interactive`/`--yes`, Mirror skips prompts and uses flags + defaults instead of waiting for input.
+
+Init flags: `--source`, `--output`, `--package-file`, `--jsr-file`, `--auxiliary`, `--tag-template`, `--name`, `--preid`, `--commit`, `--push`, `--non-interactive`, `--yes`.
+
+Generated configuration files start with a `#:schema` directive pointing at the bundled JSON Schema (`./node_modules/@guiho/mirror/schema/mirror.config.schema.json`) so editors with Taplo / Even Better TOML provide autocomplete and validation.
+
 ```bash
 mirror init package.json
 mirror init jsr.json
@@ -182,7 +190,7 @@ mirror config schema
 
 - `show`: Prints the resolved configuration after defaults and CLI overrides.
 - `check`: Validates configuration, adapter files, Git availability, and supported Git tag templates.
-- `schema`: Prints the configuration reference.
+- `schema`: Prints the configuration reference. `--format json` prints a JSON Schema for editor autocomplete; the same schema ships at `schema/mirror.config.schema.json`.
 
 ### `mirror agents`
 
@@ -419,6 +427,8 @@ The API uses the same configuration discovery and safety rules as the CLI.
 - `source/guiho-mirror-bin.ts`: CLI binary entrypoint.
 - `source/cli.ts`: citty command tree, CLI argument mapping, and process-facing error handling.
 - `source/config.ts`: TOML discovery, schema validation, defaulting, init config generation, init reconciliation, and override merge.
+- `source/init.ts`: init answer resolution, interactive prompts (TTY-only), and defaults.
+- `source/schema.ts`: JSON Schema for `mirror.config.toml` and the `#:schema` reference.
 - `source/types.ts`: public and internal TypeScript types.
 - `source/version.ts`: semver target validation and next-version resolution.
 - `source/adapters.ts`: package, JSR, and Git read/write primitives.

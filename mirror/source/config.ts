@@ -11,10 +11,12 @@ import type {
   MirrorCliOptions,
   MirrorConfig,
   MirrorConfigDiscovery,
+  MirrorInitAnswers,
   MirrorProjectNameSource,
   MirrorRawConfig,
 } from './types.js'
 import { MirrorError } from './errors.js'
+import { mirrorConfigSchemaReference } from './schema.js'
 
 const adapters = new Set(['package.json', 'jsr.json', 'git'])
 const projectNameSources = new Set(['package.json', 'jsr.json'])
@@ -131,105 +133,74 @@ export const normalizeMirrorConfig = (
   }
 }
 
-export const createInitConfig = (kind: MirrorAdapterName, cwd: string) => {
-  const projectName = basename(cwd)
+export const defaultInitAnswersForSource = (kind: MirrorAdapterName, cwd: string): MirrorInitAnswers => ({
+  source: kind,
+  output: kind === 'git' ? ['git'] : [kind, 'git'],
+  packagePath: 'package.json',
+  auxiliaryPaths: [],
+  jsrPath: 'jsr.json',
+  name: kind === 'git' ? basename(cwd) : undefined,
+  prereleaseId: '',
+  tagTemplate: '{name}@{version}',
+  commit: kind !== 'git',
+  push: false,
+})
 
-  if (kind === 'package.json') {
-    return `schema = 1
+export const generateInitConfig = (answers: MirrorInitAnswers, cwd: string) => {
+  const lines: string[] = []
 
-[project]
-name_source = "package.json"
+  lines.push(`#:schema ${mirrorConfigSchemaReference}`)
+  lines.push('')
+  lines.push('schema = 1')
+  lines.push('')
+  lines.push('[project]')
+  if (answers.source === 'package.json') lines.push('name_source = "package.json"')
+  else if (answers.source === 'jsr.json') lines.push('name_source = "jsr.json"')
+  else lines.push(`name = "${answers.name ?? basename(cwd)}"`)
+  lines.push('')
+  lines.push('[version]')
+  lines.push('scheme = "semver"')
+  lines.push(`source = "${answers.source}"`)
+  lines.push(`output = [${answers.output.map((value) => `"${value}"`).join(', ')}]`)
+  lines.push(`prerelease_id = "${answers.prereleaseId}"`)
+  lines.push('')
+  lines.push('[package]')
+  lines.push(`path = "${answers.packagePath}"`)
+  lines.push(`auxiliary_paths = [${answers.auxiliaryPaths.map((value) => `"${value}"`).join(', ')}]`)
+  lines.push('')
+  lines.push('[jsr]')
+  lines.push(`path = "${answers.jsrPath}"`)
+  lines.push('')
+  lines.push('[git]')
+  lines.push(`tag_template = "${answers.tagTemplate}"`)
+  lines.push(`commit = ${String(answers.commit)}`)
+  lines.push(`push = ${String(answers.push)}`)
+  lines.push('allow_dirty = false')
+  lines.push('')
+  lines.push('[agents]')
+  lines.push('write_changelog = true')
+  lines.push('changelog_path = "CHANGELOG.md"')
+  lines.push('auto_agents_md = true')
+  lines.push('auto_skill_install = true')
 
-[version]
-scheme = "semver"
-source = "package.json"
-output = ["package.json"]
-prerelease_id = ""
-
-[package]
-path = "package.json"
-auxiliary_paths = []
-
-[jsr]
-path = "jsr.json"
-
-[git]
-tag_template = "{name}@{version}"
-commit = false
-push = false
-allow_dirty = false
-
-[agents]
-write_changelog = true
-changelog_path = "CHANGELOG.md"
-auto_agents_md = true
-auto_skill_install = true
-`
-  }
-
-  if (kind === 'jsr.json') {
-    return `schema = 1
-
-[project]
-name_source = "jsr.json"
-
-[version]
-scheme = "semver"
-source = "jsr.json"
-output = ["jsr.json"]
-prerelease_id = ""
-
-[jsr]
-path = "jsr.json"
-
-[git]
-tag_template = "{name}@{version}"
-commit = false
-push = false
-allow_dirty = false
-
-[agents]
-write_changelog = true
-changelog_path = "CHANGELOG.md"
-auto_agents_md = true
-auto_skill_install = true
-`
-  }
-
-  return `schema = 1
-
-[project]
-name = "${projectName}"
-
-[version]
-scheme = "semver"
-source = "git"
-output = ["git"]
-prerelease_id = ""
-
-[git]
-tag_template = "v{version}"
-commit = false
-push = false
-allow_dirty = false
-
-[agents]
-write_changelog = true
-changelog_path = "CHANGELOG.md"
-auto_agents_md = true
-auto_skill_install = true
-`
+  return `${lines.join('\n')}\n`
 }
 
-export const writeInitConfig = async (kind: MirrorAdapterName, cwd: string, overwrite = false) => {
+export const createInitConfig = (kind: MirrorAdapterName, cwd: string) => generateInitConfig(defaultInitAnswersForSource(kind, cwd), cwd)
+
+export const writeInitConfig = async (kind: MirrorAdapterName, cwd: string, overwrite = false) =>
+  writeInitConfigFromAnswers(defaultInitAnswersForSource(kind, cwd), cwd, overwrite)
+
+export const writeInitConfigFromAnswers = async (answers: MirrorInitAnswers, cwd: string, overwrite = false) => {
   const path = join(cwd, 'mirror.config.toml')
+  const generated = generateInitConfig(answers, cwd)
 
   if (existsSync(path) && !overwrite) {
-    await writeFile(path, reconcileInitConfig(await readFile(path, 'utf8'), createInitConfig(kind, cwd)), 'utf8')
+    await writeFile(path, reconcileInitConfig(await readFile(path, 'utf8'), generated), 'utf8')
     return path
   }
 
-  await writeFile(path, createInitConfig(kind, cwd), 'utf8')
+  await writeFile(path, generated, 'utf8')
   return path
 }
 

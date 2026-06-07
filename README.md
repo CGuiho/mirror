@@ -73,16 +73,18 @@ Adapters connect Mirror to different versioning ecosystems:
 Mirror provides a concise CLI with three main command groups:
 
 #### `mirror init`
-Creates or reconciles a `mirror.config.toml` file in the current directory.
-- `mirror init package.json`
-- `mirror init jsr.json`
-- `mirror init git`
+Creates or reconciles a `mirror.config.toml` file in the current directory. On an interactive terminal, `mirror init` asks step-by-step questions (version source, outputs, package path, auxiliary paths, tag template, commit/push) with defaults you accept by pressing Enter. Pass flags to answer non-interactively, and in CI / non-TTY environments it uses flags + defaults without prompting.
+- `mirror init` (interactive wizard, or flags + defaults when non-interactive)
+- `mirror init package.json` / `mirror init jsr.json` / `mirror init git` (source shortcut)
+- Flags: `--source`, `--output`, `--package-file`, `--jsr-file`, `--auxiliary`, `--tag-template`, `--name`, `--preid`, `--commit`, `--push`, `--non-interactive`, `--yes`
+
+Defaults: source `package.json`, outputs `package.json` + `git`.
 
 #### `mirror config`
 Validates and inspects configuration.
 - `mirror config show`: Prints the resolved configuration.
 - `mirror config check`: Validates configuration without output.
-- `mirror config schema`: Prints the comprehensive configuration reference.
+- `mirror config schema`: Prints the comprehensive configuration reference. Use `--format json` to print a JSON Schema for editor autocomplete.
 
 #### `mirror agents`
 Installs Mirror-aware agent guidance for projects that use AI coding agents.

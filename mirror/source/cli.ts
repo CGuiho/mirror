@@ -9,9 +9,10 @@ import { resolve } from 'node:path'
 import { ensureMirrorAgentsInstructions, installMirrorSkill, runMirrorAgentAutomation } from './agents.js'
 import { MirrorError } from './errors.js'
 import { readCurrentVersion, resolveProjectName } from './adapters.js'
-import { configPathForDisplay, discoverMirrorConfig, loadMirrorConfig, relativeFromCwd, writeInitConfig } from './config.js'
+import { configPathForDisplay, discoverMirrorConfig, loadMirrorConfig, relativeFromCwd, writeInitConfigFromAnswers } from './config.js'
 import { executeVersionPlan } from './executor.js'
 import { parseMirrorCliOptions } from './flags.js'
+import { createReadlineInitPrompter, isInteractiveInit, resolveInitAnswers } from './init.js'
 import { buildVersionPlan, validateMirrorConfig } from './plan.js'
 import {
   mirrorBanner,
@@ -24,7 +25,7 @@ import {
   reportSkillInstall,
   reportValue,
 } from './reporter.js'
-import type { MirrorAdapterName, MirrorCliOptions } from './types.js'
+import type { MirrorCliOptions, MirrorInitFlags } from './types.js'
 import { resolveNextVersion } from './version.js'
 
 const mirrorVersion = readInstalledVersion()
@@ -169,25 +170,52 @@ const handleCliError = (error: unknown, verbose: boolean, exitCode?: number): ne
 
 const createInitCommand = () =>
   defineCommand({
-    meta: { name: 'init', description: 'Create a Mirror configuration file.' },
-    subCommands: {
-      'package.json': createInitKindCommand('package.json'),
-      'jsr.json': createInitKindCommand('jsr.json'),
-      git: createInitKindCommand('git'),
-    },
-  })
-
-const createInitKindCommand = (kind: MirrorAdapterName) =>
-  defineCommand({
-    meta: { name: kind, description: `Create ${kind} project configuration.` },
+    meta: { name: 'init', description: 'Create or update a Mirror configuration file.' },
     args: {
       ...globalArgs,
-      yes: { type: 'boolean', description: 'Overwrite existing mirror.config.toml' },
+      source: { type: 'positional', required: false, description: 'Version source: package.json, jsr.json, or git' },
+      output: { type: 'string', description: 'Version outputs. Repeat or comma-separate package.json, jsr.json, git.' },
+      'package-file': { type: 'string', description: 'Path to package.json' },
+      'jsr-file': { type: 'string', description: 'Path to jsr.json' },
+      auxiliary: { type: 'string', description: 'Auxiliary package.json paths. Repeat or comma-separate values.' },
+      'tag-template': { type: 'string', description: 'Git tag template' },
+      name: { type: 'string', description: 'Explicit project name' },
+      preid: { type: 'string', description: 'Default prerelease identifier' },
+      commit: { type: 'boolean', description: 'Create release commits' },
+      push: { type: 'boolean', description: 'Push release refs' },
+      'non-interactive': { type: 'boolean', description: 'Skip interactive prompts and use flags + defaults' },
+      yes: { type: 'boolean', description: 'Overwrite an existing mirror.config.toml with generated defaults' },
     },
     async run(context) {
       const options = cliOptions(context.rawArgs, context.args)
-      const path = await writeInitConfig(kind, options.cwd ?? process.cwd(), Boolean(options.yes))
-      process.stdout.write(reportValue(`created ${path}`, options.format))
+      const cwd = resolve(options.cwd ?? process.cwd())
+      const positionalSource = adapterArg(context.args['source'])
+      const commitProvided = context.rawArgs.includes('--commit')
+      const pushProvided = context.rawArgs.includes('--push')
+
+      const flags: MirrorInitFlags = {
+        source: options.source ?? positionalSource,
+        output: options.output,
+        packagePath: options.packageFile,
+        auxiliaryPaths: options.auxiliary,
+        jsrPath: options.jsrFile,
+        tagTemplate: options.tagTemplate,
+        name: options.name,
+        prereleaseId: options.preid,
+        commit: commitProvided ? options.commit : undefined,
+        push: pushProvided ? options.push : undefined,
+      }
+
+      const interactive = isInteractiveInit(options)
+      const prompter = interactive ? createReadlineInitPrompter() : undefined
+
+      try {
+        const answers = await resolveInitAnswers(flags, cwd, prompter)
+        const path = await writeInitConfigFromAnswers(answers, cwd, Boolean(options.yes))
+        process.stdout.write(reportValue(`created ${path}`, options.format))
+      } finally {
+        await prompter?.close()
+      }
     },
   })
 
@@ -330,17 +358,27 @@ const cliOptions = (rawArgs: string[], args: Record<string, unknown>): MirrorCli
     output: parsed.output ?? outputArg(args['output']),
     packageFile: parsed.packageFile ?? stringArg(args['packageFile']),
     jsrFile: parsed.jsrFile ?? stringArg(args['jsrFile']),
+    auxiliary: parsed.auxiliary ?? outputListArg(args['auxiliary']),
+    tagTemplate: parsed.tagTemplate ?? stringArg(args['tagTemplate']),
+    name: parsed.name ?? stringArg(args['name']),
     preid: parsed.preid ?? stringArg(args['preid']),
     dryRun: parsed.dryRun || args['dryRun'] === true,
     commit: parsed.commit || args['commit'] === true,
     push: parsed.push || args['push'] === true,
     allowDirty: parsed.allowDirty || args['allowDirty'] === true,
+    nonInteractive: parsed.nonInteractive || args['nonInteractive'] === true,
     yes: parsed.yes || args['yes'] === true,
     verbose: parsed.verbose || args['verbose'] === true,
   }
 }
 
 const stringArg = (value: unknown) => (typeof value === 'string' ? value : undefined)
+
+const outputListArg = (value: unknown): string[] | undefined => {
+  if (typeof value !== 'string') return undefined
+  const values = value.split(',').map((item) => item.trim()).filter(Boolean)
+  return values.length > 0 ? values : undefined
+}
 
 const adapterArg = (value: unknown) => {
   if (value === 'package.json' || value === 'jsr.json' || value === 'git') return value

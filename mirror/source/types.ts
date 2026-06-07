@@ -86,13 +86,49 @@ export type MirrorCliOptions = {
   output?: MirrorAdapterName[]
   packageFile?: string
   jsrFile?: string
+  auxiliary?: string[]
+  tagTemplate?: string
+  name?: string
   preid?: string
   dryRun?: boolean
   commit?: boolean
   push?: boolean
   allowDirty?: boolean
+  nonInteractive?: boolean
   yes?: boolean
   verbose?: boolean
+}
+
+export type MirrorInitAnswers = {
+  source: MirrorAdapterName
+  output: MirrorAdapterName[]
+  packagePath: string
+  auxiliaryPaths: string[]
+  jsrPath: string
+  name?: string
+  prereleaseId: string
+  tagTemplate: string
+  commit: boolean
+  push: boolean
+}
+
+export type MirrorInitFlags = Partial<{
+  source: MirrorAdapterName
+  output: MirrorAdapterName[]
+  packagePath: string
+  auxiliaryPaths: string[]
+  jsrPath: string
+  name: string
+  prereleaseId: string
+  tagTemplate: string
+  commit: boolean
+  push: boolean
+}>
+
+export type MirrorInitPrompter = {
+  text(question: string, defaultValue: string): Promise<string>
+  confirm(question: string, defaultValue: boolean): Promise<boolean>
+  close(): Promise<void> | void
 }
 
 export type MirrorConfigDiscovery = {

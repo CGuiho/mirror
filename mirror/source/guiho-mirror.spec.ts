@@ -11,6 +11,7 @@ import {
   applyVersionPlan,
   buildVersionPlan,
   ensureMirrorAgentsInstructions,
+  generateInitConfig,
   installMirrorSkill,
   loadMirrorConfig,
   mirrorAgentsSectionHeading,
@@ -21,6 +22,8 @@ import {
   readPackageVersion,
   readPackageVersionFile,
   renderGitTag,
+  renderMirrorConfigJsonSchema,
+  resolveInitAnswers,
   resolveMirrorSkillPath,
   resolveNextVersion,
   runMirrorAgentAutomation,
@@ -29,6 +32,7 @@ import {
   writeJsrVersion,
   writePackageVersion,
 } from './guiho-mirror.js'
+import type { MirrorInitPrompter } from './guiho-mirror.js'
 
 const temporaryDirectories: string[] = []
 
@@ -540,6 +544,110 @@ path = "custom-package.json"
     expect(content).toContain('[jsr]')
     expect(content).toContain('[git]')
     expect(content).toContain('[agents]')
+  })
+
+  test('resolves init answers from flags without prompting', async () => {
+    const answers = await resolveInitAnswers(
+      {
+        source: 'package.json',
+        output: ['package.json', 'git'],
+        auxiliaryPaths: ['package.build.json'],
+        tagTemplate: '{name}@{version}',
+        commit: true,
+      },
+      '/tmp/project',
+    )
+
+    expect(answers.source).toBe('package.json')
+    expect(answers.output).toEqual(['package.json', 'git'])
+    expect(answers.auxiliaryPaths).toEqual(['package.build.json'])
+    expect(answers.commit).toBe(true)
+    expect(answers.push).toBe(false)
+  })
+
+  test('init prompts use defaults when the user accepts with empty input', async () => {
+    const asked: string[] = []
+    const prompter: MirrorInitPrompter = {
+      async text(question, defaultValue) {
+        asked.push(question)
+        return defaultValue
+      },
+      async confirm(_question, defaultValue) {
+        return defaultValue
+      },
+      close() {},
+    }
+
+    const answers = await resolveInitAnswers({}, '/tmp/project', prompter)
+
+    expect(answers.source).toBe('package.json')
+    expect(answers.output).toEqual(['package.json', 'git'])
+    expect(answers.packagePath).toBe('package.json')
+    expect(answers.auxiliaryPaths).toEqual([])
+    expect(answers.tagTemplate).toBe('{name}@{version}')
+    expect(answers.commit).toBe(true)
+    expect(asked).toContain('Version source (package.json, jsr.json, git)')
+    expect(asked).toContain('Version outputs (comma separated)')
+  })
+
+  test('generates config with schema directive and chosen outputs', async () => {
+    const content = generateInitConfig(
+      {
+        source: 'package.json',
+        output: ['package.json', 'git'],
+        packagePath: 'package.json',
+        auxiliaryPaths: ['package.build.json'],
+        jsrPath: 'jsr.json',
+        prereleaseId: '',
+        tagTemplate: '{name}@{version}',
+        commit: true,
+        push: false,
+      },
+      '/tmp/project',
+    )
+
+    expect(content.startsWith('#:schema ')).toBe(true)
+    expect(content).toContain('source = "package.json"')
+    expect(content).toContain('output = ["package.json", "git"]')
+    expect(content).toContain('auxiliary_paths = ["package.build.json"]')
+    expect(content).toContain('commit = true')
+  })
+
+  test('runs CLI init non-interactively from flags', async () => {
+    const cwd = await createTempDir()
+
+    const result = await runMirrorCli(
+      'init',
+      '--cwd',
+      cwd,
+      '--source',
+      'package.json',
+      '--output',
+      'package.json,git',
+      '--auxiliary',
+      'package.build.json',
+      '--commit',
+    )
+    const content = await readFile(join(cwd, 'mirror.config.toml'), 'utf8')
+
+    expect(result.exitCode).toBe(0)
+    expect(content.startsWith('#:schema ')).toBe(true)
+    expect(content).toContain('source = "package.json"')
+    expect(content).toContain('output = ["package.json", "git"]')
+    expect(content).toContain('auxiliary_paths = ["package.build.json"]')
+    expect(content).toContain('commit = true')
+  })
+
+  test('prints the JSON Schema and matches the shipped schema file', async () => {
+    const cwd = await createTempDir()
+    const schema = await runMirrorCli('config', 'schema', '--cwd', cwd, '--format', 'json')
+
+    expect(schema.exitCode).toBe(0)
+    const parsed = JSON.parse(schema.stdout) as Record<string, unknown>
+    expect(parsed['title']).toBe('GUIHO Mirror Configuration')
+
+    const shippedSchema = await readFile(join(import.meta.dir, '..', 'schema', 'mirror.config.schema.json'), 'utf8')
+    expect(shippedSchema).toBe(renderMirrorConfigJsonSchema())
   })
 
   test('runs CLI agent installation and AGENTS.md commands', async () => {

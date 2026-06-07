@@ -11,6 +11,7 @@ import type {
   MirrorVersionPlan,
 } from './types.js'
 import { configPathForDisplay, relativeFromCwd } from './config.js'
+import { renderMirrorConfigJsonSchema } from './schema.js'
 
 export const mirrorBanner = (configPath?: string) => {
   const noColor = process.env['NO_COLOR'] === '1'
@@ -54,7 +55,7 @@ export const reportConfig = (config: MirrorConfig, format: MirrorFormat = 'text'
 
 export const reportConfigSchema = (format: MirrorFormat = 'text') => {
   if (format === 'json') {
-    return `${JSON.stringify({ schema: 'See text output for full reference.' }, null, 2)}\n`
+    return renderMirrorConfigJsonSchema()
   }
 
   return [

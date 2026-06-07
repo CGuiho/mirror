@@ -101,10 +101,10 @@ When the user asks to set up Mirror in a project:
    - Use `package.json` for npm/Bun package versioning.
    - Use `jsr.json` for JSR package versioning.
    - Use `git` when tags are the source of truth.
-2. Run one of:
-   - `<mirror> init package.json`
-   - `<mirror> init jsr.json`
-   - `<mirror> init git`
+2. Run `<mirror> init` (interactive wizard) or pass flags to answer non-interactively.
+   - `<mirror> init package.json`, `<mirror> init jsr.json`, or `<mirror> init git` set the source directly.
+   - Flags: `--source`, `--output`, `--package-file`, `--jsr-file`, `--auxiliary`, `--tag-template`, `--name`, `--preid`, `--commit`, `--push`, `--non-interactive`, `--yes`.
+   - Defaults are source `package.json` and outputs `package.json` + `git`. For agents and CI, always pass flags or `--non-interactive` so init never waits for prompts.
 3. If `mirror.config.toml` already exists, `init` reconciles missing defaults without overwriting user-configured values.
 4. Review `mirror.config.toml` with the user if outputs, auxiliary package paths, tag templates, commits, or pushes need customization.
 5. Validate with `<mirror> config check` and inspect with `<mirror> config show`.
@@ -158,12 +158,14 @@ Agent automation options default to true. Set `write_changelog = false` to tell 
 Common commands:
 
 ```bash
+mirror init
 mirror init package.json
 mirror init jsr.json
 mirror init git
 mirror config show
 mirror config check
 mirror config schema
+mirror config schema --format json
 mirror agents install local
 mirror agents install global
 mirror agents instructions
