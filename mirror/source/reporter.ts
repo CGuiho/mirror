@@ -7,6 +7,7 @@ import type {
   MirrorConfig,
   MirrorExecutionResult,
   MirrorFormat,
+  MirrorHookResult,
   MirrorSkillInstallResult,
   MirrorVersionPlan,
 } from './types.js'
@@ -93,6 +94,22 @@ export const reportConfigSchema = (format: MirrorFormat = 'text') => {
     '  auto_agents_md = true | false             Optional. Insert Mirror guidance into AGENTS.md when present. Default: true.',
     '  auto_skill_install = true | false         Optional. Install guiho-as-mirror globally when missing. Default: true.',
     '',
+    '  [hooks]',
+    '  before_everything = "<command>"           Optional. Shell command(s) before any release work.',
+    '  after_everything = "<command>"            Optional. Shell command(s) after all release work (always runs).',
+    '  before_plan = "<command>"                 Optional. Shell command(s) before building the release plan.',
+    '  after_plan = "<command>"                  Optional. Shell command(s) after the plan is built.',
+    '  before_apply = "<command>"                Optional. Shell command(s) before executing the plan.',
+    '  after_apply = "<command>"                 Optional. Shell command(s) after plan execution (always runs).',
+    '  before_write = "<command>"                Optional. Shell command(s) before writing version files.',
+    '  after_write = "<command>"                 Optional. Shell command(s) after writing version files.',
+    '  before_commit = "<command>"               Optional. Shell command(s) before creating a release commit.',
+    '  after_commit = "<command>"                Optional. Shell command(s) after creating a release commit.',
+    '  before_tag = "<command>"                  Optional. Shell command(s) before creating a release tag.',
+    '  after_tag = "<command>"                   Optional. Shell command(s) after creating a release tag.',
+    '  before_push = "<command>"                 Optional. Shell command(s) before pushing release refs.',
+    '  after_push = "<command>"                  Optional. Shell command(s) after pushing release refs.',
+    '',
   ].join('\n')
 }
 
@@ -149,7 +166,9 @@ export const reportPlan = (plan: MirrorVersionPlan, format: MirrorFormat = 'text
 
 export const reportExecution = (result: MirrorExecutionResult, format: MirrorFormat = 'text') => {
   if (format === 'json') return `${JSON.stringify(result, null, 2)}\n`
-  return `${reportPlan(result.plan, 'text')}applied: ${String(result.applied)}\ndry_run: ${String(result.dryRun)}\n`
+  let out = `${reportPlan(result.plan, 'text')}applied: ${String(result.applied)}\ndry_run: ${String(result.dryRun)}\n`
+  if (result.hookResults && result.hookResults.length > 0) out += reportHookResults(result.hookResults)
+  return out
 }
 
 export const reportExecutionSummary = (result: MirrorExecutionResult, format: MirrorFormat = 'text') => {
@@ -167,5 +186,12 @@ export const reportExecutionSummary = (result: MirrorExecutionResult, format: Mi
   if (files) lines.push(`files: ${files}`)
   if (result.plan.gitTag) lines.push(`tag: ${result.plan.gitTag}`)
 
+  let out = `${lines.join('\n')}\n`
+  if (result.hookResults && result.hookResults.length > 0) out += reportHookResults(result.hookResults)
+  return out
+}
+
+export const reportHookResults = (results: MirrorHookResult[]) => {
+  const lines = results.map((r) => `hooks: ${r.name} ${r.status}${r.exitCode ? ` (exit ${r.exitCode})` : ''}`)
   return `${lines.join('\n')}\n`
 }

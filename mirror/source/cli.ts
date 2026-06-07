@@ -25,8 +25,9 @@ import {
   reportSkillInstall,
   reportValue,
 } from './reporter.js'
-import type { MirrorCliOptions, MirrorInitFlags } from './types.js'
+import type { MirrorCliOptions, MirrorInitFlags, MirrorHookResult } from './types.js'
 import { resolveNextVersion } from './version.js'
+import { runHooks, runHooksQuiet, hookEnvFromConfig, hookEnvForPlan, hookEnvForResult } from './hooks.js'
 
 const mirrorVersion = readInstalledVersion()
 
@@ -334,13 +335,43 @@ const createVersionCommand = () =>
         async run(context) {
           const options = cliOptions(context.rawArgs, context.args)
           await prepareAgents(options)
-          const plan = await buildVersionPlan(String(context.args['target']), options)
+          const target = String(context.args['target'])
+          const config = await loadMirrorConfig(options)
+          const hooks = config.hooks
+          const hookResults: MirrorHookResult[] = []
 
-          if (options.format !== 'json') process.stdout.write(mirrorBanner(plan.configPath ? plan.configPath : ''))
-          if (options.format !== 'json') process.stdout.write(reportPlan(plan, options.format))
+          const baseEnv = hookEnvFromConfig(config, target)
 
-          const result = await executeVersionPlan(plan, options)
-          process.stdout.write(options.format === 'json' ? reportExecution(result, options.format) : reportExecutionSummary(result, options.format))
+          try {
+            await runHooks('before:everything', hooks['before:everything'], baseEnv, config.cwd)
+          } catch (error) {
+            hookResults.push({ name: 'before:everything', commands: hooks['before:everything'] ?? [], status: 'failure', durationMs: 0, exitCode: error instanceof Error ? 1 : 1, stderr: error instanceof Error ? error.message : String(error) })
+            throw error
+          }
+
+          try {
+            await runHooks('before:plan', hooks['before:plan'], baseEnv, config.cwd)
+            const plan = await buildVersionPlan(target, options)
+
+            const planEnv = hookEnvForPlan(plan, target)
+            await runHooks('after:plan', hooks['after:plan'], planEnv, config.cwd)
+
+            if (options.format !== 'json') process.stdout.write(mirrorBanner(plan.configPath ? plan.configPath : ''))
+            if (options.format !== 'json') process.stdout.write(reportPlan(plan, options.format))
+
+            await runHooks('before:apply', hooks['before:apply'], planEnv, config.cwd)
+
+            try {
+              const result = await executeVersionPlan(plan, options, hooks, target)
+              result.hookResults = hookResults
+              process.stdout.write(options.format === 'json' ? reportExecution(result, options.format) : reportExecutionSummary(result, options.format))
+            } finally {
+              const resultEnv = hookEnvForResult(plan, target, true, Boolean(options.dryRun))
+              await runHooksQuiet('after:apply', hooks['after:apply'], resultEnv, config.cwd, hookResults)
+            }
+          } finally {
+            await runHooksQuiet('after:everything', hooks['after:everything'], baseEnv, config.cwd, hookResults)
+          }
         },
       }),
     },

@@ -17,6 +17,7 @@ import type {
 } from './types.js'
 import { MirrorError } from './errors.js'
 import { mirrorConfigSchemaReference } from './schema.js'
+import { normalizeHooksConfig } from './hooks.js'
 
 const adapters = new Set(['package.json', 'jsr.json', 'git'])
 const projectNameSources = new Set(['package.json', 'jsr.json'])
@@ -96,6 +97,7 @@ export const normalizeMirrorConfig = (
   const changelogPath = optionalString(raw.agents?.changelog_path, 'agents.changelog_path') ?? 'CHANGELOG.md'
   const autoAgentsMd = optionalBoolean(raw.agents?.auto_agents_md, 'agents.auto_agents_md') !== false
   const autoSkillInstall = optionalBoolean(raw.agents?.auto_skill_install, 'agents.auto_skill_install') !== false
+  const hooks = normalizeHooksConfig(raw.hooks)
 
   return {
     schema: 1,
@@ -130,6 +132,7 @@ export const normalizeMirrorConfig = (
       autoAgentsMd,
       autoSkillInstall,
     },
+    hooks,
   }
 }
 

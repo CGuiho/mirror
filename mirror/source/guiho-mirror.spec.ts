@@ -12,9 +12,13 @@ import {
   buildVersionPlan,
   ensureMirrorAgentsInstructions,
   generateInitConfig,
+  hookEnvForAction,
+  hookEnvForPlan,
+  hookEnvFromConfig,
   installMirrorSkill,
   loadMirrorConfig,
   mirrorAgentsSectionHeading,
+  normalizeHooksConfig,
   parseMirrorCliOptions,
   readJsrName,
   readJsrVersion,
@@ -26,6 +30,7 @@ import {
   resolveInitAnswers,
   resolveMirrorSkillPath,
   resolveNextVersion,
+  runHooks,
   runMirrorAgentAutomation,
   validateMirrorConfig,
   versionFromTag,
@@ -794,6 +799,193 @@ path = "custom-package.json"
 
     expect(result.exitCode).not.toBe(0)
     expect(result.stderr).toMatch(/Git executable not found/)
+  })
+
+  test('normalizes hook config keys from underscores to colons', () => {
+    const raw: Record<string, string | string[]> = {
+      before_everything: 'echo start',
+      after_everything: 'echo end',
+      before_plan: ['npm run lint', 'npm run typecheck'],
+      unknown_hook: 'echo nope',
+    }
+
+    const config = normalizeHooksConfig(raw)
+
+    expect(config['before:everything']).toEqual(['echo start'])
+    expect(config['after:everything']).toEqual(['echo end'])
+    expect(config['before:plan']).toEqual(['npm run lint', 'npm run typecheck'])
+    expect(config['unknown:hook'] as unknown).toBeUndefined()
+    expect(config['after:plan']).toBeUndefined()
+  })
+
+  test('normalizes string hook values to arrays', () => {
+    const raw: Record<string, string | string[]> = {
+      before_everything: 'echo single',
+    }
+
+    const config = normalizeHooksConfig(raw)
+
+    expect(config['before:everything']).toEqual(['echo single'])
+  })
+
+  test('returns empty config for undefined hooks', () => {
+    expect(normalizeHooksConfig(undefined)).toEqual({})
+  })
+
+  test('builds hook env vars from config', () => {
+    const env = hookEnvFromConfig({
+      schema: 1,
+      cwd: '/project',
+      configPath: '/project/mirror.config.toml',
+      version: { scheme: 'semver', source: 'package.json', output: ['package.json', 'git'], prereleaseId: 'alpha' },
+      package: { path: 'package.json', auxiliaryPaths: [] },
+      jsr: { path: 'jsr.json' },
+      git: { tagTemplate: 'v{version}', commit: true, push: false, allowDirty: false },
+      agents: { writeChangelog: true, changelogPath: 'CHANGELOG.md', autoAgentsMd: true, autoSkillInstall: true },
+      hooks: {},
+      project: {},
+    }, 'patch')
+
+    expect(env['MIRROR_CWD']).toBe('/project')
+    expect(env['MIRROR_SOURCE']).toBe('package.json')
+    expect(env['MIRROR_OUTPUT']).toBe('package.json,git')
+    expect(env['MIRROR_TARGET']).toBe('patch')
+    expect(env['MIRROR_CURRENT']).toBeUndefined()
+  })
+
+  test('builds hook env vars from plan', () => {
+    const env = hookEnvForPlan({
+      cwd: '/project',
+      source: 'package.json',
+      output: ['package.json', 'git'],
+      currentVersion: '1.0.0',
+      nextVersion: '1.1.0',
+      project: { name: 'my-pkg' },
+      gitTag: 'my-pkg@1.1.0',
+      fileOutputPaths: ['package.json'],
+      commitEnabled: true,
+      pushEnabled: false,
+      allowDirty: false,
+      actions: [],
+      configPath: '/project/mirror.config.toml',
+    }, 'minor')
+
+    expect(env['MIRROR_CURRENT']).toBe('1.0.0')
+    expect(env['MIRROR_NEXT']).toBe('1.1.0')
+    expect(env['MIRROR_PROJECT_NAME']).toBe('my-pkg')
+    expect(env['MIRROR_GIT_TAG']).toBe('my-pkg@1.1.0')
+    expect(env['MIRROR_FILE_PATHS']).toBe('package.json')
+    expect(env['MIRROR_COMMIT_ENABLED']).toBe('true')
+    expect(env['MIRROR_PUSH_ENABLED']).toBe('false')
+  })
+
+  test('builds hook env vars for action-level hooks', () => {
+    const plan = {
+      cwd: '/project',
+      source: 'package.json' as const,
+      output: ['package.json', 'git'] as const,
+      currentVersion: '1.0.0',
+      nextVersion: '1.1.0',
+      project: { name: 'my-pkg' },
+      gitTag: 'my-pkg@1.1.0',
+      fileOutputPaths: ['package.json'],
+      commitEnabled: true,
+      pushEnabled: true,
+      allowDirty: false,
+      actions: [],
+      configPath: '/project/mirror.config.toml',
+    }
+
+    const writeEnv = hookEnvForAction(plan, 'minor', {
+      type: 'write-file',
+      adapter: 'package.json',
+      path: 'package.json',
+      currentVersion: '1.0.0',
+      nextVersion: '1.1.0',
+    })
+
+    expect(writeEnv['MIRROR_FILE_PATH']).toBe('package.json')
+    expect(writeEnv['MIRROR_FILE_CURRENT']).toBe('1.0.0')
+    expect(writeEnv['MIRROR_FILE_NEXT']).toBe('1.1.0')
+
+    const commitEnv = hookEnvForAction(plan, 'minor', {
+      type: 'git-commit',
+      message: 'my-pkg@1.1.0',
+      paths: ['package.json'],
+    })
+
+    expect(commitEnv['MIRROR_COMMIT_MSG']).toBe('my-pkg@1.1.0')
+    expect(commitEnv['MIRROR_COMMIT_PATHS']).toBe('package.json')
+
+    const tagEnv = hookEnvForAction(plan, 'minor', { type: 'git-tag', tag: 'my-pkg@1.1.0' })
+
+    expect(tagEnv['MIRROR_TAG']).toBe('my-pkg@1.1.0')
+
+    const pushEnv = hookEnvForAction(plan, 'minor', {
+      type: 'git-push',
+      includeCommit: true,
+      includeTags: true,
+    })
+
+    expect(pushEnv['MIRROR_INCLUDE_COMMIT']).toBe('true')
+    expect(pushEnv['MIRROR_INCLUDE_TAGS']).toBe('true')
+  })
+
+  test('runs a successful hook command', async () => {
+    const result = await runHooks('before:everything', ['node -e "console.log(\'hello hook\')"'], {}, process.cwd())
+
+    expect(result).toBeDefined()
+    expect(result!.status).toBe('success')
+    expect(result!.exitCode).toBe(0)
+  })
+
+  test('throws MirrorError on failed hook command', async () => {
+    await expect(runHooks('before:plan', ['node -e "process.exit(3)"'], {}, process.cwd())).rejects.toThrow("Hook 'before:plan' failed")
+  })
+
+  test('skips undefined hooks silently', async () => {
+    const result = await runHooks('before:plan', undefined, {}, process.cwd())
+
+    expect(result).toBeUndefined()
+  })
+
+  test('skips empty hooks array silently', async () => {
+    const result = await runHooks('before:plan', [], {}, process.cwd())
+
+    expect(result).toBeUndefined()
+  })
+
+  test('hooks appear in execution result', async () => {
+    const cwd = await createPackageAndJsrFixture()
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'] }) + `
+[hooks]
+before_apply = "echo before-apply-hook"
+after_apply = "echo after-apply-hook"
+`)
+
+    const plan = await buildVersionPlan('patch', { cwd })
+    const { executeVersionPlan } = await import('./executor.js')
+    const { normalizeHooksConfig } = await import('./hooks.js')
+    const rawHooks = normalizeHooksConfig({
+      before_apply: 'echo before-apply-hook',
+      after_apply: 'echo after-apply-hook',
+    })
+    const result = await executeVersionPlan(plan, { yes: true }, rawHooks)
+
+    expect(result.applied).toBe(true)
+  })
+
+  test('failed hook stops version apply via CLI', async () => {
+    const cwd = await createPackageAndJsrFixture()
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'] }) + `
+[hooks]
+before_apply = "node -e process.exit(1)"
+`)
+
+    const { exitCode, stderr } = await runMirrorCliFromCwd(cwd, await createTempDir(), 'version', 'apply', 'patch', '--yes')
+
+    expect(exitCode).not.toBe(0)
+    expect(stderr).toContain('before:apply')
   })
 })
 

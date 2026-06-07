@@ -355,6 +355,110 @@ Mirror intentionally separates planning from mutation.
 
 `mirror version apply` refuses to mutate unless `--yes` is passed, unless `--dry-run` is used.
 
+## Lifecycle Hooks
+
+Mirror supports lifecycle hooks that run shell commands at defined points during `mirror version apply`. Hooks are configured in the `[hooks]` section of `mirror.config.toml`.
+
+### Lifecycle Tree
+
+```
+before:everything              # Runs once, before anything else
+  │
+  ├─ before:plan               # Runs before buildVersionPlan()
+  │    buildVersionPlan()      # Plan construction (read-only)
+  │    after:plan              # Runs after plan is built
+  │
+  ├─ before:apply              # Runs before executeVersionPlan()
+  │    │
+  │    ├─ before:write         # Runs before each file-write batch
+  │    │    write-file(s)      # Mutate package.json / jsr.json
+  │    │    after:write        # Runs after all file writes
+  │    │
+  │    ├─ before:commit        # Runs before git commit
+  │    │    git-commit         # git add + git commit
+  │    │    after:commit       # Runs after git commit
+  │    │
+  │    ├─ before:tag           # Runs before git tag
+  │    │    git-tag            # git tag -m "..."
+  │    │    after:tag          # Runs after git tag
+  │    │
+  │    ├─ before:push          # Runs before git push
+  │    │    git-push           # git push + git push --tags
+  │    │    after:push         # Runs after git push
+  │    │
+  │    after:apply             # Runs after executeVersionPlan() completes (always runs)
+  │
+  after:everything             # Runs once, after everything else (always runs)
+```
+
+### Hook Configuration
+
+```toml
+[hooks]
+before_everything = "npm run typecheck"
+after_everything  = "echo 'Release complete!'"
+
+before_plan = ["npm run lint", "npm run typecheck"]
+after_plan  = "echo 'Plan is ready'"
+
+before_apply = "npm run build"
+after_apply  = "node scripts/notify-release.js"
+
+before_write  = "echo 'Writing version files...'"
+after_write   = "echo 'Files written'"
+
+before_commit = ["npm run format", "echo 'Committing...'"]
+after_commit  = "echo 'Committed'"
+
+before_tag   = "echo 'Tagging release...'"
+after_tag    = "echo 'Tagged'"
+
+before_push  = "echo 'Pushing...'"
+after_push   = "echo 'Pushed'"
+```
+
+- Each hook key maps to a string (single command) or array of strings (multiple commands run sequentially).
+- Hook names use underscores (`before_everything`) in TOML, which normalizes to colon form (`before:everything`) internally.
+- Hook commands run in the project root directory through the default platform shell.
+- Action-level hooks (`before:write`, `before:commit`, `before:tag`, `before:push` and their `after:` variants) fire only when the corresponding action is part of the plan.
+- Hooks are skipped during `--dry-run`.
+
+### Hook Error Handling
+
+- When a hook exits with a non-zero code, Mirror stops the pipeline and reports the failure.
+- `after:apply` and `after:everything` always run, even when a prior hook or action failed. This ensures cleanup and notification hooks fire reliably.
+
+### Hook Environment Variables
+
+Every hook receives `MIRROR_*` environment variables with release context:
+
+| Variable               | Scope        | Description                                           |
+|------------------------|--------------|-------------------------------------------------------|
+| `MIRROR_CWD`           | Always       | Project root directory                                |
+| `MIRROR_CONFIG_PATH`   | Always       | Path to resolved `mirror.config.toml`                 |
+| `MIRROR_SOURCE`        | Always       | Version source adapter                                |
+| `MIRROR_OUTPUT`        | Always       | Comma-separated output adapters                       |
+| `MIRROR_TARGET`        | Always       | The release target argument                           |
+| `MIRROR_CURRENT`       | Plan+        | Current version string                                |
+| `MIRROR_NEXT`          | Plan+        | Next version string                                   |
+| `MIRROR_PROJECT_NAME`  | Plan+        | Resolved project name                                 |
+| `MIRROR_GIT_TAG`       | Plan+        | Rendered git tag (if git output)                      |
+| `MIRROR_FILE_PATHS`    | Plan+        | Comma-separated file output paths                     |
+| `MIRROR_COMMIT_ENABLED`| Plan+        | `true`/`false`                                        |
+| `MIRROR_PUSH_ENABLED`  | Plan+        | `true`/`false`                                        |
+| `MIRROR_FILE_PATH`     | Write        | Path being written to                                 |
+| `MIRROR_FILE_CURRENT`  | Write        | Current version in the file                           |
+| `MIRROR_FILE_NEXT`     | Write        | Next version being written                            |
+| `MIRROR_COMMIT_MSG`    | Commit       | Commit message                                        |
+| `MIRROR_COMMIT_PATHS`  | Commit       | Space-separated paths being committed                 |
+| `MIRROR_TAG`           | Tag          | Git tag being created                                 |
+| `MIRROR_INCLUDE_COMMIT`| Push         | `true`/`false`                                        |
+| `MIRROR_INCLUDE_TAGS`  | Push         | `true`/`false`                                        |
+| `MIRROR_APPLIED`       | Results      | `true`/`false` (whether execution actually applied)    |
+| `MIRROR_DRY_RUN`       | Results      | `true`/`false`                                        |
+
+"Plan+" means the variable is available starting from `before:plan` and all later hooks. "Write", "Commit", "Tag", and "Push" mean the variable is available at the corresponding action-level hooks. "Results" means `after:apply` and `after:everything`.
+
 ## Recommended Agent Release Workflow
 
 When an AI coding agent prepares a Mirror-managed release, it should follow this sequence.
@@ -434,6 +538,7 @@ The API uses the same configuration discovery and safety rules as the CLI.
 - `source/adapters.ts`: package, JSR, and Git read/write primitives.
 - `source/plan.ts`: validation and read-only release plan construction.
 - `source/executor.ts`: mutation layer for file writes, Git commits, tags, and pushes.
+- `source/hooks.ts`: lifecycle hook configuration, execution, and environment variable construction.
 - `source/reporter.ts`: text and JSON report formatting.
 - `source/agents.ts`: agent skill installation and AGENTS.md guidance automation.
 - `source/errors.ts`: user-facing errors with stable exit codes.

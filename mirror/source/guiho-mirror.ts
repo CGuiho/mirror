@@ -11,6 +11,10 @@ export type {
   MirrorAgentAutomationResult,
   MirrorAgentSettings,
   MirrorAgentsInstructionsResult,
+  MirrorHookCommand,
+  MirrorHookName,
+  MirrorHookResult,
+  MirrorHooksConfig,
   MirrorInitAnswers,
   MirrorInitFlags,
   MirrorInitPrompter,
@@ -78,6 +82,16 @@ export {
 } from './adapters.js'
 export { buildVersionPlan, releaseLabel, resolveFileOutputPaths, validateMirrorConfig } from './plan.js'
 export { applyVersionPlan, executeVersionPlan } from './executor.js'
+export {
+  hookEnvFromConfig,
+  hookEnvForAction,
+  hookEnvForPlan,
+  hookEnvForResult,
+  mirrorHookNames,
+  normalizeHooksConfig,
+  runHooks,
+  runHooksQuiet,
+} from './hooks.js'
 export {
   mirrorBanner,
   reportAgentsInstructions,

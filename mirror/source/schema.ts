@@ -125,6 +125,30 @@ export const mirrorConfigJsonSchema = {
         },
       },
     },
+    hooks: {
+      type: 'object',
+      description: 'Lifecycle hook commands that run at defined points during version apply.',
+      additionalProperties: {
+        oneOf: [
+          { type: 'string', description: 'A single shell command.' },
+          { type: 'array', items: { type: 'string' }, description: 'Multiple shell commands run sequentially.' },
+        ],
+      },
+      properties: Object.fromEntries([
+        'before_everything', 'after_everything',
+        'before_plan', 'after_plan',
+        'before_apply', 'after_apply',
+        'before_write', 'after_write',
+        'before_commit', 'after_commit',
+        'before_tag', 'after_tag',
+        'before_push', 'after_push',
+      ].map((key) => [key, {
+        oneOf: [
+          { type: 'string', description: `A single shell command to run at the ${key.replaceAll('_', ':')} lifecycle point.` },
+          { type: 'array', items: { type: 'string' }, description: `Multiple shell commands to run sequentially at the ${key.replaceAll('_', ':')} lifecycle point.` },
+        ],
+      }])),
+    },
   },
 } as const
 

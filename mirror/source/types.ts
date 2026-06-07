@@ -11,6 +11,29 @@ export type MirrorVersionTarget = ReleaseType | string
 export type MirrorJsonObject = Record<string, unknown>
 export type MirrorSkillInstallScope = 'local' | 'global'
 
+export type MirrorHookName =
+  | 'before:everything' | 'after:everything'
+  | 'before:plan' | 'after:plan'
+  | 'before:apply' | 'after:apply'
+  | 'before:write' | 'after:write'
+  | 'before:commit' | 'after:commit'
+  | 'before:tag' | 'after:tag'
+  | 'before:push' | 'after:push'
+
+export type MirrorHookCommand = string | string[]
+
+export type MirrorHooksConfig = Partial<Record<MirrorHookName, string[]>>
+
+export type MirrorHookResult = {
+  name: MirrorHookName
+  commands: string[]
+  status: 'success' | 'failure' | 'skipped'
+  durationMs: number
+  exitCode?: number
+  stdout?: string
+  stderr?: string
+}
+
 export type MirrorRawConfig = Partial<{
   schema: number
   project: Partial<{
@@ -40,6 +63,7 @@ export type MirrorRawConfig = Partial<{
     auto_agents_md: boolean
     auto_skill_install: boolean
   }>
+  hooks: Record<string, MirrorHookCommand>
 }>
 
 export type MirrorConfig = {
@@ -68,6 +92,7 @@ export type MirrorConfig = {
     allowDirty: boolean
   }
   agents: MirrorAgentSettings
+  hooks: MirrorHooksConfig
 }
 
 export type MirrorAgentSettings = {
@@ -203,4 +228,5 @@ export type MirrorExecutionResult = {
   plan: MirrorVersionPlan
   applied: boolean
   dryRun: boolean
+  hookResults?: MirrorHookResult[]
 }
