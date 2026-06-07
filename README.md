@@ -137,7 +137,7 @@ auto_skill_install = true              # Optional. Install guiho-as-mirror globa
 
 ### Agent Automation
 
-Mirror is designed to be safely used by AI agents. Project commands automatically check for `AGENTS.md` and the `guiho-as-mirror` skill, then add the Mirror guidance or install the missing skill when automation is enabled.
+Mirror is designed to be safely used by AI agents. Project commands automatically check for `AGENTS.md` and the `guiho-as-mirror` skill, then add the Mirror guidance or install the missing skill when automation is enabled. Running `mirror` with no arguments also performs this configured agent setup before showing help.
 
 Set `write_changelog = false` when agents should skip changelog edits during release preparation. Set `changelog_path = "docs/CHANGELOG.md"` when the changelog is not at the project root. Set `auto_agents_md = false` to opt out of automatic guidance insertion, or `auto_skill_install = false` to opt out of automatic global skill installation.
 

@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Changed Mirror skill installation paths to the standard `.agents/skills` and `~/.agents/skills` directories.
 - Changed automatic skill installation to global-only by default while keeping explicit local installation available through `mirror agents install local`.
+- Changed no-argument `mirror` startup to run configured agent setup before showing help.
 - Updated documentation, schema text, and tests to describe the standard agent skill directories.
 
 ## [3.1.0] - 2026-06-07

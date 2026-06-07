@@ -83,6 +83,10 @@ export const runMirrorCli = async (rawArgs = process.argv.slice(2)) => {
   try {
     if (effectiveArgs.includes('--no-color')) process.env['NO_COLOR'] = '1'
 
+    if (rawArgs.length === 0) {
+      await prepareAgents({})
+    }
+
     if (effectiveArgs.includes('--help')) {
       const parsed = parseMirrorCliOptions(effectiveArgs)
       const cwd = resolve(parsed.cwd ?? process.cwd())

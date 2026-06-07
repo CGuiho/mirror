@@ -492,6 +492,22 @@ describe('Mirror v3', () => {
     expect(result.stdout).toContain('USAGE')
   })
 
+  test('runs configured agent automation with no arguments', async () => {
+    const cwd = await createPackageAndJsrFixture()
+    const homeDirectory = await createTempDir()
+    await writeText(join(cwd, 'AGENTS.md'), '# Agents\n')
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'] }))
+
+    const result = await runMirrorCliFromCwd(cwd, homeDirectory)
+
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout).toContain('USAGE')
+    expect(result.stderr).toContain('guiho-as-mirror skill not found global')
+    expect(await readFile(join(cwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
+    expect(existsSync(resolveMirrorSkillPath('local', { cwd, homeDirectory }))).toBe(false)
+    expect(await readFile(resolveMirrorSkillPath('global', { cwd, homeDirectory }), 'utf8')).toContain('name: guiho-as-mirror')
+  })
+
   test('runs CLI help without ANSI colors when no-color is set', async () => {
     const result = await runMirrorCli('--no-color', '--help')
 
@@ -764,6 +780,18 @@ const gitText = async (cwd: string, ...args: string[]) => {
 const runMirrorCli = async (...args: string[]) => {
   const homeDirectory = await createTempDir()
   const result = Bun.spawn(['bun', join(import.meta.dir, 'guiho-mirror-bin.ts'), ...args], {
+    stdout: 'pipe',
+    stderr: 'pipe',
+    env: { ...process.env as Record<string, string | undefined>, MIRROR_AGENT_HOME: homeDirectory },
+  })
+  const [exitCode, stdout, stderr] = await Promise.all([result.exited, result.stdout.text(), result.stderr.text()])
+
+  return { exitCode, stdout, stderr }
+}
+
+const runMirrorCliFromCwd = async (cwd: string, homeDirectory: string, ...args: string[]) => {
+  const result = Bun.spawn(['bun', join(import.meta.dir, 'guiho-mirror-bin.ts'), ...args], {
+    cwd,
     stdout: 'pipe',
     stderr: 'pipe',
     env: { ...process.env as Record<string, string | undefined>, MIRROR_AGENT_HOME: homeDirectory },

@@ -319,7 +319,7 @@ Mirror uses standard agent skill directories:
 
 Mirror can self-provision AI-agent instructions for projects that use standard agent skill directories.
 
-When automation is enabled, project commands check for `AGENTS.md` and for global `guiho-as-mirror` skill installation. If guidance is missing, Mirror notifies the user and writes the missing global skill or AGENTS section. Mirror does not automatically write a local skill file; local installation is explicit.
+When automation is enabled, project commands check for `AGENTS.md` and for global `guiho-as-mirror` skill installation. If guidance is missing, Mirror notifies the user and writes the missing global skill or AGENTS section. Running `mirror` with no arguments performs this configured setup before showing help. Mirror does not automatically write a local skill file; local installation is explicit.
 
 Automation is controlled by `[agents]`.
 
