@@ -84,6 +84,7 @@ export const normalizeMirrorConfig = (
   const projectName = optionalString(raw.project?.name, 'project.name')
   const prereleaseId = options.preid ?? optionalString(raw.version?.prerelease_id, 'version.prerelease_id') ?? ''
   const packagePath = options.packageFile ?? optionalString(raw.package?.path, 'package.path') ?? 'package.json'
+  const packageAuxiliaryPaths = assertStringArray(raw.package?.auxiliary_paths, 'package.auxiliary_paths')
   const jsrPath = options.jsrFile ?? optionalString(raw.jsr?.path, 'jsr.path') ?? 'jsr.json'
   const tagTemplate = optionalString(raw.git?.tag_template, 'git.tag_template') ?? 'v{version}'
   const gitCommit = optionalBoolean(raw.git?.commit, 'git.commit') === true
@@ -110,6 +111,7 @@ export const normalizeMirrorConfig = (
     },
     package: {
       path: packagePath,
+      auxiliaryPaths: packageAuxiliaryPaths,
     },
     jsr: {
       path: jsrPath,
@@ -146,6 +148,7 @@ prerelease_id = ""
 
 [package]
 path = "package.json"
+auxiliary_paths = []
 
 [jsr]
 path = "jsr.json"
@@ -221,10 +224,40 @@ auto_skill_install = true
 export const writeInitConfig = async (kind: MirrorAdapterName, cwd: string, overwrite = false) => {
   const path = join(cwd, 'mirror.config.toml')
 
-  if (existsSync(path) && !overwrite) throw new MirrorError(`Configuration already exists: ${path}`)
+  if (existsSync(path) && !overwrite) {
+    await writeFile(path, reconcileInitConfig(await readFile(path, 'utf8'), createInitConfig(kind, cwd)), 'utf8')
+    return path
+  }
 
   await writeFile(path, createInitConfig(kind, cwd), 'utf8')
   return path
+}
+
+export const reconcileInitConfig = (existingContent: string, defaultsContent: string) => {
+  const existingRaw = parseConfigContent(existingContent, 'existing configuration')
+  const defaultsRaw = parseConfigContent(defaultsContent, 'default configuration')
+  const additions: string[] = []
+
+  for (const [sectionName, defaultSection] of Object.entries(defaultsRaw)) {
+    if (!isRecord(defaultSection)) continue
+
+    const existingSection = existingRaw[sectionName]
+
+    if (!isRecord(existingSection)) {
+      additions.push(renderTomlSection(sectionName, defaultSection))
+      continue
+    }
+
+    const missingValues = Object.fromEntries(
+      Object.entries(defaultSection).filter(([key]) => existingSection[key] === undefined),
+    )
+
+    if (Object.keys(missingValues).length > 0) existingContent = insertTomlValuesIntoSection(existingContent, sectionName, missingValues)
+  }
+
+  if (additions.length === 0) return existingContent
+
+  return `${existingContent.trimEnd()}\n\n${additions.join('\n\n')}\n`
 }
 
 export const configPathForDisplay = (config: MirrorConfig) => (config.configPath ? relativeFromCwd(config.cwd, config.configPath) : '(none)')
@@ -244,6 +277,15 @@ const assertOutput = (value: unknown): MirrorAdapterName[] => {
   return value.map((item) => assertAdapter(item, 'version.output'))
 }
 
+const assertStringArray = (value: unknown, key: string) => {
+  if (value === undefined) return []
+  if (!Array.isArray(value)) throw new MirrorError(`Invalid ${key}. Expected an array of strings.`)
+  return value.map((item) => {
+    if (typeof item !== 'string' || item.length === 0) throw new MirrorError(`Invalid ${key}. Expected an array of strings.`)
+    return item
+  })
+}
+
 const dedupeAdapters = (value: MirrorAdapterName[]) => [...new Set(value)]
 
 const optionalString = (value: unknown, key: string) => {
@@ -259,3 +301,48 @@ const optionalBoolean = (value: unknown, key: string) => {
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
+
+const parseConfigContent = (content: string, label: string): Record<string, unknown> => {
+  let parsed: unknown
+  try {
+    parsed = parseToml(content)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    throw new MirrorError(`Invalid TOML in ${label}:\n${message}`)
+  }
+
+  if (!isRecord(parsed)) throw new MirrorError(`Invalid ${label}. Expected a TOML object.`)
+  return parsed
+}
+
+const renderTomlSection = (sectionName: string, values: Record<string, unknown>) => {
+  const lines = [`[${sectionName}]`]
+
+  for (const [key, value] of Object.entries(values)) {
+    lines.push(`${key} = ${renderTomlValue(value)}`)
+  }
+
+  return lines.join('\n')
+}
+
+const insertTomlValuesIntoSection = (content: string, sectionName: string, values: Record<string, unknown>) => {
+  const lines = content.split(/\r?\n/)
+  const sectionIndex = lines.findIndex((line) => line.trim() === `[${sectionName}]`)
+
+  if (sectionIndex === -1) return `${content.trimEnd()}\n\n${renderTomlSection(sectionName, values)}\n`
+
+  const nextSectionIndex = lines.findIndex((line, index) => index > sectionIndex && /^\[[^\]]+]\s*$/.test(line.trim()))
+  const insertIndex = nextSectionIndex === -1 ? lines.length : nextSectionIndex
+  const renderedValues = Object.entries(values).map(([key, value]) => `${key} = ${renderTomlValue(value)}`)
+
+  lines.splice(insertIndex, 0, ...renderedValues)
+
+  return lines.join('\n')
+}
+
+const renderTomlValue = (value: unknown): string => {
+  if (typeof value === 'string') return JSON.stringify(value)
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  if (Array.isArray(value)) return `[${value.map(renderTomlValue).join(', ')}]`
+  throw new MirrorError('Cannot render unsupported init configuration value.')
+}

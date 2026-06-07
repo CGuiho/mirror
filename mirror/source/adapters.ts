@@ -60,6 +60,8 @@ export const writeJsonObject = async (path: string, object: MirrorJsonObject) =>
 
 export const readPackageVersion = async (config: MirrorConfig) => readVersionField(resolveMirrorPath(config.cwd, config.package.path), 'package.json')
 export const readJsrVersion = async (config: MirrorConfig) => readVersionField(resolveMirrorPath(config.cwd, config.jsr.path), 'jsr.json')
+export const readPackageVersionFile = async (path: string) => readVersionField(path, 'package.json')
+export const readJsrVersionFile = async (path: string) => readVersionField(path, 'jsr.json')
 export const readPackageName = async (config: MirrorConfig) => readNameField(resolveMirrorPath(config.cwd, config.package.path), 'package.json')
 export const readJsrName = async (config: MirrorConfig) => readNameField(resolveMirrorPath(config.cwd, config.jsr.path), 'jsr.json')
 
@@ -69,8 +71,14 @@ export const writePackageVersion = async (config: MirrorConfig, nextVersion: str
 export const writeJsrVersion = async (config: MirrorConfig, nextVersion: string) =>
   writeVersionField(resolveMirrorPath(config.cwd, config.jsr.path), 'jsr.json', nextVersion)
 
+export const writePackageVersionFile = async (path: string, nextVersion: string) => writeVersionField(path, 'package.json', nextVersion)
+export const writeJsrVersionFile = async (path: string, nextVersion: string) => writeVersionField(path, 'jsr.json', nextVersion)
+
 export const ensureAdapterFiles = async (config: MirrorConfig) => {
-  if (usesAdapter(config, 'package.json')) ensureFile(resolveMirrorPath(config.cwd, config.package.path), 'package.json')
+  if (usesAdapter(config, 'package.json')) {
+    ensureFile(resolveMirrorPath(config.cwd, config.package.path), 'package.json')
+    for (const path of config.package.auxiliaryPaths) ensureFile(resolveMirrorPath(config.cwd, path), 'package.json')
+  }
   if (usesAdapter(config, 'jsr.json')) ensureFile(resolveMirrorPath(config.cwd, config.jsr.path), 'jsr.json')
   if (usesAdapter(config, 'git')) await ensureGitRepository(config.cwd)
 }

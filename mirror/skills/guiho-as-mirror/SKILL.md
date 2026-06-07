@@ -105,9 +105,10 @@ When the user asks to set up Mirror in a project:
    - `<mirror> init package.json`
    - `<mirror> init jsr.json`
    - `<mirror> init git`
-3. Review `mirror.config.toml` with the user if outputs, tag templates, commits, or pushes need customization.
-4. Validate with `<mirror> config check` and inspect with `<mirror> config show`.
-5. Run `<mirror> version current` and a harmless `<mirror> version plan patch` to confirm the lifecycle works.
+3. If `mirror.config.toml` already exists, `init` reconciles missing defaults without overwriting user-configured values.
+4. Review `mirror.config.toml` with the user if outputs, auxiliary package paths, tag templates, commits, or pushes need customization.
+5. Validate with `<mirror> config check` and inspect with `<mirror> config show`.
+6. Run `<mirror> version current` and a harmless `<mirror> version plan patch` to confirm the lifecycle works.
 
 ## Configuration Reference
 
@@ -128,6 +129,7 @@ prerelease_id = "alpha"
 
 [package]
 path = "package.json"
+auxiliary_paths = []
 
 [jsr]
 path = "jsr.json"
@@ -146,6 +148,8 @@ auto_skill_install = true
 ```
 
 Supported version sources and outputs are `package.json`, `jsr.json`, and `git`. Supported Git tag templates are `v{version}`, `{name}@{version}`, and `{name}/v{version}`.
+
+Use `[package].auxiliary_paths` for extra package.json files that should mirror the main package version when `package.json` is in `[version].output`.
 
 Agent automation options default to true. Set `write_changelog = false` to tell agents to skip changelog edits, `changelog_path = "docs/CHANGELOG.md"` to specify the changelog file, `auto_agents_md = false` to stop Mirror from inserting its AGENTS.md section, and `auto_skill_install = false` to stop Mirror from installing `guiho-as-mirror` globally when missing.
 

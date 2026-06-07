@@ -73,7 +73,7 @@ Adapters connect Mirror to different versioning ecosystems:
 Mirror provides a concise CLI with three main command groups:
 
 #### `mirror init`
-Creates a `mirror.config.toml` file in the current directory.
+Creates or reconciles a `mirror.config.toml` file in the current directory.
 - `mirror init package.json`
 - `mirror init jsr.json`
 - `mirror init git`
@@ -118,6 +118,7 @@ prerelease_id = "alpha"                # Optional. e.g., creates 1.0.1-alpha.0
 
 [package]
 path = "package.json"                  # Optional. Override path to package.json
+auxiliary_paths = []                    # Optional. Extra package.json files that mirror the main version
 
 [jsr]
 path = "jsr.json"                      # Optional. Override path to jsr.json

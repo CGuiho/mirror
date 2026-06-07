@@ -6,7 +6,7 @@ import { relative } from 'node:path'
 import type { MirrorCliOptions, MirrorConfig, MirrorVersionPlan, MirrorVersionPlanAction } from './types.js'
 import { MirrorError } from './errors.js'
 import { loadMirrorConfig, relativeFromCwd, resolveMirrorPath } from './config.js'
-import { ensureAdapterFiles, readCurrentVersion, renderGitTag, resolveProjectName } from './adapters.js'
+import { ensureAdapterFiles, readCurrentVersion, readJsrVersionFile, readPackageVersionFile, renderGitTag, resolveProjectName } from './adapters.js'
 import { resolveNextVersion } from './version.js'
 
 export const validateMirrorConfig = async (options: MirrorCliOptions = {}): Promise<MirrorConfig> => {
@@ -34,11 +34,13 @@ export const buildVersionPlan = async (target: string, options: MirrorCliOptions
   const actions: MirrorVersionPlanAction[] = []
 
   for (const path of fileOutputPaths) {
+    const adapter = path === resolveMirrorPath(config.cwd, config.jsr.path) ? 'jsr.json' : 'package.json'
+
     actions.push({
       type: 'write-file',
-      adapter: path.endsWith(config.package.path) ? 'package.json' : 'jsr.json',
+      adapter,
       path,
-      currentVersion,
+      currentVersion: adapter === 'package.json' ? await readPackageVersionFile(path) : await readJsrVersionFile(path),
       nextVersion,
     })
   }
@@ -87,10 +89,13 @@ export const buildVersionPlan = async (target: string, options: MirrorCliOptions
 export const resolveFileOutputPaths = (config: MirrorConfig) => {
   const paths: string[] = []
 
-  if (config.version.output.includes('package.json')) paths.push(resolveMirrorPath(config.cwd, config.package.path))
+  if (config.version.output.includes('package.json')) {
+    paths.push(resolveMirrorPath(config.cwd, config.package.path))
+    for (const path of config.package.auxiliaryPaths) paths.push(resolveMirrorPath(config.cwd, path))
+  }
   if (config.version.output.includes('jsr.json')) paths.push(resolveMirrorPath(config.cwd, config.jsr.path))
 
-  return paths
+  return [...new Set(paths)]
 }
 
 export const releaseLabel = (version: string, projectName?: string) => (projectName ? `${projectName}@${version}` : `v${version}`)

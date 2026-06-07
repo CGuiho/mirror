@@ -19,6 +19,7 @@ import {
   readJsrVersion,
   readPackageName,
   readPackageVersion,
+  readPackageVersionFile,
   renderGitTag,
   resolveMirrorSkillPath,
   resolveNextVersion,
@@ -139,6 +140,17 @@ describe('Mirror v3', () => {
     expect(config.git.commit).toBe(true)
     expect(config.git.push).toBe(true)
     expect(config.git.allowDirty).toBe(true)
+  })
+
+  test('loads auxiliary package paths without replacing the main package path', async () => {
+    const cwd = await createPackageAndJsrFixture()
+    await writeText(join(cwd, 'package.build.json'), JSON.stringify({ name: '@guiho/mirror-build', version: '1.0.0' }, null, 2))
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'], auxiliaryPackagePaths: ['package.build.json'] }))
+
+    const config = await loadMirrorConfig({ cwd })
+
+    expect(config.package.path).toBe('package.json')
+    expect(config.package.auxiliaryPaths).toEqual(['package.build.json'])
   })
 
   test('loads agent automation defaults and opt-out settings', async () => {
@@ -332,6 +344,31 @@ describe('Mirror v3', () => {
     expect(plan.actions.map((action) => action.type)).toEqual(['write-file', 'write-file'])
   })
 
+  test('plans and applies auxiliary package file outputs', async () => {
+    const cwd = await createPackageAndJsrFixture()
+    await writeText(join(cwd, 'package.build.json'), JSON.stringify({ name: '@guiho/mirror-build', version: '1.0.0' }, null, 2))
+    await writeText(join(cwd, 'server-types', 'package.json'), JSON.stringify({ name: '@guiho/server-types', version: '0.9.0' }, null, 2))
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({
+      output: ['package.json'],
+      auxiliaryPackagePaths: ['package.build.json', 'server-types/package.json'],
+    }))
+
+    const plan = await buildVersionPlan('patch', { cwd })
+
+    expect(plan.fileOutputPaths.map((path) => path.replaceAll('\\', '/'))).toEqual([
+      join(cwd, 'package.json').replaceAll('\\', '/'),
+      join(cwd, 'package.build.json').replaceAll('\\', '/'),
+      join(cwd, 'server-types', 'package.json').replaceAll('\\', '/'),
+    ])
+    expect(plan.actions.filter((action) => action.type === 'write-file').map((action) => action.currentVersion)).toEqual(['1.0.0', '1.0.0', '0.9.0'])
+
+    await applyVersionPlan('patch', { cwd, yes: true })
+
+    expect(await readPackageVersion(await loadMirrorConfig({ cwd }))).toBe('1.0.1')
+    expect(await readPackageVersionFile(join(cwd, 'package.build.json'))).toBe('1.0.1')
+    expect(await readPackageVersionFile(join(cwd, 'server-types', 'package.json'))).toBe('1.0.1')
+  })
+
   test('applies package and JSR file outputs outside Git', async () => {
     const cwd = await createPackageAndJsrFixture()
     await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json', 'jsr.json'] }))
@@ -407,6 +444,19 @@ describe('Mirror v3', () => {
     expect((await gitText(cwd, 'status', '--porcelain')).trim()).toBe('')
   })
 
+  test('release commits include auxiliary package outputs', async () => {
+    const cwd = await createPackageAndJsrFixture()
+    await writeText(join(cwd, 'package.build.json'), JSON.stringify({ name: '@guiho/mirror-build', version: '1.0.0' }, null, 2))
+    await initializeGitRepository(cwd)
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json', 'git'], auxiliaryPackagePaths: ['package.build.json'] }))
+    await commitAll(cwd, 'Add Mirror config')
+
+    await applyVersionPlan('patch', { cwd, commit: true, yes: true })
+
+    expect(await readPackageVersionFile(join(cwd, 'package.build.json'))).toBe('1.0.1')
+    expect((await gitText(cwd, 'show', '--name-only', '--format=', 'HEAD')).trim().split(/\r?\n/).sort()).toEqual(['package.build.json', 'package.json'])
+  })
+
   test('push implies commit and pushes the release tag', async () => {
     const remote = await createBareGitRepository()
     const cwd = await createPackageAndJsrFixture()
@@ -462,6 +512,34 @@ describe('Mirror v3', () => {
     expect(await readFile(join(cwd, 'mirror.config.toml'), 'utf8')).toContain('changelog_path = "CHANGELOG.md"')
     expect(schema.exitCode).toBe(0)
     expect(schema.stdout).toContain('changelog_path = "<path>"')
+  })
+
+  test('reconciles init defaults into existing configuration without overwriting values', async () => {
+    const cwd = await createTempDir()
+    await writeText(join(cwd, 'mirror.config.toml'), `schema = 1
+
+[project]
+name = "custom-project"
+
+[version]
+scheme = "semver"
+source = "package.json"
+output = ["package.json", "git"]
+
+[package]
+path = "custom-package.json"
+`)
+
+    const result = await runMirrorCli('init', 'package.json', '--cwd', cwd)
+    const content = await readFile(join(cwd, 'mirror.config.toml'), 'utf8')
+
+    expect(result.exitCode).toBe(0)
+    expect(content).toContain('name = "custom-project"')
+    expect(content).toContain('path = "custom-package.json"')
+    expect(content).toContain('auxiliary_paths = []')
+    expect(content).toContain('[jsr]')
+    expect(content).toContain('[git]')
+    expect(content).toContain('[agents]')
   })
 
   test('runs CLI agent installation and AGENTS.md commands', async () => {
@@ -658,6 +736,7 @@ const commitAll = async (cwd: string, message: string) => {
 }
 
 const writeText = async (path: string, content: string) => {
+  await mkdir(dirname(path), { recursive: true })
   await writeFile(path, content, 'utf8')
 }
 
@@ -671,6 +750,7 @@ const packageConfig = ({
   nameSource = 'package.json',
   tagTemplate = '{name}@{version}',
   preid = '',
+  auxiliaryPackagePaths = [],
   writeChangelog,
   changelogPath,
   autoAgentsMd,
@@ -681,6 +761,7 @@ const packageConfig = ({
   nameSource?: string
   tagTemplate?: string
   preid?: string
+  auxiliaryPackagePaths?: string[]
   writeChangelog?: boolean
   changelogPath?: string
   autoAgentsMd?: boolean
@@ -698,6 +779,7 @@ prerelease_id = "${preid}"
 
 [package]
 path = "package.json"
+auxiliary_paths = [${auxiliaryPackagePaths.map((value) => `"${value}"`).join(', ')}]
 
 [jsr]
 path = "jsr.json"

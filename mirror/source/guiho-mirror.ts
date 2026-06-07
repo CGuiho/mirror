@@ -34,7 +34,7 @@ export {
   resolveMirrorSkillPath,
   runMirrorAgentAutomation,
 } from './agents.js'
-export { createInitConfig, discoverMirrorConfig, loadMirrorConfig, normalizeMirrorConfig, writeInitConfig } from './config.js'
+export { createInitConfig, discoverMirrorConfig, loadMirrorConfig, normalizeMirrorConfig, reconcileInitConfig, writeInitConfig } from './config.js'
 export { assertValidSemver, isMirrorReleaseTarget, mirrorReleaseTargets, resolveNextVersion, sortSemverDescending } from './version.js'
 export {
   createGitCommit,
@@ -48,14 +48,18 @@ export {
   readGitVersion,
   readJsrName,
   readJsrVersion,
+  readJsrVersionFile,
   readPackageName,
   readPackageVersion,
+  readPackageVersionFile,
   renderGitTag,
   resolveProjectName,
   supportedGitTagTemplates,
   versionFromTag,
   writeJsrVersion,
+  writeJsrVersionFile,
   writePackageVersion,
+  writePackageVersionFile,
 } from './adapters.js'
 export { buildVersionPlan, releaseLabel, resolveFileOutputPaths, validateMirrorConfig } from './plan.js'
 export { applyVersionPlan, executeVersionPlan } from './executor.js'

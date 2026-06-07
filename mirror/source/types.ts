@@ -23,7 +23,10 @@ export type MirrorRawConfig = Partial<{
     output: MirrorAdapterName[]
     prerelease_id: string
   }>
-  package: Partial<{ path: string }>
+  package: Partial<{
+    path: string
+    auxiliary_paths: string[]
+  }>
   jsr: Partial<{ path: string }>
   git: Partial<{
     tag_template: string
@@ -53,7 +56,10 @@ export type MirrorConfig = {
     output: MirrorAdapterName[]
     prereleaseId: string
   }
-  package: { path: string }
+  package: {
+    path: string
+    auxiliaryPaths: string[]
+  }
   jsr: { path: string }
   git: {
     tagTemplate: string

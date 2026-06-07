@@ -160,7 +160,7 @@ Version and config commands accept runtime overrides.
 
 ### `mirror init`
 
-Creates `mirror.config.toml` in the current working directory.
+Creates `mirror.config.toml` in the current working directory. When a configuration file already exists, `mirror init` reconciles missing default keys into it without overwriting user-configured values. Use `--yes` only when you intentionally want to replace the file with freshly generated defaults.
 
 ```bash
 mirror init package.json
@@ -245,6 +245,7 @@ prerelease_id = "alpha"
 
 [package]
 path = "package.json"
+auxiliary_paths = []
 
 [jsr]
 path = "jsr.json"
@@ -285,6 +286,9 @@ Exactly one source is used. Multiple outputs are allowed.
 ### `[package]`
 
 - `path`: Optional path to `package.json`. Default: `package.json`.
+- `auxiliary_paths`: Optional array of extra `package.json` files that mirror the main package version. Default: `[]`.
+
+The main package path remains the source of truth for package version reads and project name reads. Auxiliary package files are write-only mirrors: when `package.json` is in `[version].output`, Mirror plans and writes the same next version to each auxiliary package file and includes those files in release commits.
 
 ### `[jsr]`
 
@@ -414,7 +418,7 @@ The API uses the same configuration discovery and safety rules as the CLI.
 - `source/guiho-mirror.ts`: public library export surface.
 - `source/guiho-mirror-bin.ts`: CLI binary entrypoint.
 - `source/cli.ts`: citty command tree, CLI argument mapping, and process-facing error handling.
-- `source/config.ts`: TOML discovery, schema validation, defaulting, init config generation, and override merge.
+- `source/config.ts`: TOML discovery, schema validation, defaulting, init config generation, init reconciliation, and override merge.
 - `source/types.ts`: public and internal TypeScript types.
 - `source/version.ts`: semver target validation and next-version resolution.
 - `source/adapters.ts`: package, JSR, and Git read/write primitives.
@@ -516,7 +520,11 @@ Run `mirror init package.json`, `mirror init jsr.json`, or `mirror init git` fro
 
 ### Adapter file not found
 
-Check `[package].path` or `[jsr].path`, or pass `--package-file` or `--jsr-file`.
+Check `[package].path`, `[package].auxiliary_paths`, or `[jsr].path`, or pass `--package-file` or `--jsr-file`.
+
+### Auxiliary package version did not change
+
+Ensure `package.json` is present in `[version].output` and the file is listed in `[package].auxiliary_paths`.
 
 ### Unsupported Git tag template
 
