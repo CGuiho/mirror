@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.1] - 2026-06-09
+
+### Added
+
+- Added lifecycle hooks with before/after hook points around planning, applying, writing, committing, tagging, pushing, and the full execution flow.
+
+### Changed
+
+- Wrapped the generated Mirror `AGENTS.md` guidance in `BEGIN/END GUIHO MIRROR` markers that tell agents not to edit the Mirror-managed block.
+- Made Mirror AGENTS guidance detection whitespace-insensitive so markdown formatting that only adds or removes blank lines does not duplicate the section.
+- Updated hook tests to use the active Bun runtime instead of requiring a separate `node` binary on `PATH`.
+
 ## [3.2.0] - 2026-06-07
 
 ### Added

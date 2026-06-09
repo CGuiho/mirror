@@ -18,6 +18,8 @@ import { MirrorError } from './errors.js'
 import { discoverMirrorConfig, resolveMirrorPath } from './config.js'
 
 export const mirrorSkillName = 'guiho-as-mirror'
+export const mirrorAgentsSectionStartMarker = '<!-- BEGIN GUIHO MIRROR - DO NOT EDIT THIS SECTION -->'
+export const mirrorAgentsSectionEndMarker = '<!-- END GUIHO MIRROR -->'
 export const mirrorAgentsSectionHeading = '## Semantic Project Versioning -- GUIHO Mirror'
 
 export const defaultMirrorAgentSettings: MirrorAgentSettings = {
@@ -27,7 +29,7 @@ export const defaultMirrorAgentSettings: MirrorAgentSettings = {
   autoSkillInstall: true,
 }
 
-export const mirrorAgentsSection = `${mirrorAgentsSectionHeading}
+const mirrorAgentsSectionBody = `${mirrorAgentsSectionHeading}
 
 Invoke the guiho-as-mirror agent skill every time the user wants to bump, tag, release, plan, initialize, configure, or troubleshoot semantic project versioning with GUIHO Mirror.
 
@@ -35,6 +37,10 @@ Before editing release docs or changelogs, inspect mirror.config.toml. If [agent
 
 Use [agents].changelog_path as the changelog file path. If it is missing, use CHANGELOG.md in the project root.
 `
+
+export const mirrorAgentsSection = `${mirrorAgentsSectionStartMarker}
+${mirrorAgentsSectionBody.trimEnd()}
+${mirrorAgentsSectionEndMarker}`
 
 type MirrorSkillPathOptions = {
   cwd?: string
@@ -90,7 +96,7 @@ export const ensureMirrorAgentsInstructions = async (cwd: string, create = false
   }
 
   const content = await readFile(path, 'utf8')
-  if (content.includes(mirrorAgentsSectionHeading)) return { path, exists: true, changed: false }
+  if (hasMirrorAgentsSection(content)) return { path, exists: true, changed: false }
 
   const nextContent = `${content.trimEnd()}\n\n${mirrorAgentsSection}\n`
   await writeFile(path, nextContent, 'utf8')
@@ -173,6 +179,16 @@ const optionalString = (value: unknown, key: string) => {
   if (typeof value !== 'string') throw new MirrorError(`Invalid ${key}. Expected a string.`)
   return value
 }
+
+const hasMirrorAgentsSection = (content: string) => {
+  const normalizedContent = normalizeMirrorAgentsSection(content)
+
+  return [mirrorAgentsSection, mirrorAgentsSectionBody].some((section) => {
+    return normalizedContent.includes(normalizeMirrorAgentsSection(section))
+  })
+}
+
+const normalizeMirrorAgentsSection = (content: string) => content.replace(/\s+/g, ' ').trim()
 
 const embeddedMirrorSkillContent = [
   '---',

@@ -17,7 +17,9 @@ import {
   hookEnvFromConfig,
   installMirrorSkill,
   loadMirrorConfig,
+  mirrorAgentsSectionEndMarker,
   mirrorAgentsSectionHeading,
+  mirrorAgentsSectionStartMarker,
   normalizeHooksConfig,
   parseMirrorCliOptions,
   readJsrName,
@@ -37,7 +39,7 @@ import {
   writeJsrVersion,
   writePackageVersion,
 } from './guiho-mirror.js'
-import type { MirrorInitPrompter } from './guiho-mirror.js'
+import type { MirrorAdapterName, MirrorInitPrompter, MirrorVersionPlan } from './guiho-mirror.js'
 
 const temporaryDirectories: string[] = []
 
@@ -203,8 +205,38 @@ describe('Mirror v3', () => {
 
     expect(inserted.changed).toBe(true)
     expect(repeated.changed).toBe(false)
-    expect(await readFile(agentsPath, 'utf8')).toContain(mirrorAgentsSectionHeading)
-    expect(await readFile(agentsPath, 'utf8')).toContain('[agents].changelog_path')
+    const content = await readFile(agentsPath, 'utf8')
+    expect(content).toContain(mirrorAgentsSectionStartMarker)
+    expect(content).toContain(mirrorAgentsSectionHeading)
+    expect(content).toContain('[agents].changelog_path')
+    expect(content).toContain(mirrorAgentsSectionEndMarker)
+  })
+
+  test('detects existing AGENTS.md guidance despite whitespace-only formatting changes', async () => {
+    const cwd = await createTempDir()
+    const agentsPath = join(cwd, 'AGENTS.md')
+    await writeText(agentsPath, [
+      '# Existing Agents',
+      '',
+      mirrorAgentsSectionStartMarker,
+      '',
+      mirrorAgentsSectionHeading,
+      '',
+      'Invoke the guiho-as-mirror agent skill every time the user wants to bump, tag, release, plan, initialize, configure, or troubleshoot semantic project versioning with GUIHO Mirror.',
+      '',
+      'Before editing release docs or changelogs, inspect mirror.config.toml. If [agents].write_changelog is false, skip changelog edits. If it is missing or true, changelog edits are allowed when the project has a changelog.',
+      '',
+      'Use [agents].changelog_path as the changelog file path. If it is missing, use CHANGELOG.md in the project root.',
+      '',
+      mirrorAgentsSectionEndMarker,
+      '',
+    ].join('\n'))
+
+    const result = await ensureMirrorAgentsInstructions(cwd)
+    const content = await readFile(agentsPath, 'utf8')
+
+    expect(result.changed).toBe(false)
+    expect(content.match(new RegExp(mirrorAgentsSectionHeading, 'g'))).toHaveLength(1)
   })
 
   test('finds AGENTS.md in ancestor directories', async () => {
@@ -814,7 +846,7 @@ path = "custom-package.json"
     expect(config['before:everything']).toEqual(['echo start'])
     expect(config['after:everything']).toEqual(['echo end'])
     expect(config['before:plan']).toEqual(['npm run lint', 'npm run typecheck'])
-    expect(config['unknown:hook'] as unknown).toBeUndefined()
+    expect((config as Record<string, unknown>)['unknown:hook']).toBeUndefined()
     expect(config['after:plan']).toBeUndefined()
   })
 
@@ -880,10 +912,10 @@ path = "custom-package.json"
   })
 
   test('builds hook env vars for action-level hooks', () => {
-    const plan = {
+    const plan: MirrorVersionPlan = {
       cwd: '/project',
       source: 'package.json' as const,
-      output: ['package.json', 'git'] as const,
+      output: ['package.json', 'git'] as MirrorAdapterName[],
       currentVersion: '1.0.0',
       nextVersion: '1.1.0',
       project: { name: 'my-pkg' },
@@ -932,7 +964,7 @@ path = "custom-package.json"
   })
 
   test('runs a successful hook command', async () => {
-    const result = await runHooks('before:everything', ['node -e "console.log(\'hello hook\')"'], {}, process.cwd())
+    const result = await runHooks('before:everything', [runtimeCommand('console.log("hello hook")')], {}, process.cwd())
 
     expect(result).toBeDefined()
     expect(result!.status).toBe('success')
@@ -940,7 +972,7 @@ path = "custom-package.json"
   })
 
   test('throws MirrorError on failed hook command', async () => {
-    await expect(runHooks('before:plan', ['node -e "process.exit(3)"'], {}, process.cwd())).rejects.toThrow("Hook 'before:plan' failed")
+    await expect(runHooks('before:plan', [runtimeCommand('process.exit(3)')], {}, process.cwd())).rejects.toThrow("Hook 'before:plan' failed")
   })
 
   test('skips undefined hooks silently', async () => {
@@ -979,7 +1011,7 @@ after_apply = "echo after-apply-hook"
     const cwd = await createPackageAndJsrFixture()
     await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'] }) + `
 [hooks]
-before_apply = "node -e process.exit(1)"
+before_apply = ${JSON.stringify(runtimeCommand('process.exit(1)'))}
 `)
 
     const { exitCode, stderr } = await runMirrorCliFromCwd(cwd, await createTempDir(), 'version', 'apply', 'patch', '--yes')
@@ -1039,6 +1071,8 @@ const writeText = async (path: string, content: string) => {
   await mkdir(dirname(path), { recursive: true })
   await writeFile(path, content, 'utf8')
 }
+
+const runtimeCommand = (code: string) => `${JSON.stringify(process.execPath)} -e ${JSON.stringify(code)}`
 
 const writeJson = async (path: string, object: Record<string, unknown>) => {
   await writeText(path, `${JSON.stringify(object, null, 2)}\n`)

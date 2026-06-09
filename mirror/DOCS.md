@@ -204,7 +204,7 @@ mirror agents instructions
 
 - `install local`: Writes `.agents/skills/guiho-as-mirror/SKILL.md` in the project.
 - `install global`: Writes `~/.agents/skills/guiho-as-mirror/SKILL.md`.
-- `instructions`: Creates or updates `AGENTS.md` with the GUIHO Mirror semantic versioning section.
+- `instructions`: Creates or updates `AGENTS.md` with the protected GUIHO Mirror semantic versioning section.
 
 Global skill installation uses the user home directory. Tests and automation can override that home root with `MIRROR_AGENT_HOME`.
 
@@ -340,7 +340,7 @@ Automation is controlled by `[agents]`.
 - Disable changelog edits by agents with `write_changelog = false`.
 - Direct agents to the correct changelog with `changelog_path = "path/to/CHANGELOG.md"`.
 
-The generated AGENTS section instructs agents to invoke `guiho-as-mirror` for versioning work, inspect `mirror.config.toml`, respect `write_changelog`, and use `changelog_path` for changelog edits. Use `mirror agents install local` only when a project-local skill copy is desired explicitly.
+The generated AGENTS section is wrapped in `<!-- BEGIN GUIHO MIRROR - DO NOT EDIT THIS SECTION -->` and `<!-- END GUIHO MIRROR -->` markers so agents know the block is Mirror-managed. It instructs agents to invoke `guiho-as-mirror` for versioning work, inspect `mirror.config.toml`, respect `write_changelog`, and use `changelog_path` for changelog edits. Mirror detects the existing block with whitespace-insensitive matching so markdown formatting that only adds or removes blank lines does not duplicate the section. Use `mirror agents install local` only when a project-local skill copy is desired explicitly.
 
 ## Release Safety Rules
 
