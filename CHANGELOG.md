@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- Added Bun-native multi-target binary compilation for Linux, macOS, and Windows release assets.
+- Added direct native binary installers for POSIX shells and PowerShell.
+- Added package-manager install helper that places the matching native binary at `bin/mirror`.
+
+### Changed
+
+- Converted Mirror to a CLI-only package and removed the public TypeScript API contract from package metadata and documentation.
+- Replaced Node.js runtime imports with Bun-native file, TOML, process, shell, and binary build APIs.
+- Replaced `citty` with Mirror's internal CLI router and replaced `smol-toml` with Bun's native `Bun.TOML` parser, while keeping `semver` for semantic version calculations.
+
 ## [3.2.1] - 2026-06-09
 
 ### Added
