@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Converted Mirror to a CLI-only package and removed the public TypeScript API contract from package metadata and documentation.
 - Replaced Node.js runtime imports with Bun-native file, TOML, process, shell, and binary build APIs.
 - Replaced `citty` with Mirror's internal CLI router and replaced `smol-toml` with Bun's native `Bun.TOML` parser, while keeping `semver` for semantic version calculations.
+- Changed npm packaging to ship a small Bun launcher and postinstall downloader instead of bundling every platform binary into the package tarball.
 
 ## [3.2.1] - 2026-06-09
 
