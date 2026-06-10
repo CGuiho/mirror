@@ -2,13 +2,13 @@
 
 **Open source project versioning for Bun, npm, JSR, and Git.**
 
-Mirror is a powerful, deterministic CLI and TypeScript library for semantic project versioning. It reads a single version source, calculates the next semantic version, builds a transparent release plan, and safely applies it to configured outputs like `package.json`, `jsr.json`, and Git tags.
+Mirror is a powerful, deterministic CLI for semantic project versioning. It reads a single version source, calculates the next semantic version, builds a transparent release plan, and safely applies it to configured outputs like `package.json`, `jsr.json`, and Git tags.
 
 ```text
 source -> version engine -> plan -> outputs
 ```
 
-Mirror runs on **Node >= 20** at runtime. Bun is the recommended development tool (build, test, typecheck). Git is required **only** for Git-based workflows (`source: "git"`, `output: ["git"]`, or commit/tag/push operations).
+Mirror ships as a **native Bun-compiled CLI binary**. The installed `mirror` command does not require Node.js or Bun at runtime. Bun is required for development and for package-manager install helpers. Git is required **only** for Git-based workflows (`source: "git"`, `output: ["git"]`, or commit/tag/push operations).
 
 ---
 
@@ -20,6 +20,18 @@ Mirror runs on **Node >= 20** at runtime. Bun is the recommended development too
 npm install -D @guiho/mirror
 # or
 bun add -d @guiho/mirror
+```
+
+Direct native binary install on macOS/Linux:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/mirror/install.sh | sh
+```
+
+Direct native binary install on Windows:
+
+```powershell
+irm https://raw.githubusercontent.com/CGuiho/mirror/main/mirror/install.ps1 | iex
 ```
 
 ### Initializing
@@ -155,47 +167,9 @@ When combining file outputs (`package.json`, `jsr.json`) with Git tag output, Mi
 
 ---
 
-## 💻 API Reference
-
-Mirror exposes a fully-typed TypeScript API for custom automation scripts.
-
-### Core Lifecycle Methods
-
-```ts
-import { buildVersionPlan, applyVersionPlan, executeVersionPlan } from '@guiho/mirror'
-
-// 1. Build a read-only plan for a patch release
-const plan = await buildVersionPlan('patch', { cwd: process.cwd() })
-
-// 2. Inspect the plan
-console.log(plan.currentVersion) // "1.0.0"
-console.log(plan.nextVersion)    // "1.0.1"
-console.log(plan.actions)        // Array of actions (write-file, git-commit, etc.)
-
-// 3. Execute the plan manually
-const result = await executeVersionPlan(plan, { dryRun: false, yes: true })
-
-// OR: Build and apply in one step
-await applyVersionPlan('minor', { cwd: process.cwd(), yes: true })
-```
-
-### Reading State
-
-```ts
-import { loadMirrorConfig, readCurrentVersion } from '@guiho/mirror'
-
-// Load resolved configuration
-const config = await loadMirrorConfig({ cwd: process.cwd() })
-
-// Read the current version using the configured source
-const version = await readCurrentVersion(config)
-```
-
----
-
 ## 🛠️ Development
 
-Development tasks require Bun and Node >= 20. Run from the `mirror/` directory:
+Development tasks require Bun. Run from the `mirror/` directory:
 
 ```bash
 cd mirror
