@@ -1,6 +1,6 @@
 # GUIHO Mirror Documentation
 
-GUIHO Mirror is a deterministic CLI and TypeScript library for semantic project versioning. It reads one source of truth, calculates the next semantic version, builds a transparent release plan, and applies that plan to configured outputs such as `package.json`, `jsr.json`, and Git tags.
+GUIHO Mirror is a deterministic CLI for semantic project versioning. It reads one source of truth, calculates the next semantic version, builds a transparent release plan, and applies that plan to configured outputs such as `package.json`, `jsr.json`, and Git tags.
 
 ```text
 source -> version engine -> plan -> outputs
@@ -11,15 +11,16 @@ Mirror is designed for human operators, CI jobs, and AI coding agents that need 
 ## Package Overview
 
 - Package name: `@guiho/mirror`
-- Runtime target: Node >= 20
+- Runtime target: native Bun-compiled CLI binary
 - Development runtime: Bun
-- Package type: ESM
-- Library entrypoint: `source/guiho-mirror.ts`
+- Package type: CLI-only
 - CLI entrypoint: `source/guiho-mirror-bin.ts`
-- TypeScript build output: `library/`
-- Standalone binary output: `bin/mirror` or `bin/mirror.exe`
+- Package-manager binary path: `bin/mirror`
+- Standalone release assets: `bin/guiho-mirror-<os>-<arch>` or `bin/guiho-mirror-<os>-<arch>.exe`
 
-The public package exposes a CLI named `mirror` and a TypeScript API for loading configuration, building release plans, reading versions, and applying version changes.
+The public package exposes a CLI named `mirror`. It does not maintain a public TypeScript API contract.
+
+Mirror's implementation is Bun-native where Bun provides the runtime primitive. Runtime code uses Bun APIs for file IO, TOML parsing, shell/process execution, and binary compilation. Mirror uses an internal CLI router and keeps `semver` for semantic version calculations; do not add Node.js runtime imports or parser dependencies when Bun provides the capability.
 
 ## Core Model
 
@@ -80,19 +81,28 @@ Prerelease identifiers come from `[version].prerelease_id` or the `--preid` CLI 
 
 ## Installation
 
-Install Mirror as a development dependency:
+Install the native binary directly on macOS or Linux:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/mirror/install.sh | sh
+```
+
+Install the native binary directly on Windows:
+
+```powershell
+irm https://raw.githubusercontent.com/CGuiho/mirror/main/mirror/install.ps1 | iex
+```
+
+Package-manager installs are also supported:
 
 ```bash
 bun add -d @guiho/mirror
-```
-
-Or with npm:
-
-```bash
 npm install -D @guiho/mirror
+pnpm add -D @guiho/mirror
+yarn add -D @guiho/mirror
 ```
 
-Use the CLI through the package manager or through the installed `mirror` binary.
+Package-manager installs use install-time tooling to place the matching native binary at `bin/mirror`. After installation, the `mirror` command runs the native binary and does not require Node.js or Bun at runtime.
 
 ## Quick Start
 
@@ -476,69 +486,27 @@ When an AI coding agent prepares a Mirror-managed release, it should follow this
 
 ## Documentation Requirement Before Publishing
 
-Every behavior change must be documented before publishing a new version. This includes changes to CLI commands, configuration fields, TypeScript APIs, release behavior, Git behavior, package contents, agent automation, tests that describe public behavior, and operational workflows.
+Every behavior change must be documented before publishing a new version. This includes changes to CLI commands, configuration fields, release behavior, Git behavior, package contents, agent automation, tests that describe public behavior, and operational workflows.
 
 Before a version is published, update this file and any other relevant user-facing documentation so the published package describes the behavior that is actually shipping. If a code change does not require documentation, the release preparation should still state why no documentation update was needed.
 
-## TypeScript API
-
-Mirror exports types and functions from `source/guiho-mirror.ts`.
-
-Common release-plan API:
-
-```ts
-import { applyVersionPlan, buildVersionPlan, executeVersionPlan } from '@guiho/mirror'
-
-const plan = await buildVersionPlan('patch', { cwd: process.cwd() })
-
-console.log(plan.currentVersion)
-console.log(plan.nextVersion)
-console.log(plan.actions)
-
-await executeVersionPlan(plan, { yes: true })
-
-await applyVersionPlan('minor', { cwd: process.cwd(), yes: true })
-```
-
-Configuration and read API:
-
-```ts
-import { loadMirrorConfig, readCurrentVersion } from '@guiho/mirror'
-
-const config = await loadMirrorConfig({ cwd: process.cwd() })
-const version = await readCurrentVersion(config)
-```
-
-Agent automation API:
-
-```ts
-import {
-  ensureMirrorAgentsInstructions,
-  installMirrorSkill,
-  runMirrorAgentAutomation,
-} from '@guiho/mirror'
-
-await ensureMirrorAgentsInstructions(process.cwd(), true)
-await installMirrorSkill('local', { cwd: process.cwd() })
-await runMirrorAgentAutomation({ cwd: process.cwd() })
-```
-
-The API uses the same configuration discovery and safety rules as the CLI.
-
 ## Internal Source Map
 
-- `source/guiho-mirror.ts`: public library export surface.
+- `source/guiho-mirror.ts`: internal source aggregation for tests and CLI internals, not a public API contract.
 - `source/guiho-mirror-bin.ts`: CLI binary entrypoint.
-- `source/cli.ts`: citty command tree, CLI argument mapping, and process-facing error handling.
-- `source/config.ts`: TOML discovery, schema validation, defaulting, init config generation, init reconciliation, and override merge.
+- `source/cli.ts`: internal command router, CLI argument mapping, and process-facing error handling.
+- `source/config.ts`: Bun TOML discovery, schema validation, defaulting, init config generation, init reconciliation, and override merge.
 - `source/init.ts`: init answer resolution, interactive prompts (TTY-only), and defaults.
 - `source/schema.ts`: JSON Schema for `mirror.config.toml` and the `#:schema` reference.
 - `source/types.ts`: public and internal TypeScript types.
-- `source/version.ts`: semver target validation and next-version resolution.
+- `source/version.ts`: `semver` target validation and next-version resolution.
 - `source/adapters.ts`: package, JSR, and Git read/write primitives.
 - `source/plan.ts`: validation and read-only release plan construction.
 - `source/executor.ts`: mutation layer for file writes, Git commits, tags, and pushes.
 - `source/hooks.ts`: lifecycle hook configuration, execution, and environment variable construction.
+- `source/path.ts`: small path helpers used instead of Node.js `path` imports.
+- `source/runtime.ts`: Bun-native file, process, and shell helpers.
+- `source/build-binaries.ts`: multi-target Bun binary compilation script.
 - `source/reporter.ts`: text and JSON report formatting.
 - `source/agents.ts`: agent skill installation and AGENTS.md guidance automation.
 - `source/errors.ts`: user-facing errors with stable exit codes.
@@ -559,9 +527,7 @@ bun run binary
 
 Generated outputs are ignored and should not be hand-edited.
 
-- `library/`: TypeScript build output used by `main` and `types`.
 - `bin/`: compiled standalone CLI binary output.
-- `bundle/`: optional bundled output.
 
 There is no lint or formatter config. Existing source style is strict TypeScript, ESM imports, single quotes, and no semicolons.
 
@@ -596,19 +562,13 @@ bun test source/guiho-mirror.spec.ts
 
 ## Build and Binary
 
-Build the library:
-
-```bash
-bun run build
-```
-
-Compile the standalone binary:
+Compile native binaries:
 
 ```bash
 bun run binary
 ```
 
-The compiled binary embeds fallback `guiho-as-mirror` skill content so `mirror agents install local` and `mirror agents install global` still work when adjacent package files are not available.
+The binary build writes `bin/mirror` for local validation and platform release assets for Linux, macOS, and Windows x64/arm64 targets where Bun compilation supports the target. The compiled binary embeds fallback `guiho-as-mirror` skill content so `mirror agents install local` and `mirror agents install global` still work when adjacent package files are not available.
 
 ## Publishing Checklist
 
@@ -619,8 +579,8 @@ Before publishing a new version:
 3. Confirm other relevant docs are updated, including `README.md`, `AGENTS.md`, and the configured changelog path when applicable.
 4. Run `bun run typecheck`.
 5. Run `bun test`.
-6. Run `bun run build`.
-7. Run `bun run binary` when the CLI binary is part of the release validation.
+6. Run `bun run binary`.
+7. Upload the generated platform binaries as release assets when publishing a binary release.
 8. Run `mirror version plan <target>`.
 9. Commit release documentation updates before applying the version bump.
 10. Run `mirror version apply <target> --yes` with the required commit or push flags.
