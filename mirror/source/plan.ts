@@ -2,12 +2,12 @@
  * @copyright Copyright (c) 2026 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
  */
 
-import { relative } from 'node:path'
 import type { MirrorCliOptions, MirrorConfig, MirrorVersionPlan, MirrorVersionPlanAction } from './types.js'
 import { MirrorError } from './errors.js'
 import { loadMirrorConfig, relativeFromCwd, resolveMirrorPath } from './config.js'
 import { ensureAdapterFiles, readCurrentVersion, readJsrVersionFile, readPackageVersionFile, renderGitTag, resolveProjectName } from './adapters.js'
 import { resolveNextVersion } from './version.js'
+import { relativePath } from './path.js'
 
 export const validateMirrorConfig = async (options: MirrorCliOptions = {}): Promise<MirrorConfig> => {
   const config = await loadMirrorConfig(options)
@@ -55,7 +55,7 @@ export const buildVersionPlan = async (target: string, options: MirrorCliOptions
     actions.push({
       type: 'git-commit',
       message: releaseLabel(nextVersion, projectName),
-      paths: fileOutputPaths.map((path) => relative(config.cwd, path)),
+      paths: fileOutputPaths.map((path) => relativePath(config.cwd, path)),
     })
   }
 
