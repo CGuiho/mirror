@@ -2,10 +2,6 @@
  * @copyright Copyright (c) 2026 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
  */
 
-import { existsSync } from 'node:fs'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
-import { homedir } from 'node:os'
-import { dirname, resolve } from 'node:path'
 import type {
   MirrorAgentAutomationResult,
   MirrorAgentSettings,
@@ -16,6 +12,8 @@ import type {
 } from './types.js'
 import { MirrorError } from './errors.js'
 import { discoverMirrorConfig, resolveMirrorPath } from './config.js'
+import { dirnamePath, resolvePath } from './path.js'
+import { fileExists, readTextFile, writeTextFile } from './runtime.js'
 
 export const mirrorSkillName = 'guiho-as-mirror'
 export const mirrorAgentsSectionStartMarker = '<!-- BEGIN GUIHO MIRROR - DO NOT EDIT THIS SECTION -->'
@@ -56,69 +54,68 @@ type MirrorAgentAutomationOptions = MirrorCliOptions & {
 }
 
 export const resolveMirrorSkillPath = (scope: MirrorSkillInstallScope, options: MirrorSkillPathOptions = {}) => {
-  if (scope === 'local') return resolve(options.cwd ?? process.cwd(), '.agents', 'skills', mirrorSkillName, 'SKILL.md')
+  if (scope === 'local') return resolvePath(options.cwd ?? process.cwd(), '.agents', 'skills', mirrorSkillName, 'SKILL.md')
 
-  return resolve(resolveMirrorAgentHome(options.homeDirectory), '.agents', 'skills', mirrorSkillName, 'SKILL.md')
+  return resolvePath(resolveMirrorAgentHome(options.homeDirectory), '.agents', 'skills', mirrorSkillName, 'SKILL.md')
 }
 
-export const isMirrorSkillInstalled = (scope: MirrorSkillInstallScope, options: MirrorSkillPathOptions = {}) =>
-  existsSync(resolveMirrorSkillPath(scope, options))
+export const isMirrorSkillInstalled = async (scope: MirrorSkillInstallScope, options: MirrorSkillPathOptions = {}) =>
+  fileExists(resolveMirrorSkillPath(scope, options))
 
 export const installMirrorSkill = async (
   scope: MirrorSkillInstallScope,
   options: MirrorSkillInstallOptions = {},
 ): Promise<MirrorSkillInstallResult> => {
   const path = resolveMirrorSkillPath(scope, options)
-  const exists = existsSync(path)
+  const exists = await fileExists(path)
 
   if (exists && options.overwrite === false) return { scope, path, installed: false, updated: false }
 
   const content = await readBundledMirrorSkill()
-  const current = exists ? await readFile(path, 'utf8') : undefined
+  const current = exists ? await readTextFile(path) : undefined
 
   if (current === content) return { scope, path, installed: false, updated: false }
 
-  await mkdir(dirname(path), { recursive: true })
-  await writeFile(path, content, 'utf8')
+  await writeTextFile(path, content)
 
   return { scope, path, installed: !exists, updated: exists }
 }
 
 export const ensureMirrorAgentsInstructions = async (cwd: string, create = false): Promise<MirrorAgentsInstructionsResult> => {
-  const path = findAgentsFile(cwd) ?? resolve(cwd, 'AGENTS.md')
-  const exists = existsSync(path)
+  const path = await findAgentsFile(cwd) ?? resolvePath(cwd, 'AGENTS.md')
+  const exists = await fileExists(path)
 
   if (!exists && !create) return { path, exists: false, changed: false }
 
   if (!exists) {
-    await writeFile(path, `# Project Agents\n\n${mirrorAgentsSection}\n`, 'utf8')
+    await writeTextFile(path, `# Project Agents\n\n${mirrorAgentsSection}\n`)
     return { path, exists: true, changed: true }
   }
 
-  const content = await readFile(path, 'utf8')
+  const content = await readTextFile(path)
   if (hasMirrorAgentsSection(content)) return { path, exists: true, changed: false }
 
   const nextContent = `${content.trimEnd()}\n\n${mirrorAgentsSection}\n`
-  await writeFile(path, nextContent, 'utf8')
+  await writeTextFile(path, nextContent)
 
   return { path, exists: true, changed: true }
 }
 
-export const findAgentsFile = (cwd: string): string | undefined => {
-  let current = resolve(cwd)
+export const findAgentsFile = async (cwd: string): Promise<string | undefined> => {
+  let current = resolvePath(cwd)
 
   while (true) {
-    const path = resolve(current, 'AGENTS.md')
-    if (existsSync(path)) return path
+    const path = resolvePath(current, 'AGENTS.md')
+    if (await fileExists(path)) return path
 
-    const parent = dirname(current)
+    const parent = dirnamePath(current)
     if (parent === current) return undefined
     current = parent
   }
 }
 
 export const resolveMirrorAgentSettings = async (options: MirrorCliOptions = {}): Promise<MirrorAgentSettings> => {
-  const cwd = resolve(options.cwd ?? process.cwd())
+  const cwd = resolvePath(options.cwd ?? process.cwd())
   const discovered = await discoverMirrorConfig(cwd, options.config)
 
   if (!discovered.raw) return { ...defaultMirrorAgentSettings }
@@ -136,7 +133,7 @@ export const runMirrorAgentAutomation = async (
   options: MirrorAgentAutomationOptions = {},
   notify: (message: string) => void = () => {},
 ): Promise<MirrorAgentAutomationResult> => {
-  const cwd = resolve(options.cwd ?? process.cwd())
+  const cwd = resolvePath(options.cwd ?? process.cwd())
   const settings = await resolveMirrorAgentSettings(options)
   const result: MirrorAgentAutomationResult = { settings }
 
@@ -145,7 +142,7 @@ export const runMirrorAgentAutomation = async (
   if (settings.autoSkillInstall) {
     const scope = 'global'
 
-    if (!isMirrorSkillInstalled(scope, { cwd, homeDirectory: options.homeDirectory })) {
+    if (!(await isMirrorSkillInstalled(scope, { cwd, homeDirectory: options.homeDirectory }))) {
       const path = resolveMirrorSkillPath(scope, { cwd, homeDirectory: options.homeDirectory })
       notify(`notice: ${mirrorSkillName} skill not found ${scope}; Mirror is installing it at ${path}`)
       result.globalSkill = await installMirrorSkill(scope, { cwd, homeDirectory: options.homeDirectory, overwrite: false })
@@ -157,14 +154,14 @@ export const runMirrorAgentAutomation = async (
 
 const readBundledMirrorSkill = async () => {
   try {
-    return await readFile(new URL('../skills/guiho-as-mirror/SKILL.md', import.meta.url), 'utf8')
+    return await Bun.file(new URL('../skills/guiho-as-mirror/SKILL.md', import.meta.url)).text()
   } catch {
     return embeddedMirrorSkillContent
   }
 }
 
 const resolveMirrorAgentHome = (homeDirectory?: string) => {
-  const value = homeDirectory ?? process.env['MIRROR_AGENT_HOME'] ?? homedir()
+  const value = homeDirectory ?? process.env['MIRROR_AGENT_HOME'] ?? process.env['HOME'] ?? process.env['USERPROFILE'] ?? process.cwd()
   return resolveMirrorPath(process.cwd(), value)
 }
 
@@ -198,7 +195,7 @@ const embeddedMirrorSkillContent = [
   '',
   '# GUIHO Mirror',
   '',
-  'GUIHO Mirror is a deterministic CLI and TypeScript library for semantic project versioning. Use it instead of ad hoc version edits, manual package-manager version commands, or manual release tags.',
+  'GUIHO Mirror is a deterministic CLI for semantic project versioning. Use it instead of ad hoc version edits, manual package-manager version commands, or manual release tags.',
   '',
   '## Command Selection',
   '',
