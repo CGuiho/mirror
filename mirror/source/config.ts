@@ -2,10 +2,6 @@
  * @copyright Copyright (c) 2026 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
  */
 
-import { existsSync } from 'node:fs'
-import { readFile, writeFile } from 'node:fs/promises'
-import { basename, isAbsolute, join, relative, resolve } from 'node:path'
-import { parse as parseToml } from 'smol-toml'
 import type {
   MirrorAdapterName,
   MirrorCliOptions,
@@ -18,15 +14,17 @@ import type {
 import { MirrorError } from './errors.js'
 import { mirrorConfigSchemaReference } from './schema.js'
 import { normalizeHooksConfig } from './hooks.js'
+import { basenamePath, isAbsolutePath, joinPath, relativePath, resolvePath } from './path.js'
+import { fileExists, readTextFile, writeTextFile } from './runtime.js'
 
 const adapters = new Set(['package.json', 'jsr.json', 'git'])
 const projectNameSources = new Set(['package.json', 'jsr.json'])
 
-export const resolveMirrorPath = (cwd: string, path: string) => (isAbsolute(path) ? path : resolve(cwd, path))
+export const resolveMirrorPath = (cwd: string, path: string) => (isAbsolutePath(path) ? resolvePath(path) : resolvePath(cwd, path))
 
 export const relativeFromCwd = (cwd: string, path: string) => {
-  const relativePath = relative(cwd, resolveMirrorPath(cwd, path))
-  return relativePath || '.'
+  const relativePathValue = relativePath(cwd, resolveMirrorPath(cwd, path))
+  return relativePathValue || '.'
 }
 
 export const discoverMirrorConfig = async (cwd: string, explicitPath?: string): Promise<MirrorConfigDiscovery> => {
@@ -35,22 +33,22 @@ export const discoverMirrorConfig = async (cwd: string, explicitPath?: string): 
     return { path: configPath, raw: await readConfigFile(configPath) }
   }
 
-  const rootConfigPath = resolve(cwd, 'mirror.config.toml')
-  if (existsSync(rootConfigPath)) return { path: rootConfigPath, raw: await readConfigFile(rootConfigPath) }
+  const rootConfigPath = resolvePath(cwd, 'mirror.config.toml')
+  if (await fileExists(rootConfigPath)) return { path: rootConfigPath, raw: await readConfigFile(rootConfigPath) }
 
-  const nestedConfigPath = resolve(cwd, 'config', 'mirror.config.toml')
-  if (existsSync(nestedConfigPath)) return { path: nestedConfigPath, raw: await readConfigFile(nestedConfigPath) }
+  const nestedConfigPath = resolvePath(cwd, 'config', 'mirror.config.toml')
+  if (await fileExists(nestedConfigPath)) return { path: nestedConfigPath, raw: await readConfigFile(nestedConfigPath) }
 
   return {}
 }
 
 export const readConfigFile = async (path: string): Promise<MirrorRawConfig> => {
-  if (!existsSync(path)) throw new MirrorError(`Configuration file not found: ${path}`)
+  if (!(await fileExists(path))) throw new MirrorError(`Configuration file not found: ${path}`)
 
-  const content = await readFile(path, 'utf8')
+  const content = await readTextFile(path)
   let parsed: unknown
   try {
-    parsed = parseToml(content)
+    parsed = Bun.TOML.parse(content)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     throw new MirrorError(`Invalid TOML in configuration file: ${path}\n${message}`)
@@ -62,7 +60,7 @@ export const readConfigFile = async (path: string): Promise<MirrorRawConfig> => 
 }
 
 export const loadMirrorConfig = async (options: MirrorCliOptions = {}): Promise<MirrorConfig> => {
-  const cwd = resolve(options.cwd ?? process.cwd())
+  const cwd = resolvePath(options.cwd ?? process.cwd())
   const discovered = await discoverMirrorConfig(cwd, options.config)
 
   if (!discovered.raw) throw new MirrorError('Mirror configuration not found. Run `mirror init package`, `mirror init jsr`, or `mirror init git`.')
@@ -142,7 +140,7 @@ export const defaultInitAnswersForSource = (kind: MirrorAdapterName, cwd: string
   packagePath: 'package.json',
   auxiliaryPaths: [],
   jsrPath: 'jsr.json',
-  name: kind === 'git' ? basename(cwd) : undefined,
+  name: kind === 'git' ? basenamePath(cwd) : undefined,
   prereleaseId: '',
   tagTemplate: '{name}@{version}',
   commit: kind !== 'git',
@@ -159,7 +157,7 @@ export const generateInitConfig = (answers: MirrorInitAnswers, cwd: string) => {
   lines.push('[project]')
   if (answers.source === 'package.json') lines.push('name_source = "package.json"')
   else if (answers.source === 'jsr.json') lines.push('name_source = "jsr.json"')
-  else lines.push(`name = "${answers.name ?? basename(cwd)}"`)
+  else lines.push(`name = "${answers.name ?? basenamePath(cwd)}"`)
   lines.push('')
   lines.push('[version]')
   lines.push('scheme = "semver"')
@@ -195,15 +193,15 @@ export const writeInitConfig = async (kind: MirrorAdapterName, cwd: string, over
   writeInitConfigFromAnswers(defaultInitAnswersForSource(kind, cwd), cwd, overwrite)
 
 export const writeInitConfigFromAnswers = async (answers: MirrorInitAnswers, cwd: string, overwrite = false) => {
-  const path = join(cwd, 'mirror.config.toml')
+  const path = joinPath(cwd, 'mirror.config.toml')
   const generated = generateInitConfig(answers, cwd)
 
-  if (existsSync(path) && !overwrite) {
-    await writeFile(path, reconcileInitConfig(await readFile(path, 'utf8'), generated), 'utf8')
+  if ((await fileExists(path)) && !overwrite) {
+    await writeTextFile(path, reconcileInitConfig(await readTextFile(path), generated))
     return path
   }
 
-  await writeFile(path, generated, 'utf8')
+  await writeTextFile(path, generated)
   return path
 }
 
@@ -279,7 +277,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 const parseConfigContent = (content: string, label: string): Record<string, unknown> => {
   let parsed: unknown
   try {
-    parsed = parseToml(content)
+    parsed = Bun.TOML.parse(content)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     throw new MirrorError(`Invalid TOML in ${label}:\n${message}`)
