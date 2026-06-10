@@ -21,9 +21,14 @@ const targets = [
 ] as const
 
 const main = async () => {
+  await removeOutput('bin/mirror')
+  await removeOutput('bin/mirror.exe')
   await runCommand(['bun', 'build', 'source/guiho-mirror-bin.ts', '--compile', '--production', '--minify-whitespace', '--minify-syntax', '--outfile', 'bin/mirror'])
 
-  const results = await Promise.all(targets.map(async ([target, outfile]) => {
+  const results = []
+
+  for (const [target, outfile] of targets) {
+    await removeOutput(outfile)
     const result = await runCommand([
       'bun',
       'build',
@@ -38,8 +43,8 @@ const main = async () => {
       outfile,
     ])
 
-    return { target, outfile, result }
-  }))
+    results.push({ target, outfile, result })
+  }
 
   let failed = false
 
@@ -59,3 +64,7 @@ const main = async () => {
 }
 
 await main()
+
+async function removeOutput(path: string) {
+  await Bun.$`rm -f ${path}`.quiet()
+}
