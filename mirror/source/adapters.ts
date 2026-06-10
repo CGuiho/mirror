@@ -2,16 +2,11 @@
  * @copyright Copyright (c) 2026 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
  */
 
-import { execFile } from 'node:child_process'
-import { existsSync } from 'node:fs'
-import { readFile, writeFile } from 'node:fs/promises'
-import { promisify } from 'node:util'
 import type { MirrorConfig, MirrorJsonObject } from './types.js'
 import { MirrorError } from './errors.js'
 import { assertValidSemver, sortSemverDescending } from './version.js'
 import { resolveMirrorPath } from './config.js'
-
-const execFileAsync = promisify(execFile)
+import { fileExists, readTextFile, runCommand, writeTextFile } from './runtime.js'
 
 let gitChecked = false
 let gitExists = false
@@ -20,8 +15,8 @@ const checkGitAvailable = async () => {
   if (gitChecked) return gitExists
   gitChecked = true
   try {
-    await execFileAsync('git', ['--version'])
-    gitExists = true
+    const result = await runCommand(['git', '--version'])
+    gitExists = result.exitCode === 0
   } catch {
     gitExists = false
   }
@@ -41,8 +36,9 @@ const runGit = async (cwd: string, args: string[]) => {
     throw new MirrorError(gitNotFoundMessage)
   }
   try {
-    const { stdout } = await execFileAsync('git', args, { cwd })
-    return stdout
+    const result = await runCommand(['git', ...args], { cwd })
+    if (result.exitCode !== 0) throw new MirrorError([result.stderr.trim(), result.stdout.trim()].filter(Boolean).join('\n') || `exit code ${result.exitCode}`)
+    return result.stdout
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error)
     throw new MirrorError(`Git command failed: git ${args.join(' ')}\n${message}`)
@@ -55,7 +51,7 @@ export const readPackageJson = async (path: string): Promise<MirrorJsonObject> =
 export const readJsrJson = async (path: string): Promise<MirrorJsonObject> => readJsonObject(path, 'jsr.json')
 
 export const writeJsonObject = async (path: string, object: MirrorJsonObject) => {
-  await writeFile(path, `${JSON.stringify(object, null, 2)}\n`, 'utf8')
+  await writeTextFile(path, `${JSON.stringify(object, null, 2)}\n`)
 }
 
 export const readPackageVersion = async (config: MirrorConfig) => readVersionField(resolveMirrorPath(config.cwd, config.package.path), 'package.json')
@@ -76,10 +72,10 @@ export const writeJsrVersionFile = async (path: string, nextVersion: string) => 
 
 export const ensureAdapterFiles = async (config: MirrorConfig) => {
   if (usesAdapter(config, 'package.json')) {
-    ensureFile(resolveMirrorPath(config.cwd, config.package.path), 'package.json')
-    for (const path of config.package.auxiliaryPaths) ensureFile(resolveMirrorPath(config.cwd, path), 'package.json')
+    await ensureFile(resolveMirrorPath(config.cwd, config.package.path), 'package.json')
+    for (const path of config.package.auxiliaryPaths) await ensureFile(resolveMirrorPath(config.cwd, path), 'package.json')
   }
-  if (usesAdapter(config, 'jsr.json')) ensureFile(resolveMirrorPath(config.cwd, config.jsr.path), 'jsr.json')
+  if (usesAdapter(config, 'jsr.json')) await ensureFile(resolveMirrorPath(config.cwd, config.jsr.path), 'jsr.json')
   if (usesAdapter(config, 'git')) await ensureGitRepository(config.cwd)
 }
 
@@ -152,8 +148,8 @@ export const assertSupportedGitTagTemplate = (template: string) => {
 export const isGitRepository = async (cwd: string) => {
   if (!(await checkGitAvailable())) return false
   try {
-    await execFileAsync('git', ['-C', cwd, 'rev-parse', '--is-inside-work-tree'])
-    return true
+    const result = await runCommand(['git', '-C', cwd, 'rev-parse', '--is-inside-work-tree'], { cwd })
+    return result.exitCode === 0
   } catch {
     return false
   }
@@ -182,8 +178,8 @@ export const pushGitRefs = async (cwd: string, includeCommit: boolean, includeTa
 }
 
 const readJsonObject = async (path: string, label: string): Promise<MirrorJsonObject> => {
-  ensureFile(path, label)
-  const content = await readFile(path, 'utf8')
+  await ensureFile(path, label)
+  const content = await readTextFile(path)
   let json: unknown
   try {
     json = JSON.parse(content)
@@ -221,8 +217,8 @@ const writeVersionField = async (path: string, label: string, nextVersion: strin
   await writeJsonObject(path, json)
 }
 
-const ensureFile = (path: string, label: string) => {
-  if (!existsSync(path)) throw new MirrorError(`${label} file not found: ${path}`)
+const ensureFile = async (path: string, label: string) => {
+  if (!(await fileExists(path))) throw new MirrorError(`${label} file not found: ${path}`)
 }
 
 const ensureGitRepository = async (cwd: string) => {
