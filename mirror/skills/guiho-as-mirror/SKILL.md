@@ -5,7 +5,7 @@ description: Use this skill whenever the user asks to version, bump, release, ta
 
 # GUIHO Mirror
 
-GUIHO Mirror is a deterministic CLI and TypeScript library for semantic project versioning. It reads one version source, calculates the next semantic version, builds a transparent read-only plan, and applies the plan to configured outputs such as `package.json`, `jsr.json`, and Git tags.
+GUIHO Mirror is a deterministic CLI for semantic project versioning. It reads one version source, calculates the next semantic version, builds a transparent read-only plan, and applies the plan to configured outputs such as `package.json`, `jsr.json`, and Git tags.
 
 ```text
 source -> version engine -> plan -> outputs
@@ -23,7 +23,7 @@ Choose the Mirror command in this order:
 
 When unsure, run a cheap availability check (`bun @guiho/mirror --help`, `mirror --help`, or `bunx @guiho/mirror --help`) and then reuse the working command consistently. Run `mirror --help` or `mirror <command> --help` for command-specific details when needed.
 
-Mirror runs on Node >= 20 at runtime, Bun, and Deno. Bun is the recommended development tool for the Mirror project itself. Git is required only for Git-based workflows: `source = "git"`, `output = ["git"]`, commits, tags, or pushes.
+Mirror ships as a Bun-compiled native CLI binary. The installed `mirror` command should not require Node.js or Bun at runtime. Bun is required for Mirror project development and binary compilation. Git is required only for Git-based workflows: `source = "git"`, `output = ["git"]`, commits, tags, or pushes.
 
 ## Release Workflow
 
@@ -176,33 +176,6 @@ mirror version apply <target> --yes
 ```
 
 Supported targets are `major`, `premajor`, `minor`, `preminor`, `patch`, `prepatch`, `prerelease`, or an exact semantic version such as `2.0.0`.
-
-## TypeScript API
-
-When the user wants automation code rather than CLI usage, use the typed API:
-
-```ts
-import { applyVersionPlan, buildVersionPlan, executeVersionPlan } from '@guiho/mirror';
-
-const plan = await buildVersionPlan('patch', { cwd: process.cwd() });
-
-console.log(plan.currentVersion);
-console.log(plan.nextVersion);
-console.log(plan.actions);
-
-await executeVersionPlan(plan, { dryRun: false, yes: true });
-
-await applyVersionPlan('minor', { cwd: process.cwd(), yes: true });
-```
-
-For reading state:
-
-```ts
-import { loadMirrorConfig, readCurrentVersion } from '@guiho/mirror';
-
-const config = await loadMirrorConfig({ cwd: process.cwd() });
-const version = await readCurrentVersion(config);
-```
 
 ## Mirror Project Development
 
