@@ -3,8 +3,8 @@
  * Package-manager install helper for GUIHO Mirror.
  *
  * This script uses Bun APIs only. It downloads the platform-native Mirror binary
- * into `bin/mirror` so the installed command does not need Node.js or Bun at
- * runtime. Package managers still need their own runtime while installing.
+ * into `vendor/mirror`. Package-manager installs use the small Bun launcher in
+ * `scripts/mirror-bin.ts`; direct installers remain the no-Bun runtime path.
  */
 
 type PackageJson = {
@@ -24,7 +24,7 @@ const version = process.env['MIRROR_VERSION'] ?? packageJson.version ?? 'latest'
 const repo = process.env['MIRROR_REPO'] ?? 'CGuiho/mirror'
 const asset = detectAsset()
 const bundledAsset = Bun.file(new URL(`../bin/${asset}`, import.meta.url))
-const destination = new URL('../bin/mirror', import.meta.url)
+const destination = new URL('../vendor/mirror', import.meta.url)
 
 if (await bundledAsset.exists()) {
   await Bun.write(destination, bundledAsset)
