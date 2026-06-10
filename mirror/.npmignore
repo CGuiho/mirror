@@ -1,0 +1,4 @@
+bin/
+library/
+bundle/
+source/**/*.spec.ts
