@@ -4,11 +4,10 @@
   "version": "3.3.0-alpha.0",
   "type": "module",
   "bin": {
-    "mirror": "./bin/mirror"
+    "mirror": "./scripts/mirror-bin.ts"
   },
   "files": [
     "README.md",
-    "bin/",
     "scripts/",
     "skills/",
     "schema/",
