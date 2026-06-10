@@ -2,17 +2,9 @@
  * @copyright Copyright (c) 2026 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
  */
 
-import { exec } from 'node:child_process'
-import { promisify } from 'node:util'
 import type { MirrorCliOptions, MirrorConfig, MirrorHookCommand, MirrorHookName, MirrorHookResult, MirrorHooksConfig, MirrorVersionPlan, MirrorVersionPlanAction } from './types.js'
 import { MirrorError } from './errors.js'
-
-const execAsync = (command: string, options: { cwd: string, env: Record<string, string> }) =>
-  promisify(exec)(command, {
-    cwd: options.cwd,
-    env: { ...process.env, ...options.env },
-    maxBuffer: 10 * 1024 * 1024,
-  })
+import { runShellCommand } from './runtime.js'
 
 export const mirrorHookNames: MirrorHookName[] = [
   'before:everything', 'after:everything',
@@ -57,10 +49,14 @@ export const runHooks = async (
     const command = commands[i]
     if (!command) continue
     try {
-      await execAsync(command, { cwd, env })
+      const result = await runShellCommand(command, { cwd, env })
+      if (result.exitCode !== 0) {
+        const details = [result.stderr.trim(), result.stdout.trim()].filter(Boolean).join('\n')
+        throw new MirrorError(details || `exit code ${result.exitCode}`, result.exitCode)
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error)
-      const exitCode = typeof (error as Record<string, unknown>)['code'] === 'number' ? (error as Record<string, unknown>)['code'] as number : 1
+      const exitCode = error instanceof MirrorError && typeof error.exitCode === 'number' ? error.exitCode : 1
       throw new MirrorError(`Hook '${name}' failed (exit code ${exitCode}): ${command}\n${message}`, Number(exitCode))
     }
   }
