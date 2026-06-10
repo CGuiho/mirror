@@ -15,7 +15,7 @@ Mirror is designed for human operators, CI jobs, and AI coding agents that need 
 - Development runtime: Bun
 - Package type: CLI-only
 - CLI entrypoint: `source/guiho-mirror-bin.ts`
-- Package-manager binary path: `bin/mirror`
+- Package-manager launcher path: `scripts/mirror-bin.ts`
 - Standalone release assets: `bin/guiho-mirror-<os>-<arch>` or `bin/guiho-mirror-<os>-<arch>.exe`
 
 The public package exposes a CLI named `mirror`. It does not maintain a public TypeScript API contract.
@@ -102,7 +102,7 @@ pnpm add -D @guiho/mirror
 yarn add -D @guiho/mirror
 ```
 
-Package-manager installs use install-time tooling to place the matching native binary at `bin/mirror`. After installation, the `mirror` command runs the native binary and does not require Node.js or Bun at runtime.
+Package-manager installs use a small Bun launcher plus install-time tooling that downloads the matching native binary into `vendor/mirror`. Direct installers are the no-runtime path; package-manager installs require Bun for the launcher and postinstall helper.
 
 ## Quick Start
 
@@ -527,7 +527,8 @@ bun run binary
 
 Generated outputs are ignored and should not be hand-edited.
 
-- `bin/`: compiled standalone CLI binary output.
+- `bin/`: ignored local compiled binary output and release asset staging.
+- `vendor/`: package-manager postinstall destination for the selected native binary.
 
 There is no lint or formatter config. Existing source style is strict TypeScript, ESM imports, single quotes, and no semicolons.
 
@@ -568,7 +569,7 @@ Compile native binaries:
 bun run binary
 ```
 
-The binary build writes `bin/mirror` for local validation and platform release assets for Linux, macOS, and Windows x64/arm64 targets where Bun compilation supports the target. The compiled binary embeds fallback `guiho-as-mirror` skill content so `mirror agents install local` and `mirror agents install global` still work when adjacent package files are not available.
+The binary build writes `bin/mirror` for local validation and platform release assets for Linux, macOS, and Windows x64/arm64 targets where Bun compilation supports the target. Do not publish the full `bin/` matrix inside the npm package; upload those files as GitHub release assets and let installers download the matching one. The compiled binary embeds fallback `guiho-as-mirror` skill content so `mirror agents install local` and `mirror agents install global` still work when adjacent package files are not available.
 
 ## Publishing Checklist
 
