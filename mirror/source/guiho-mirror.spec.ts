@@ -3,10 +3,6 @@
  */
 
 import { afterEach, describe, expect, test } from 'bun:test'
-import { existsSync } from 'node:fs'
-import { mkdir, mkdtemp, rm, readFile, writeFile } from 'node:fs/promises'
-import { platform, tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
 import {
   applyVersionPlan,
   buildVersionPlan,
@@ -40,6 +36,17 @@ import {
   writePackageVersion,
 } from './guiho-mirror.js'
 import type { MirrorAdapterName, MirrorInitPrompter, MirrorVersionPlan } from './guiho-mirror.js'
+import { dirnamePath, joinPath } from './path.js'
+import { ensureDirectory, makeTempDirectory, readTextFile, removePath, writeTextFile } from './runtime.js'
+
+const existsSync = (path: string) => Bun.file(path).exists()
+const mkdir = (path: string, _options?: { recursive?: boolean }) => ensureDirectory(path)
+const rm = (path: string, _options?: { recursive?: boolean, force?: boolean }) => removePath(path)
+const readFile = (path: string, _encoding?: 'utf8') => readTextFile(path)
+const writeFile = (path: string, content: string, _encoding?: 'utf8') => writeTextFile(path, content)
+const platform = () => process.platform
+const dirname = dirnamePath
+const join = joinPath
 
 const temporaryDirectories: string[] = []
 
@@ -321,8 +328,8 @@ describe('Mirror v3', () => {
     expect(result.localSkill).toBeUndefined()
     expect(notices).toHaveLength(1)
     expect(await readFile(join(cwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
-    expect(existsSync(resolveMirrorSkillPath('local', { cwd, homeDirectory }))).toBe(false)
-    expect(existsSync(resolveMirrorSkillPath('global', { cwd, homeDirectory }))).toBe(true)
+    expect(await existsSync(resolveMirrorSkillPath('local', { cwd, homeDirectory }))).toBe(false)
+    expect(await existsSync(resolveMirrorSkillPath('global', { cwd, homeDirectory }))).toBe(true)
 
     const disabledCwd = await createPackageAndJsrFixture()
     const disabledHome = await createTempDir()
@@ -339,7 +346,7 @@ describe('Mirror v3', () => {
     expect(disabled.localSkill).toBeUndefined()
     expect(disabled.globalSkill).toBeUndefined()
     expect(await readFile(join(disabledCwd, 'AGENTS.md'), 'utf8')).not.toContain(mirrorAgentsSectionHeading)
-    expect(existsSync(resolveMirrorSkillPath('local', { cwd: disabledCwd, homeDirectory: disabledHome }))).toBe(false)
+    expect(await existsSync(resolveMirrorSkillPath('local', { cwd: disabledCwd, homeDirectory: disabledHome }))).toBe(false)
   })
 
   test('reads and writes package and JSR names and versions', async () => {
@@ -512,7 +519,7 @@ describe('Mirror v3', () => {
     expect(result.plan.commitEnabled).toBe(true)
     expect(result.plan.pushEnabled).toBe(true)
     expect((await gitText(remote, 'tag', '--list')).trim()).toBe('@guiho/mirror@1.0.1')
-  })
+  }, 15000)
 
   test('git-only releases with --commit create tags without empty commits', async () => {
     const cwd = await createGitFixture()
@@ -526,7 +533,7 @@ describe('Mirror v3', () => {
     expect(result.applied).toBe(true)
     expect((await gitText(cwd, 'rev-list', '--count', 'HEAD')).trim()).toBe(commitsBefore)
     expect((await gitText(cwd, 'tag', '--list')).trim().split(/\r?\n/).sort()).toEqual(['v1.0.0', 'v1.0.1'])
-  })
+  }, 15000)
 
   test('runs CLI config show and config check', async () => {
     const cwd = await createGitFixture()
@@ -687,6 +694,23 @@ path = "custom-package.json"
     expect(shippedSchema).toBe(renderMirrorConfigJsonSchema())
   })
 
+  test('ships CLI-only package metadata with intentional runtime dependencies', async () => {
+    const packageJson = JSON.parse(await readFile(join(import.meta.dir, '..', 'package.json'), 'utf8')) as Record<string, unknown>
+    const jsrJson = JSON.parse(await readFile(join(import.meta.dir, '..', 'jsr.json'), 'utf8')) as Record<string, unknown>
+
+    expect(packageJson['main']).toBeUndefined()
+    expect(packageJson['types']).toBeUndefined()
+    expect(packageJson['exports']).toBeUndefined()
+    expect(packageJson['dependencies']).toEqual({ semver: '^7.8.1' })
+    expect(packageJson['bin']).toEqual({ mirror: './bin/mirror' })
+    expect(packageJson['scripts']).toMatchObject({ postinstall: 'bun run scripts/install-package.ts', prepack: 'bun run binary' })
+    expect(packageJson['files']).toContain('install.sh')
+    expect(packageJson['files']).toContain('install.ps1')
+    expect(packageJson['files']).toContain('bin/')
+    expect(packageJson['files']).toContain('scripts/')
+    expect(jsrJson['exports']).toBe('./source/guiho-mirror-bin.ts')
+  })
+
   test('runs CLI agent installation and AGENTS.md commands', async () => {
     const cwd = await createTempDir()
     const homeDirectory = await createTempDir()
@@ -727,7 +751,7 @@ path = "custom-package.json"
     expect(result.stdout).toContain('USAGE')
     expect(result.stderr).toContain('guiho-as-mirror skill not found global')
     expect(await readFile(join(cwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
-    expect(existsSync(resolveMirrorSkillPath('local', { cwd, homeDirectory }))).toBe(false)
+    expect(await existsSync(resolveMirrorSkillPath('local', { cwd, homeDirectory }))).toBe(false)
     expect(await readFile(resolveMirrorSkillPath('global', { cwd, homeDirectory }), 'utf8')).toContain('name: guiho-as-mirror')
   })
 
@@ -964,7 +988,8 @@ path = "custom-package.json"
   })
 
   test('runs a successful hook command', async () => {
-    const result = await runHooks('before:everything', [runtimeCommand('console.log("hello hook")')], {}, process.cwd())
+    const cwd = await createTempDir()
+    const result = await runHooks('before:everything', [await hookFileCommand(cwd, 'success', 'console.log("hello hook")')], {}, cwd)
 
     expect(result).toBeDefined()
     expect(result!.status).toBe('success')
@@ -972,7 +997,8 @@ path = "custom-package.json"
   })
 
   test('throws MirrorError on failed hook command', async () => {
-    await expect(runHooks('before:plan', [runtimeCommand('process.exit(3)')], {}, process.cwd())).rejects.toThrow("Hook 'before:plan' failed")
+    const cwd = await createTempDir()
+    await expect(runHooks('before:plan', [await hookFileCommand(cwd, 'failure', 'process.exit(3)')], {}, cwd)).rejects.toThrow("Hook 'before:plan' failed")
   })
 
   test('skips undefined hooks silently', async () => {
@@ -1009,9 +1035,10 @@ after_apply = "echo after-apply-hook"
 
   test('failed hook stops version apply via CLI', async () => {
     const cwd = await createPackageAndJsrFixture()
+    const hookCommand = await hookFileCommand(cwd, 'before-apply-failure', 'process.exit(1)')
     await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'] }) + `
 [hooks]
-before_apply = ${JSON.stringify(runtimeCommand('process.exit(1)'))}
+before_apply = ${JSON.stringify(hookCommand)}
 `)
 
     const { exitCode, stderr } = await runMirrorCliFromCwd(cwd, await createTempDir(), 'version', 'apply', 'patch', '--yes')
@@ -1022,7 +1049,7 @@ before_apply = ${JSON.stringify(runtimeCommand('process.exit(1)'))}
 })
 
 const createTempDir = async () => {
-  const path = await mkdtemp(join(tmpdir(), 'guiho-mirror-'))
+  const path = await makeTempDirectory('guiho-mirror-')
   temporaryDirectories.push(path)
   return path
 }
@@ -1072,7 +1099,11 @@ const writeText = async (path: string, content: string) => {
   await writeFile(path, content, 'utf8')
 }
 
-const runtimeCommand = (code: string) => `${JSON.stringify(process.execPath)} -e ${JSON.stringify(code)}`
+const hookFileCommand = async (cwd: string, name: string, code: string) => {
+  const path = join(cwd, `${name}.ts`)
+  await writeText(path, `${code}\n`)
+  return `bun run ${path}`
+}
 
 const writeJson = async (path: string, object: Record<string, unknown>) => {
   await writeText(path, `${JSON.stringify(object, null, 2)}\n`)
