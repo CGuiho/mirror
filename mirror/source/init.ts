@@ -2,9 +2,8 @@
  * @copyright Copyright (c) 2026 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
  */
 
-import { createInterface } from 'node:readline/promises'
-import { basename } from 'node:path'
 import type { MirrorAdapterName, MirrorInitAnswers, MirrorInitFlags, MirrorInitPrompter } from './types.js'
+import { basenamePath } from './path.js'
 
 const adapterValues = new Set<MirrorAdapterName>(['package.json', 'jsr.json', 'git'])
 
@@ -52,7 +51,7 @@ export const resolveInitAnswers = async (
     ? flags.jsrPath ?? (prompter ? await prompter.text('jsr.json path', 'jsr.json') : 'jsr.json')
     : 'jsr.json'
 
-  const name = flags.name ?? (source === 'git' ? basename(cwd) : undefined)
+  const name = flags.name ?? (source === 'git' ? basenamePath(cwd) : undefined)
   const nameAvailable = source === 'package.json' || source === 'jsr.json' || Boolean(name)
   const defaultTagTemplate = nameAvailable ? '{name}@{version}' : 'v{version}'
 
@@ -84,23 +83,19 @@ export const isInteractiveInit = (options: { yes?: boolean; nonInteractive?: boo
   Boolean(process.stdin.isTTY) && options.yes !== true && options.nonInteractive !== true
 
 export const createReadlineInitPrompter = (): MirrorInitPrompter => {
-  const rl = createInterface({ input: process.stdin, output: process.stdout })
-
   return {
     async text(question, defaultValue) {
       const suffix = defaultValue.length > 0 ? ` [${defaultValue}]` : ' [none]'
-      const answer = (await rl.question(`${question}${suffix}: `)).trim()
+      const answer = (prompt(`${question}${suffix}: `) ?? '').trim()
       return answer.length > 0 ? answer : defaultValue
     },
     async confirm(question, defaultValue) {
       const suffix = defaultValue ? ' [Y/n]' : ' [y/N]'
-      const answer = (await rl.question(`${question}${suffix}: `)).trim().toLowerCase()
+      const answer = (prompt(`${question}${suffix}: `) ?? '').trim().toLowerCase()
       if (answer.length === 0) return defaultValue
       return answer === 'y' || answer === 'yes'
     },
-    close() {
-      rl.close()
-    },
+    close() {},
   }
 }
 
