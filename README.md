@@ -8,7 +8,7 @@ Mirror is a powerful, deterministic CLI for semantic project versioning. It read
 source -> version engine -> plan -> outputs
 ```
 
-Mirror ships as a **native Bun-compiled CLI binary**. Direct installers run the native binary without requiring Node.js or Bun at runtime. Package-manager installs use a small Bun launcher and postinstall helper. Git is required **only** for Git-based workflows (`source: "git"`, `output: ["git"]`, or commit/tag/push operations).
+Mirror ships as a **native Bun-compiled CLI binary**. Direct installers run the native binary without requiring Node.js or Bun at runtime. Package-manager installs use a small Bun launcher with install-time and on-demand native binary download. Git is required **only** for Git-based workflows (`source: "git"`, `output: ["git"]`, or commit/tag/push operations).
 
 ---
 

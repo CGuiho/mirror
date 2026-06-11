@@ -6,7 +6,7 @@ on:
       - '@guiho/mirror@*'
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 jobs:
@@ -20,9 +20,9 @@ jobs:
         working-directory: mirror
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
@@ -35,6 +35,25 @@ jobs:
       - run: bun run typecheck
       - run: bun test
       - run: bun run build
+
+      - name: Upload GitHub release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(bun -e "console.log(require('./package.json').version)")
+          RELEASE_FLAGS=()
+
+          if [[ "$VERSION" == *-* ]]; then
+            RELEASE_FLAGS+=(--prerelease)
+          else
+            RELEASE_FLAGS+=(--latest)
+          fi
+
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" bin/guiho-mirror-* --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" bin/guiho-mirror-* --title "$GITHUB_REF_NAME" --verify-tag "${RELEASE_FLAGS[@]}"
+          fi
 
       - run: cp ../README.md .
       - run: cp ../CHANGELOG.md .

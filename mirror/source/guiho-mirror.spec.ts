@@ -708,7 +708,34 @@ path = "custom-package.json"
     expect(packageJson['files']).toContain('install.ps1')
     expect(packageJson['files']).not.toContain('bin/')
     expect(packageJson['files']).toContain('scripts/')
+    expect(await existsSync(join(import.meta.dir, '..', 'install.sh'))).toBe(true)
+    expect(await existsSync(join(import.meta.dir, '..', 'install.ps1'))).toBe(true)
     expect(jsrJson['exports']).toBe('./source/guiho-mirror-bin.ts')
+  })
+
+  test('package launcher installs a bundled native binary on demand', async () => {
+    const packageRoot = await createTempDir()
+    const scriptsDir = join(packageRoot, 'scripts')
+    const binDir = join(packageRoot, 'bin')
+    const vendorBinary = join(packageRoot, 'vendor', `mirror${platform() === 'win32' ? '.exe' : ''}`)
+    await mkdir(scriptsDir, { recursive: true })
+    await mkdir(binDir, { recursive: true })
+    await writeText(join(packageRoot, 'package.json'), JSON.stringify({ version: '0.0.0-test.0' }, null, 2))
+    await writeText(join(scriptsDir, 'mirror-bin.ts'), await readFile(join(import.meta.dir, '..', 'scripts', 'mirror-bin.ts'), 'utf8'))
+    await writeText(join(scriptsDir, 'install-package.ts'), await readFile(join(import.meta.dir, '..', 'scripts', 'install-package.ts'), 'utf8'))
+    await Bun.write(join(binDir, packageAssetName()), Bun.file(process.execPath))
+
+    const result = Bun.spawn([process.execPath, join(scriptsDir, 'mirror-bin.ts'), '--version'], {
+      stdout: 'pipe',
+      stderr: 'pipe',
+    })
+    const [exitCode, stdout, stderr] = await Promise.all([result.exited, result.stdout.text(), result.stderr.text()])
+
+    expect(exitCode).toBe(0)
+    expect(stdout).toContain(`installed bundled GUIHO Mirror native binary: ${packageAssetName()}`)
+    expect(stdout.trim()).toMatch(/\d+\.\d+\.\d+$/)
+    expect(stderr).toBe('')
+    expect(await existsSync(vendorBinary)).toBe(true)
   })
 
   test('runs CLI agent installation and AGENTS.md commands', async () => {
@@ -1052,6 +1079,16 @@ const createTempDir = async () => {
   const path = await makeTempDirectory('guiho-mirror-')
   temporaryDirectories.push(path)
   return path
+}
+
+const packageAssetName = () => {
+  const os = platform() === 'win32'
+    ? 'windows'
+    : platform() === 'darwin'
+      ? 'macos'
+      : 'linux'
+  const arch = process.arch === 'arm64' ? 'arm64' : 'x64'
+  return `guiho-mirror-${os}-${arch}${os === 'windows' ? '.exe' : ''}`
 }
 
 const createPackageAndJsrFixture = async () => {

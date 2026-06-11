@@ -7,11 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [3.3.0-alpha.2] - 2026-06-11
+
 ### Added
 
 - Added Bun-native multi-target binary compilation for Linux, macOS, and Windows release assets.
 - Added direct native binary installers for POSIX shells and PowerShell.
-- Added package-manager install helper that places the matching native binary at `bin/mirror`.
+- Added package-manager install helper that places the matching native binary under `vendor/`.
+- Added on-demand native binary installation from the Bun package launcher so `bun x @guiho/mirror` can recover when install hooks did not populate `vendor/mirror`.
 
 ### Changed
 
@@ -19,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replaced Node.js runtime imports with Bun-native file, TOML, process, shell, and binary build APIs.
 - Replaced `citty` with Mirror's internal CLI router and replaced `smol-toml` with Bun's native `Bun.TOML` parser, while keeping `semver` for semantic version calculations.
 - Changed npm packaging to ship a small Bun launcher and postinstall downloader instead of bundling every platform binary into the package tarball.
+- Changed the publish workflow to create or update the tag release and upload compiled native binaries as GitHub release assets before publishing to npm.
 
 ## [3.2.1] - 2026-06-09
 

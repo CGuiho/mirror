@@ -3,8 +3,9 @@
  * Package-manager install helper for GUIHO Mirror.
  *
  * This script uses Bun APIs only. It downloads the platform-native Mirror binary
- * into `vendor/mirror`. Package-manager installs use the small Bun launcher in
- * `scripts/mirror-bin.ts`; direct installers remain the no-Bun runtime path.
+ * into `vendor/mirror` or `vendor/mirror.exe`. Package-manager installs use the
+ * small Bun launcher in `scripts/mirror-bin.ts`; direct installers remain the
+ * no-Bun runtime path.
  */
 
 type PackageJson = {
@@ -24,10 +25,11 @@ const version = process.env['MIRROR_VERSION'] ?? packageJson.version ?? 'latest'
 const repo = process.env['MIRROR_REPO'] ?? 'CGuiho/mirror'
 const asset = detectAsset()
 const bundledAsset = Bun.file(new URL(`../bin/${asset}`, import.meta.url))
-const destination = new URL('../vendor/mirror', import.meta.url)
+const destination = new URL(`../vendor/mirror${process.platform === 'win32' ? '.exe' : ''}`, import.meta.url)
 
 if (await bundledAsset.exists()) {
   await Bun.write(destination, bundledAsset)
+  await makeExecutable(destination)
   console.log(`installed bundled GUIHO Mirror native binary: ${asset}`)
   process.exit(0)
 }
@@ -46,7 +48,23 @@ if (!response.ok) {
 }
 
 await Bun.write(destination, response)
+await makeExecutable(destination)
 console.log(`installed GUIHO Mirror native binary: ${asset}`)
+
+async function makeExecutable(path: URL) {
+  if (process.platform === 'win32') return
+
+  const result = Bun.spawn(['chmod', '755', Bun.fileURLToPath(path)], {
+    stdout: 'ignore',
+    stderr: 'inherit',
+  })
+  const exitCode = await result.exited
+
+  if (exitCode !== 0) {
+    console.error('error: failed to make GUIHO Mirror native binary executable')
+    process.exit(exitCode)
+  }
+}
 
 function detectAsset() {
   const os = detectOs()

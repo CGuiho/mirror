@@ -102,7 +102,7 @@ pnpm add -D @guiho/mirror
 yarn add -D @guiho/mirror
 ```
 
-Package-manager installs use a small Bun launcher plus install-time tooling that downloads the matching native binary into `vendor/mirror`. Direct installers are the no-runtime path; package-manager installs require Bun for the launcher and postinstall helper.
+Package-manager installs use a small Bun launcher plus install-time tooling that downloads the matching native binary into `vendor/mirror` on POSIX systems or `vendor/mirror.exe` on Windows. When a package runner such as `bun x` starts without a populated vendor binary, the launcher runs the same installer on demand before executing the native binary. Direct installers are the no-runtime path; package-manager installs require Bun for the launcher and install helper.
 
 ## Quick Start
 
@@ -528,7 +528,7 @@ bun run binary
 Generated outputs are ignored and should not be hand-edited.
 
 - `bin/`: ignored local compiled binary output and release asset staging.
-- `vendor/`: package-manager postinstall destination for the selected native binary.
+- `vendor/`: package-manager install destination for the selected native binary.
 
 There is no lint or formatter config. Existing source style is strict TypeScript, ESM imports, single quotes, and no semicolons.
 
@@ -569,7 +569,7 @@ Compile native binaries:
 bun run binary
 ```
 
-The binary build writes `bin/mirror` for local validation and platform release assets for Linux, macOS, and Windows x64/arm64 targets where Bun compilation supports the target. Do not publish the full `bin/` matrix inside the npm package; upload those files as GitHub release assets and let installers download the matching one. The compiled binary embeds fallback `guiho-as-mirror` skill content so `mirror agents install local` and `mirror agents install global` still work when adjacent package files are not available.
+The binary build writes `bin/mirror` for local validation and platform release assets for Linux, macOS, and Windows x64/arm64 targets where Bun compilation supports the target. Do not publish the full `bin/` matrix inside the npm package; upload those files as GitHub release assets and let installers download the matching one. The publish workflow creates the tag release when missing, uploads or replaces `bin/guiho-mirror-*` assets, then publishes the npm package. The compiled binary embeds fallback `guiho-as-mirror` skill content so `mirror agents install local` and `mirror agents install global` still work when adjacent package files are not available.
 
 ## Publishing Checklist
 
@@ -587,6 +587,8 @@ Before publishing a new version:
 10. Run `mirror version apply <target> --yes` with the required commit or push flags.
 
 Do not publish a new version when documentation is stale relative to the code being released.
+
+The GitHub Actions CI and publish workflows should use Node 24-compatible JavaScript actions. Keep first-party actions on current supported majors, currently `actions/checkout@v6` and `actions/setup-node@v6`, so the publish workflow does not depend on the deprecated Node 20 action runtime.
 
 ## Troubleshooting
 
