@@ -121,7 +121,7 @@ export const mirrorConfigJsonSchema = {
         },
         auto_skill_install: {
           type: 'boolean',
-          description: 'Install guiho-as-mirror globally when missing.',
+          description: 'Install guiho-s-mirror globally when missing or outdated.',
         },
       },
     },
