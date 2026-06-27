@@ -754,7 +754,7 @@ path = "custom-package.json"
     expect(packageJson['types']).toBeUndefined()
     expect(packageJson['exports']).toBeUndefined()
     expect(packageJson['dependencies']).toEqual({ semver: '^7.8.1' })
-    expect(packageJson['bin']).toEqual({ mirror: './scripts/mirror-bin.ts' })
+    expect(packageJson['bin']).toEqual({ mirror: 'scripts/mirror-bin.ts' })
     expect(packageJson['scripts']).toMatchObject({ postinstall: 'bun run scripts/install-package.ts', prepack: 'bun run binary' })
     expect(packageJson['files']).toContain('install.sh')
     expect(packageJson['files']).toContain('install.ps1')
