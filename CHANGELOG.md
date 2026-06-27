@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [3.3.0-alpha.3] - 2026-06-27
+
+### Added
+
+- Added the renamed bundled `guiho-s-mirror` agent skill with package-version metadata in its frontmatter.
+
+### Changed
+
+- Changed Mirror agent skill installation to remove stale `guiho-as-mirror` and `guiho-s-mirror` skill directories before writing the bundled skill.
+- Changed automatic agent setup to migrate legacy `guiho-as-mirror` installations and update installed skills when their version is older than the bundled skill version.
+- Updated generated AGENTS guidance, README, DOCS, schema descriptions, CLI reporting, exports, and tests for the `guiho-s-mirror` skill name and versioned sync behavior.
+
 ## [3.3.0-alpha.2] - 2026-06-11
 
 ### Added
