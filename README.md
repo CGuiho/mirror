@@ -16,6 +16,8 @@ Mirror ships as a **native Bun-compiled CLI binary**. Direct installers run the 
 
 ### Installation
 
+NPM package: [@guiho/mirror](https://www.npmjs.com/package/@guiho/mirror)
+
 ```bash
 npm install -D @guiho/mirror
 # or
