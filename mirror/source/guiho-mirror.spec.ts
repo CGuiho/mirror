@@ -13,6 +13,8 @@ import {
   hookEnvFromConfig,
   installMirrorSkill,
   loadMirrorConfig,
+  mirrorSkillName,
+  mirrorSkillVersion,
   mirrorAgentsSectionEndMarker,
   mirrorAgentsSectionHeading,
   mirrorAgentsSectionStartMarker,
@@ -219,7 +221,7 @@ describe('Mirror v3', () => {
     expect(content).toContain(mirrorAgentsSectionEndMarker)
   })
 
-  test('detects existing AGENTS.md guidance despite whitespace-only formatting changes', async () => {
+  test('updates existing AGENTS.md guidance that names the legacy skill', async () => {
     const cwd = await createTempDir()
     const agentsPath = join(cwd, 'AGENTS.md')
     await writeText(agentsPath, [
@@ -242,8 +244,10 @@ describe('Mirror v3', () => {
     const result = await ensureMirrorAgentsInstructions(cwd)
     const content = await readFile(agentsPath, 'utf8')
 
-    expect(result.changed).toBe(false)
+    expect(result.changed).toBe(true)
     expect(content.match(new RegExp(mirrorAgentsSectionHeading, 'g'))).toHaveLength(1)
+    expect(content).toContain('Invoke the guiho-s-mirror agent skill')
+    expect(content).not.toContain('Invoke the guiho-as-mirror agent skill')
   })
 
   test('finds AGENTS.md in ancestor directories', async () => {
@@ -273,7 +277,7 @@ describe('Mirror v3', () => {
     expect(await readFile(join(cwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
   })
 
-  test('installs the guiho-as-mirror skill locally and globally', async () => {
+  test('installs the guiho-s-mirror skill locally and globally', async () => {
     const cwd = await createTempDir()
     const homeDirectory = await createTempDir()
 
@@ -284,18 +288,47 @@ describe('Mirror v3', () => {
     expect(local.installed).toBe(true)
     expect(global.installed).toBe(true)
     expect(localAgain.installed).toBe(false)
+    expect(localAgain.updated).toBe(true)
+    expect(local.name).toBe(mirrorSkillName)
+    expect(local.version).toBe(mirrorSkillVersion)
     expect(local.path).toBe(resolveMirrorSkillPath('local', { cwd, homeDirectory }))
     expect(global.path).toBe(resolveMirrorSkillPath('global', { cwd, homeDirectory }))
-    expect(local.path).toBe(join(cwd, '.agents', 'skills', 'guiho-as-mirror', 'SKILL.md'))
-    expect(global.path).toBe(join(homeDirectory, '.agents', 'skills', 'guiho-as-mirror', 'SKILL.md'))
-    expect(await readFile(local.path, 'utf8')).toContain('name: guiho-as-mirror')
-    expect(await readFile(global.path, 'utf8')).toContain('name: guiho-as-mirror')
+    expect(local.path).toBe(join(cwd, '.agents', 'skills', mirrorSkillName, 'SKILL.md'))
+    expect(global.path).toBe(join(homeDirectory, '.agents', 'skills', mirrorSkillName, 'SKILL.md'))
+    expect(await readFile(local.path, 'utf8')).toContain(`name: ${mirrorSkillName}`)
+    expect(await readFile(local.path, 'utf8')).toContain(`version: ${mirrorSkillVersion}`)
+    expect(await readFile(global.path, 'utf8')).toContain(`name: ${mirrorSkillName}`)
+  })
+
+  test('migrates legacy Mirror skill installs and removes stale current copies', async () => {
+    const cwd = await createTempDir()
+    const homeDirectory = await createTempDir()
+    const legacyPath = join(cwd, '.agents', 'skills', 'guiho-as-mirror', 'SKILL.md')
+    const currentPath = resolveMirrorSkillPath('local', { cwd, homeDirectory })
+
+    await writeText(legacyPath, '---\nname: guiho-as-mirror\nversion: 0.0.1\n---\nold skill\n')
+    await writeText(currentPath, `---\nname: ${mirrorSkillName}\nversion: 0.0.1\n---\nstale current skill\n`)
+
+    const result = await installMirrorSkill('local', { cwd, homeDirectory })
+    const installed = await readFile(currentPath, 'utf8')
+
+    expect(result.installed).toBe(false)
+    expect(result.updated).toBe(true)
+    expect(result.migrated).toBe(true)
+    expect(result.previousName).toBe('guiho-as-mirror')
+    expect(result.previousVersion).toBe('0.0.1')
+    expect(result.removed).toContain(dirname(legacyPath))
+    expect(result.removed).toContain(dirname(currentPath))
+    expect(await existsSync(legacyPath)).toBe(false)
+    expect(installed).toContain(`name: ${mirrorSkillName}`)
+    expect(installed).toContain(`version: ${mirrorSkillVersion}`)
+    expect(installed).not.toContain('stale current skill')
   })
 
   test('falls back to embedded skill content when the bundled skill file is unavailable', async () => {
     const cwd = await createTempDir()
     const homeDirectory = await createTempDir()
-    const sourceSkillPath = join(import.meta.dir, '..', 'skills', 'guiho-as-mirror', 'SKILL.md')
+    const sourceSkillPath = join(import.meta.dir, '..', 'skills', mirrorSkillName, 'SKILL.md')
     const backupSkillPath = `${sourceSkillPath}.backup`
 
     await writeText(backupSkillPath, await readFile(sourceSkillPath, 'utf8'))
@@ -306,7 +339,8 @@ describe('Mirror v3', () => {
       const installed = await readFile(result.path, 'utf8')
 
       expect(result.installed).toBe(true)
-      expect(installed).toContain('name: guiho-as-mirror')
+  expect(installed).toContain(`name: ${mirrorSkillName}`)
+  expect(installed).toContain(`version: ${mirrorSkillVersion}`)
       expect(installed).toContain('GUIHO Mirror')
     } finally {
       await writeText(sourceSkillPath, await readFile(backupSkillPath, 'utf8'))
@@ -347,6 +381,24 @@ describe('Mirror v3', () => {
     expect(disabled.globalSkill).toBeUndefined()
     expect(await readFile(join(disabledCwd, 'AGENTS.md'), 'utf8')).not.toContain(mirrorAgentsSectionHeading)
     expect(await existsSync(resolveMirrorSkillPath('local', { cwd: disabledCwd, homeDirectory: disabledHome }))).toBe(false)
+  })
+
+  test('updates an outdated global Mirror skill during automation', async () => {
+    const cwd = await createPackageAndJsrFixture()
+    const homeDirectory = await createTempDir()
+    const globalPath = resolveMirrorSkillPath('global', { cwd, homeDirectory })
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'] }))
+    await writeText(globalPath, `---\nname: ${mirrorSkillName}\nversion: 0.0.1\n---\nstale current skill\n`)
+
+    const notices: string[] = []
+    const result = await runMirrorAgentAutomation({ cwd, homeDirectory }, (message) => notices.push(message))
+    const installed = await readFile(globalPath, 'utf8')
+
+    expect(result.globalSkill?.updated).toBe(true)
+    expect(result.globalSkill?.previousVersion).toBe('0.0.1')
+    expect(notices.join('\n')).toContain('outdated (0.0.1 ->')
+    expect(installed).toContain(`version: ${mirrorSkillVersion}`)
+    expect(installed).not.toContain('stale current skill')
   })
 
   test('reads and writes package and JSR names and versions', async () => {
@@ -753,8 +805,8 @@ path = "custom-package.json"
     expect(local.stdout).toContain('scope: local')
     expect(global.stdout).toContain('scope: global')
     expect(instructions.stdout).toContain('changed: true')
-    expect(await readFile(resolveMirrorSkillPath('local', { cwd, homeDirectory }), 'utf8')).toContain('name: guiho-as-mirror')
-    expect(await readFile(resolveMirrorSkillPath('global', { cwd, homeDirectory }), 'utf8')).toContain('name: guiho-as-mirror')
+    expect(await readFile(resolveMirrorSkillPath('local', { cwd, homeDirectory }), 'utf8')).toContain(`name: ${mirrorSkillName}`)
+    expect(await readFile(resolveMirrorSkillPath('global', { cwd, homeDirectory }), 'utf8')).toContain(`name: ${mirrorSkillName}`)
     expect(await readFile(join(cwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
   })
 
@@ -776,10 +828,10 @@ path = "custom-package.json"
 
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toContain('USAGE')
-    expect(result.stderr).toContain('guiho-as-mirror skill not found global')
+    expect(result.stderr).toContain('guiho-s-mirror skill not found global')
     expect(await readFile(join(cwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
     expect(await existsSync(resolveMirrorSkillPath('local', { cwd, homeDirectory }))).toBe(false)
-    expect(await readFile(resolveMirrorSkillPath('global', { cwd, homeDirectory }), 'utf8')).toContain('name: guiho-as-mirror')
+    expect(await readFile(resolveMirrorSkillPath('global', { cwd, homeDirectory }), 'utf8')).toContain(`name: ${mirrorSkillName}`)
   })
 
   test('runs CLI help without ANSI colors when no-color is set', async () => {
