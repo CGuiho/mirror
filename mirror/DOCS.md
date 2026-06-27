@@ -212,13 +212,15 @@ mirror agents install global
 mirror agents instructions
 ```
 
-- `install local`: Writes `.agents/skills/guiho-as-mirror/SKILL.md` in the project.
-- `install global`: Writes `~/.agents/skills/guiho-as-mirror/SKILL.md`.
+- `install local`: Synchronizes `.agents/skills/guiho-s-mirror/SKILL.md` in the project.
+- `install global`: Synchronizes `~/.agents/skills/guiho-s-mirror/SKILL.md`.
 - `instructions`: Creates or updates `AGENTS.md` with the protected GUIHO Mirror semantic versioning section.
 
 Global skill installation uses the user home directory. Tests and automation can override that home root with `MIRROR_AGENT_HOME`.
 
-Automatic skill installation is global-only by default. Use `mirror agents install local` when a project-local `.agents/skills/guiho-as-mirror/SKILL.md` copy is intentionally needed.
+Explicit skill installation is authoritative: Mirror removes stale `guiho-as-mirror` and `guiho-s-mirror` skill directories for the selected scope, then writes the bundled `guiho-s-mirror` skill fresh. The installed skill frontmatter includes a `version` field from the installed `@guiho/mirror` package version.
+
+Automatic skill installation is global-only by default. Use `mirror agents install local` when a project-local `.agents/skills/guiho-s-mirror/SKILL.md` copy is intentionally needed.
 
 ### `mirror version`
 
@@ -328,7 +330,7 @@ Agent settings tell AI coding agents how to prepare release documentation and wh
 - `write_changelog`: Optional. Tell agents whether changelog edits are allowed. Default: `true`.
 - `changelog_path`: Optional. Changelog file path for agents. Default: `CHANGELOG.md`.
 - `auto_agents_md`: Optional. Insert Mirror guidance into `AGENTS.md` when present. Default: `true`.
-- `auto_skill_install`: Optional. Install `guiho-as-mirror` globally when missing. Default: `true`.
+- `auto_skill_install`: Optional. Install `guiho-s-mirror` globally when missing or outdated. Default: `true`.
 
 Set `write_changelog = false` when agents must skip changelog edits, even if a changelog exists. Set `changelog_path` when the changelog is not at the project root or when a package inside a monorepo writes release notes elsewhere.
 
@@ -341,7 +343,7 @@ Mirror uses standard agent skill directories:
 
 Mirror can self-provision AI-agent instructions for projects that use standard agent skill directories.
 
-When automation is enabled, project commands check for `AGENTS.md` and for global `guiho-as-mirror` skill installation. If guidance is missing, Mirror notifies the user and writes the missing global skill or AGENTS section. Running `mirror` with no arguments performs this configured setup before showing help. Mirror does not automatically write a local skill file; local installation is explicit.
+When automation is enabled, project commands check for `AGENTS.md` and for global `guiho-s-mirror` skill installation. If guidance is missing, the legacy `guiho-as-mirror` skill is present, or the installed skill version is older than the bundled skill version, Mirror notifies the user and writes the synchronized global skill or AGENTS section. Running `mirror` with no arguments performs this configured setup before showing help. Mirror does not automatically write a local skill file; local installation is explicit.
 
 Automation is controlled by `[agents]`.
 
@@ -350,7 +352,7 @@ Automation is controlled by `[agents]`.
 - Disable changelog edits by agents with `write_changelog = false`.
 - Direct agents to the correct changelog with `changelog_path = "path/to/CHANGELOG.md"`.
 
-The generated AGENTS section is wrapped in `<!-- BEGIN GUIHO MIRROR - DO NOT EDIT THIS SECTION -->` and `<!-- END GUIHO MIRROR -->` markers so agents know the block is Mirror-managed. It instructs agents to invoke `guiho-as-mirror` for versioning work, inspect `mirror.config.toml`, respect `write_changelog`, and use `changelog_path` for changelog edits. Mirror detects the existing block with whitespace-insensitive matching so markdown formatting that only adds or removes blank lines does not duplicate the section. Use `mirror agents install local` only when a project-local skill copy is desired explicitly.
+The generated AGENTS section is wrapped in `<!-- BEGIN GUIHO MIRROR - DO NOT EDIT THIS SECTION -->` and `<!-- END GUIHO MIRROR -->` markers so agents know the block is Mirror-managed. It instructs agents to invoke `guiho-s-mirror` for versioning work, inspect `mirror.config.toml`, respect `write_changelog`, and use `changelog_path` for changelog edits. Mirror replaces existing marked Mirror sections so older `guiho-as-mirror` guidance is updated instead of duplicated. Use `mirror agents install local` only when a project-local skill copy is desired explicitly.
 
 ## Release Safety Rules
 
@@ -511,7 +513,7 @@ Before a version is published, update this file and any other relevant user-faci
 - `source/agents.ts`: agent skill installation and AGENTS.md guidance automation.
 - `source/errors.ts`: user-facing errors with stable exit codes.
 - `source/guiho-mirror.spec.ts`: Bun test coverage for configuration, adapters, planning, execution, CLI behavior, Git behavior, and agent automation.
-- `skills/guiho-as-mirror/SKILL.md`: bundled AI-agent skill installed by `mirror agents` commands.
+- `skills/guiho-s-mirror/SKILL.md`: bundled AI-agent skill installed by `mirror agents` commands.
 
 ## Development Workflow
 
@@ -569,7 +571,7 @@ Compile native binaries:
 bun run binary
 ```
 
-The binary build writes `bin/mirror` for local validation and platform release assets for Linux, macOS, and Windows x64/arm64 targets where Bun compilation supports the target. Do not publish the full `bin/` matrix inside the npm package; upload those files as GitHub release assets and let installers download the matching one. The publish workflow creates the tag release when missing, uploads or replaces `bin/guiho-mirror-*` assets, then publishes the npm package. The compiled binary embeds fallback `guiho-as-mirror` skill content so `mirror agents install local` and `mirror agents install global` still work when adjacent package files are not available.
+The binary build writes `bin/mirror` for local validation and platform release assets for Linux, macOS, and Windows x64/arm64 targets where Bun compilation supports the target. Do not publish the full `bin/` matrix inside the npm package; upload those files as GitHub release assets and let installers download the matching one. The publish workflow creates the tag release when missing, uploads or replaces `bin/guiho-mirror-*` assets, then publishes the npm package. The compiled binary embeds fallback `guiho-s-mirror` skill content so `mirror agents install local` and `mirror agents install global` still work when adjacent package files are not available.
 
 ## Publishing Checklist
 
