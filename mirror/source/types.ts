@@ -164,8 +164,14 @@ export type MirrorConfigDiscovery = {
 export type MirrorSkillInstallResult = {
   scope: MirrorSkillInstallScope
   path: string
+  name: string
+  version: string
   installed: boolean
   updated: boolean
+  migrated: boolean
+  removed: string[]
+  previousName?: string
+  previousVersion?: string
 }
 
 export type MirrorAgentsInstructionsResult = {
