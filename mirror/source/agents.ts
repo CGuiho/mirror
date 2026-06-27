@@ -10,12 +10,16 @@ import type {
   MirrorSkillInstallResult,
   MirrorSkillInstallScope,
 } from './types.js'
+import { gt as isSemverGreater, valid as validSemver } from 'semver'
 import { MirrorError } from './errors.js'
 import { discoverMirrorConfig, resolveMirrorPath } from './config.js'
 import { dirnamePath, resolvePath } from './path.js'
-import { fileExists, readTextFile, writeTextFile } from './runtime.js'
+import { fileExists, readTextFile, removePath, writeTextFile } from './runtime.js'
+import packageJson from '../package.json' with { type: 'json' }
 
-export const mirrorSkillName = 'guiho-as-mirror'
+export const mirrorSkillName = 'guiho-s-mirror'
+export const legacyMirrorSkillNames = ['guiho-as-mirror'] as const
+export const mirrorSkillVersion = typeof packageJson.version === 'string' ? packageJson.version : '0.0.0'
 export const mirrorAgentsSectionStartMarker = '<!-- BEGIN GUIHO MIRROR - DO NOT EDIT THIS SECTION -->'
 export const mirrorAgentsSectionEndMarker = '<!-- END GUIHO MIRROR -->'
 export const mirrorAgentsSectionHeading = '## Semantic Project Versioning -- GUIHO Mirror'
@@ -29,12 +33,23 @@ export const defaultMirrorAgentSettings: MirrorAgentSettings = {
 
 const mirrorAgentsSectionBody = `${mirrorAgentsSectionHeading}
 
-Invoke the guiho-as-mirror agent skill every time the user wants to bump, tag, release, plan, initialize, configure, or troubleshoot semantic project versioning with GUIHO Mirror.
+Invoke the guiho-s-mirror agent skill every time the user wants to bump, tag, release, plan, initialize, configure, or troubleshoot semantic project versioning with GUIHO Mirror.
 
 Before editing release docs or changelogs, inspect mirror.config.toml. If [agents].write_changelog is false, skip changelog edits. If it is missing or true, changelog edits are allowed when the project has a changelog.
 
 Use [agents].changelog_path as the changelog file path. If it is missing, use CHANGELOG.md in the project root.
 `
+
+const legacyMirrorAgentsSectionBodies = [
+  `${mirrorAgentsSectionHeading}
+
+Invoke the guiho-as-mirror agent skill every time the user wants to bump, tag, release, plan, initialize, configure, or troubleshoot semantic project versioning with GUIHO Mirror.
+
+Before editing release docs or changelogs, inspect mirror.config.toml. If [agents].write_changelog is false, skip changelog edits. If it is missing or true, changelog edits are allowed when the project has a changelog.
+
+Use [agents].changelog_path as the changelog file path. If it is missing, use CHANGELOG.md in the project root.
+`,
+]
 
 export const mirrorAgentsSection = `${mirrorAgentsSectionStartMarker}
 ${mirrorAgentsSectionBody.trimEnd()}
@@ -49,14 +64,21 @@ type MirrorSkillInstallOptions = MirrorSkillPathOptions & {
   overwrite?: boolean
 }
 
+type InstalledMirrorSkill = {
+  name: string
+  path: string
+  content: string
+  version?: string
+}
+
 type MirrorAgentAutomationOptions = MirrorCliOptions & {
   homeDirectory?: string
 }
 
-export const resolveMirrorSkillPath = (scope: MirrorSkillInstallScope, options: MirrorSkillPathOptions = {}) => {
-  if (scope === 'local') return resolvePath(options.cwd ?? process.cwd(), '.agents', 'skills', mirrorSkillName, 'SKILL.md')
+const mirrorSkillInstallNames = [...legacyMirrorSkillNames, mirrorSkillName] as const
 
-  return resolvePath(resolveMirrorAgentHome(options.homeDirectory), '.agents', 'skills', mirrorSkillName, 'SKILL.md')
+export const resolveMirrorSkillPath = (scope: MirrorSkillInstallScope, options: MirrorSkillPathOptions = {}) => {
+  return resolveMirrorSkillPathForName(scope, mirrorSkillName, options)
 }
 
 export const isMirrorSkillInstalled = async (scope: MirrorSkillInstallScope, options: MirrorSkillPathOptions = {}) =>
@@ -67,18 +89,45 @@ export const installMirrorSkill = async (
   options: MirrorSkillInstallOptions = {},
 ): Promise<MirrorSkillInstallResult> => {
   const path = resolveMirrorSkillPath(scope, options)
-  const exists = await fileExists(path)
-
-  if (exists && options.overwrite === false) return { scope, path, installed: false, updated: false }
-
   const content = await readBundledMirrorSkill()
-  const current = exists ? await readTextFile(path) : undefined
+  const version = readMirrorSkillVersion(content) ?? mirrorSkillVersion
+  const installedSkills = await readInstalledMirrorSkills(scope, options)
+  const legacySkill = installedSkills.find((skill) => skill.name !== mirrorSkillName)
+  const currentSkill = installedSkills.find((skill) => skill.name === mirrorSkillName)
+  const previousSkill = legacySkill ?? currentSkill
 
-  if (current === content) return { scope, path, installed: false, updated: false }
+  if (!shouldWriteBundledMirrorSkill(installedSkills, content, version, options.overwrite)) {
+    return {
+      scope,
+      path,
+      name: mirrorSkillName,
+      version,
+      installed: false,
+      updated: false,
+      migrated: false,
+      removed: [],
+      previousName: previousSkill?.name,
+      previousVersion: previousSkill?.version,
+    }
+  }
+
+  const removed = installedSkills.map((skill) => dirnamePath(skill.path))
+  for (const target of new Set(removed)) await removePath(target)
 
   await writeTextFile(path, content)
 
-  return { scope, path, installed: !exists, updated: exists }
+  return {
+    scope,
+    path,
+    name: mirrorSkillName,
+    version,
+    installed: installedSkills.length === 0,
+    updated: installedSkills.length > 0,
+    migrated: Boolean(legacySkill),
+    removed,
+    previousName: previousSkill?.name,
+    previousVersion: previousSkill?.version,
+  }
 }
 
 export const ensureMirrorAgentsInstructions = async (cwd: string, create = false): Promise<MirrorAgentsInstructionsResult> => {
@@ -93,7 +142,13 @@ export const ensureMirrorAgentsInstructions = async (cwd: string, create = false
   }
 
   const content = await readTextFile(path)
-  if (hasMirrorAgentsSection(content)) return { path, exists: true, changed: false }
+  if (hasCurrentMirrorAgentsSection(content)) return { path, exists: true, changed: false }
+
+  const replacedContent = replaceExistingMirrorAgentsSection(content)
+  if (replacedContent !== content) {
+    await writeTextFile(path, replacedContent)
+    return { path, exists: true, changed: true }
+  }
 
   const nextContent = `${content.trimEnd()}\n\n${mirrorAgentsSection}\n`
   await writeTextFile(path, nextContent)
@@ -141,11 +196,11 @@ export const runMirrorAgentAutomation = async (
 
   if (settings.autoSkillInstall) {
     const scope = 'global'
+    const globalSkill = await installMirrorSkill(scope, { cwd, homeDirectory: options.homeDirectory, overwrite: false })
 
-    if (!(await isMirrorSkillInstalled(scope, { cwd, homeDirectory: options.homeDirectory }))) {
-      const path = resolveMirrorSkillPath(scope, { cwd, homeDirectory: options.homeDirectory })
-      notify(`notice: ${mirrorSkillName} skill not found ${scope}; Mirror is installing it at ${path}`)
-      result.globalSkill = await installMirrorSkill(scope, { cwd, homeDirectory: options.homeDirectory, overwrite: false })
+    if (globalSkill.installed || globalSkill.updated || globalSkill.migrated) {
+      notify(`notice: ${mirrorSkillName} skill ${describeMirrorSkillInstallReason(globalSkill)} ${scope}; Mirror is installing it at ${globalSkill.path}`)
+      result.globalSkill = globalSkill
     }
   }
 
@@ -154,10 +209,80 @@ export const runMirrorAgentAutomation = async (
 
 const readBundledMirrorSkill = async () => {
   try {
-    return await Bun.file(new URL('../skills/guiho-as-mirror/SKILL.md', import.meta.url)).text()
+    return withBundledMirrorSkillVersion(await Bun.file(new URL('../skills/guiho-s-mirror/SKILL.md', import.meta.url)).text())
   } catch {
-    return embeddedMirrorSkillContent
+    return withBundledMirrorSkillVersion(embeddedMirrorSkillContent)
   }
+}
+
+const resolveMirrorSkillPathForName = (scope: MirrorSkillInstallScope, name: string, options: MirrorSkillPathOptions = {}) => {
+  if (scope === 'local') return resolvePath(options.cwd ?? process.cwd(), '.agents', 'skills', name, 'SKILL.md')
+
+  return resolvePath(resolveMirrorAgentHome(options.homeDirectory), '.agents', 'skills', name, 'SKILL.md')
+}
+
+const readInstalledMirrorSkills = async (scope: MirrorSkillInstallScope, options: MirrorSkillPathOptions = {}) => {
+  const installedSkills: InstalledMirrorSkill[] = []
+
+  for (const name of mirrorSkillInstallNames) {
+    const path = resolveMirrorSkillPathForName(scope, name, options)
+    if (!(await fileExists(path))) continue
+
+    const content = await readTextFile(path)
+    installedSkills.push({ name, path, content, version: readMirrorSkillVersion(content) })
+  }
+
+  return installedSkills
+}
+
+const shouldWriteBundledMirrorSkill = (installedSkills: InstalledMirrorSkill[], content: string, version: string, overwrite?: boolean) => {
+  if (overwrite !== false) return true
+  if (installedSkills.length === 0) return true
+  if (installedSkills.some((skill) => skill.name !== mirrorSkillName)) return true
+
+  const [currentSkill] = installedSkills
+
+  if (!currentSkill) return true
+  if (currentSkill.content === content) return false
+  if (!currentSkill.version) return true
+
+  return isMirrorSkillVersionOutdated(currentSkill.version, version)
+}
+
+const isMirrorSkillVersionOutdated = (currentVersion: string, bundledVersion: string) => {
+  const current = validSemver(currentVersion)
+  const bundled = validSemver(bundledVersion)
+
+  if (!current || !bundled) return true
+
+  return isSemverGreater(bundled, current)
+}
+
+const readMirrorSkillVersion = (content: string) => readMirrorSkillFrontmatterValue(content, 'version')
+
+const readMirrorSkillFrontmatterValue = (content: string, key: string) => {
+  const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---/.exec(content)?.[1]
+  const value = frontmatter ? new RegExp(`^${key}:\\s*["']?([^"'\\r\\n]+)["']?\\s*$`, 'm').exec(frontmatter)?.[1] : undefined
+
+  return value?.trim()
+}
+
+const withBundledMirrorSkillVersion = (content: string) => {
+  const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(content)
+  if (!match) return content
+
+  const frontmatter = match[1] ?? ''
+  const nextFrontmatter = /^version:\s*/m.test(frontmatter)
+    ? frontmatter.replace(/^version:\s*.*$/m, `version: ${mirrorSkillVersion}`)
+    : frontmatter.replace(/^name:\s*.*$/m, (line) => `${line}\nversion: ${mirrorSkillVersion}`)
+
+  return `---\n${nextFrontmatter}\n---${content.slice(match[0].length)}`
+}
+
+const describeMirrorSkillInstallReason = (result: MirrorSkillInstallResult) => {
+  if (result.installed) return 'not found'
+  if (result.migrated) return `legacy ${result.previousName ?? 'skill'} found`
+  return `outdated${result.previousVersion ? ` (${result.previousVersion} -> ${result.version})` : ''}`
 }
 
 const resolveMirrorAgentHome = (homeDirectory?: string) => {
@@ -177,7 +302,7 @@ const optionalString = (value: unknown, key: string) => {
   return value
 }
 
-const hasMirrorAgentsSection = (content: string) => {
+const hasCurrentMirrorAgentsSection = (content: string) => {
   const normalizedContent = normalizeMirrorAgentsSection(content)
 
   return [mirrorAgentsSection, mirrorAgentsSectionBody].some((section) => {
@@ -185,11 +310,27 @@ const hasMirrorAgentsSection = (content: string) => {
   })
 }
 
+const replaceExistingMirrorAgentsSection = (content: string) => {
+  const markerPattern = new RegExp(`${escapeRegExp(mirrorAgentsSectionStartMarker)}[\\s\\S]*?${escapeRegExp(mirrorAgentsSectionEndMarker)}`)
+  const markerMatch = markerPattern.exec(content)
+  if (markerMatch) return content.replace(markerPattern, mirrorAgentsSection)
+
+  for (const legacySection of legacyMirrorAgentsSectionBodies) {
+    const legacyBody = legacySection.trimEnd()
+    if (content.includes(legacyBody)) return content.replace(legacyBody, mirrorAgentsSectionBody.trimEnd())
+  }
+
+  return content
+}
+
 const normalizeMirrorAgentsSection = (content: string) => content.replace(/\s+/g, ' ').trim()
+
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 const embeddedMirrorSkillContent = [
   '---',
-  'name: guiho-as-mirror',
+  'name: guiho-s-mirror',
+  `version: ${mirrorSkillVersion}`,
   'description: Use this skill whenever the user asks to version, bump, release, tag, initialize, configure, or troubleshoot a project with GUIHO Mirror. This includes Bun, npm, JSR, package.json, jsr.json, Git tag, semantic versioning, changelog, release-plan, prerelease, and what version comes next workflows.',
   '---',
   '',
@@ -239,7 +380,7 @@ const embeddedMirrorSkillContent = [
   '',
   'Common configuration keys: `[version].source`, `[version].output`, `[version].prerelease_id`, `[git].tag_template`, `[git].commit`, `[git].push`, `[git].allow_dirty`, `[agents].write_changelog`, `[agents].changelog_path`, `[agents].auto_agents_md`, and `[agents].auto_skill_install`.',
   '',
-  'Agent automation options default to true. Set `write_changelog = false` to tell agents to skip changelog edits, `changelog_path = "docs/CHANGELOG.md"` to specify the changelog file, `auto_agents_md = false` to stop Mirror from inserting its AGENTS.md section, and `auto_skill_install = false` to stop Mirror from installing `guiho-as-mirror` globally when missing.',
+  'Agent automation options default to true. Set `write_changelog = false` to tell agents to skip changelog edits, `changelog_path = "docs/CHANGELOG.md"` to specify the changelog file, `auto_agents_md = false` to stop Mirror from inserting its AGENTS.md section, and `auto_skill_install = false` to stop Mirror from installing `guiho-s-mirror` globally when missing.',
   '',
   '## CLI Reference',
   '',
