@@ -92,7 +92,7 @@ export const reportConfigSchema = (format: MirrorFormat = 'text') => {
     '  write_changelog = true | false            Optional. Tell agents to write changelog entries. Default: true.',
     '  changelog_path = "<path>"                 Optional. Changelog file path for agents. Default: "CHANGELOG.md".',
     '  auto_agents_md = true | false             Optional. Insert Mirror guidance into AGENTS.md when present. Default: true.',
-    '  auto_skill_install = true | false         Optional. Install guiho-as-mirror globally when missing. Default: true.',
+    '  auto_skill_install = true | false         Optional. Install guiho-s-mirror globally when missing or outdated. Default: true.',
     '',
     '  [hooks]',
     '  before_everything = "<command>"           Optional. Shell command(s) before any release work.',
@@ -117,11 +117,16 @@ export const reportSkillInstall = (result: MirrorSkillInstallResult, format: Mir
   if (format === 'json') return `${JSON.stringify(result, null, 2)}\n`
 
   return [
-    'skill: guiho-as-mirror',
+    `skill: ${result.name}`,
+    `version: ${result.version}`,
     `scope: ${result.scope}`,
     `path: ${result.path}`,
     `installed: ${String(result.installed)}`,
     `updated: ${String(result.updated)}`,
+    `migrated: ${String(result.migrated)}`,
+    `previous_name: ${result.previousName ?? '(none)'}`,
+    `previous_version: ${result.previousVersion ?? '(none)'}`,
+    `removed: ${result.removed.join(', ') || '(none)'}`,
     '',
   ].join('\n')
 }
