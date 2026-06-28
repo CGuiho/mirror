@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [3.3.0] - 2026-06-28
+
+### Added
+
+- Added Bun-native multi-target binary compilation, direct native installers, and on-demand package-launcher binary installation for supported platforms.
+- Added the renamed bundled `guiho-s-mirror` agent skill with package-version metadata and automated sync/migration from legacy `guiho-as-mirror` installs.
+
+### Changed
+
+- Converted Mirror to a CLI-only Bun-native package using Bun APIs for file IO, TOML parsing, process execution, and binary compilation.
+- Updated generated AGENTS guidance, README, DOCS, schema descriptions, CLI reporting, exports, and tests for the `guiho-s-mirror` skill name and versioned sync behavior.
+- Updated installation documentation with the npm package link.
+
+### Fixed
+
+- Normalized the npm `bin.mirror` target so npm keeps the CLI entry when publishing the package.
+
 ## [3.3.0-alpha.4] - 2026-06-27
 
 ### Fixed
