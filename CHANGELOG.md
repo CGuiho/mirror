@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [3.3.1] - 2026-07-02
+
+### Added
+- Added interactive numbered select options for the Git tag template prompt during CLI initialization.
+- Added installer console logs and progress messages during the native binary download/installation.
+
+### Changed
+- Compiled and supported all 12 platform-native binary variants (including baseline/modern targets for x64/arm64 on Windows, Linux, and macOS).
+- Changed default install behavior on x64 platforms to always use the `x64-baseline` binary to avoid instruction set compatibility crashes.
+
 ## [3.3.0] - 2026-06-28
 
 ### Added
