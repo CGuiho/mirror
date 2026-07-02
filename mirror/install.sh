@@ -34,7 +34,7 @@ detect_asset() {
   esac
 
   case "$arch" in
-    x86_64|amd64) arch="x64" ;;
+    x86_64|amd64) arch="x64-baseline" ;;
     arm64|aarch64) arch="arm64" ;;
     *) printf 'error: unsupported architecture: %s\n' "$arch" >&2; exit 1 ;;
   esac
@@ -57,6 +57,7 @@ trap 'rm -rf -- "$tmp"' EXIT
 
 printf 'Downloading %s\n' "$url"
 curl -fsSL "$url" -o "$tmp/mirror"
+
 mkdir -p "$install_dir"
 install -m 0755 "$tmp/mirror" "$install_dir/mirror"
 printf 'Installed mirror to %s\n' "$install_dir/mirror"

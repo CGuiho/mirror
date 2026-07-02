@@ -153,6 +153,7 @@ export type MirrorInitFlags = Partial<{
 export type MirrorInitPrompter = {
   text(question: string, defaultValue: string): Promise<string>
   confirm(question: string, defaultValue: boolean): Promise<boolean>
+  select?(question: string, options: string[], defaultIndex: number): Promise<string>
   close(): Promise<void> | void
 }
 

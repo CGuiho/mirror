@@ -11,7 +11,7 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
 }
 
 $arch = switch ([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture) {
-  'X64' { 'x64' }
+  'X64' { 'x64-baseline' }
   'Arm64' { 'arm64' }
   default { throw "Unsupported architecture: $([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)" }
 }

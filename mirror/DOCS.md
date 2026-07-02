@@ -104,6 +104,8 @@ yarn add -D @guiho/mirror
 
 Package-manager installs use a small Bun launcher plus install-time tooling that downloads the matching native binary into `vendor/mirror` on POSIX systems or `vendor/mirror.exe` on Windows. When a package runner such as `bun x` starts without a populated vendor binary, the launcher runs the same installer on demand before executing the native binary. Direct installers are the no-runtime path; package-manager installs require Bun for the launcher and install helper.
 
+The installer prints progress messages so the user knows what is happening during the first-run download. On x64 platforms, installers always use the `x64-baseline` variant by default. This avoids "Illegal instruction" crashes on x86_64 CPUs that lack certain instruction-set extensions.
+
 ## Quick Start
 
 Create a configuration file:
@@ -172,7 +174,15 @@ Version and config commands accept runtime overrides.
 
 Creates `mirror.config.toml` in the current working directory. When a configuration file already exists, `mirror init` reconciles missing default keys into it without overwriting user-configured values. Use `--yes` only when you intentionally want to replace the file with freshly generated defaults.
 
-On an interactive terminal, `mirror init` runs a step-by-step wizard for the core fields (version source, outputs, package path, auxiliary package paths, jsr path, git tag template, commit, push). Each prompt shows a default that you accept by pressing Enter. Defaults are source `package.json` and outputs `package.json` + `git`.
+On an interactive terminal, `mirror init` runs a step-by-step wizard for the core fields (version source, outputs, package path, auxiliary package paths, jsr path, git tag template, commit, push). Each prompt shows a default that you accept by pressing Enter. Defaults are source `package.json` and outputs `package.json` + `git`. The Git tag template prompt presents numbered options instead of a free-text field:
+
+```text
+Git tag template:
+  1. v{version}
+  2. {name}@{version}  (default)
+  3. {name}/v{version}
+Choice [2]:
+```
 
 Every answer also has a flag, so the command runs fully non-interactively when flags are provided. In non-TTY environments (CI, AI agents) or with `--non-interactive`/`--yes`, Mirror skips prompts and uses flags + defaults instead of waiting for input.
 
@@ -571,7 +581,24 @@ Compile native binaries:
 bun run binary
 ```
 
-The binary build writes `bin/mirror` for local validation and platform release assets for Linux, macOS, and Windows x64/arm64 targets where Bun compilation supports the target. Do not publish the full `bin/` matrix inside the npm package; upload those files as GitHub release assets and let installers download the matching one. The publish workflow creates the tag release when missing, uploads or replaces `bin/guiho-mirror-*` assets, then publishes the npm package. The compiled binary embeds fallback `guiho-s-mirror` skill content so `mirror agents install local` and `mirror agents install global` still work when adjacent package files are not available.
+The binary build writes `bin/mirror` for local validation and platform release assets for Linux, macOS, and Windows across arm64, x64, x64-baseline, and x64-modern targets. The full matrix is:
+
+- `guiho-mirror-linux-arm64`
+- `guiho-mirror-linux-x64`
+- `guiho-mirror-linux-x64-baseline`
+- `guiho-mirror-linux-x64-modern`
+- `guiho-mirror-windows-arm64.exe`
+- `guiho-mirror-windows-x64.exe`
+- `guiho-mirror-windows-x64-baseline.exe`
+- `guiho-mirror-windows-x64-modern.exe`
+- `guiho-mirror-macos-arm64`
+- `guiho-mirror-macos-x64`
+- `guiho-mirror-macos-x64-baseline`
+- `guiho-mirror-macos-x64-modern`
+
+Do not publish the full `bin/` matrix inside the npm package; upload those files as GitHub release assets and let installers download the matching one. The publish workflow creates the tag release when missing, uploads or replaces `bin/guiho-mirror-*` assets, then publishes the npm package. The compiled binary embeds fallback `guiho-s-mirror` skill content so `mirror agents install local` and `mirror agents install global` still work when adjacent package files are not available.
+
+On x64 platforms, installers always use the `x64-baseline` variant by default. The `x64-baseline` variant avoids "Illegal instruction" crashes on x86_64 CPUs that lack certain instruction-set extensions. The `x64` and `x64-modern` variants are available as GitHub release assets for users who want to opt in manually.
 
 ## Publishing Checklist
 

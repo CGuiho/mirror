@@ -4,6 +4,7 @@
 
 import type { MirrorAdapterName, MirrorInitAnswers, MirrorInitFlags, MirrorInitPrompter } from './types.js'
 import { basenamePath } from './path.js'
+import { supportedGitTagTemplates } from './adapters.js'
 
 const adapterValues = new Set<MirrorAdapterName>(['package.json', 'jsr.json', 'git'])
 
@@ -56,7 +57,7 @@ export const resolveInitAnswers = async (
   const defaultTagTemplate = nameAvailable ? '{name}@{version}' : 'v{version}'
 
   const tagTemplate = usesGit
-    ? flags.tagTemplate ?? (prompter ? await prompter.text('Git tag template', defaultTagTemplate) : defaultTagTemplate)
+    ? flags.tagTemplate ?? (prompter ? await askTagTemplate(prompter, defaultTagTemplate) : defaultTagTemplate)
     : defaultTagTemplate
 
   const defaultCommit = usesGit && hasFileOutput
@@ -95,6 +96,18 @@ export const createReadlineInitPrompter = (): MirrorInitPrompter => {
       if (answer.length === 0) return defaultValue
       return answer === 'y' || answer === 'yes'
     },
+    async select(question, options, defaultIndex) {
+      console.log(`${question}:`)
+      for (let i = 0; i < options.length; i += 1) {
+        const marker = i === defaultIndex ? ' (default)' : ''
+        console.log(`  ${i + 1}. ${options[i]}${marker}`)
+      }
+      const answer = (prompt(`Choice [${defaultIndex + 1}]: `) ?? '').trim()
+      if (answer.length === 0) return options[defaultIndex] ?? options[0]!
+      const index = parseInt(answer, 10) - 1
+      if (Number.isFinite(index) && index >= 0 && index < options.length) return options[index]!
+      return options[defaultIndex] ?? options[0]!
+    },
     close() {},
   }
 }
@@ -120,4 +133,15 @@ const askAdapterList = async (prompter: MirrorInitPrompter | undefined, question
   }
 
   return defaultValue
+}
+
+const askTagTemplate = async (prompter: MirrorInitPrompter, defaultValue: string) => {
+  const options = [...supportedGitTagTemplates]
+  const defaultIndex = Math.max(0, options.indexOf(defaultValue as typeof options[number]))
+
+  if (prompter.select) {
+    return prompter.select('Git tag template', options, defaultIndex)
+  }
+
+  return prompter.text('Git tag template', defaultValue)
 }

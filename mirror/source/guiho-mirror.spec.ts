@@ -1139,7 +1139,7 @@ const packageAssetName = () => {
     : platform() === 'darwin'
       ? 'macos'
       : 'linux'
-  const arch = process.arch === 'arm64' ? 'arm64' : 'x64'
+  const arch = process.arch === 'arm64' ? 'arm64' : 'x64-baseline'
   return `guiho-mirror-${os}-${arch}${os === 'windows' ? '.exe' : ''}`
 }
 
