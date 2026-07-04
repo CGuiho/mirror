@@ -1,4 +1,4 @@
-# Repository Notes
+﻿# Repository Notes
 
 - The real package lives in `mirror/`; run package commands there unless editing root docs or `ci/`.
 - `@guiho/mirror` is a Bun-native CLI-only package. The CLI entrypoint is `mirror/source/guiho-mirror-bin.ts`; Bun compiles `mirror/bin/` for local validation and platform release assets.
@@ -40,3 +40,47 @@ Invoke the guiho-s-mirror agent skill every time the user wants to bump, tag, re
 Before editing release docs or changelogs, inspect mirror.config.toml. If [agents].write_changelog is false, skip changelog edits. If it is missing or true, changelog edits are allowed when the project has a changelog.
 
 Use [agents].changelog_path as the changelog file path. If it is missing, use CHANGELOG.md in the project root.
+
+## GUIHO Project
+
+### Identity
+
+| Field | Value |
+| --- | --- |
+| GUIHO Project ID | g0000 observed in current GUIHO runtime artifacts; confirm before using as a formal registry ID |
+| GUIHO Subject ID | TBD - formal subject ID for this component is not declared yet |
+| GUIHO Subject Name | Mirror |
+| Project Family | guiho |
+| Repository Directory | C:\GUIHO\mirror |
+| Repository Kind | shared package |
+| Parent Project | GUIHO Root (C:\GUIHO\guiho) |
+| Parent Component | GUIHO Root |
+
+### Component Purpose
+
+Semantic project versioning and release workflow package for @guiho/mirror.
+
+### Parent Context
+
+- Parent AGENTS: [../guiho/AGENTS.md](../guiho/AGENTS.md)
+- Parent TODO: [../guiho/TODO.md](../guiho/TODO.md)
+- Local TODO: [./TODO.md](./TODO.md)
+
+For the full project map, sibling components, package index, service index,
+project-wide TODOs, and cross-repository coordination rules, read the parent
+repository's AGENTS.md GUIHO Project section.
+
+### Local Scope
+
+- Kind: shared package
+- Work directory: .
+- Primary skills: guiho-s-mirror, guiho-s-0015-bun
+- Baseline checks: package-local typecheck/test scripts when present
+
+### Coordination Rules
+
+- This repository is a child of C:\GUIHO\guiho.
+- Keep component-specific implementation tasks in the local TODO file.
+- Keep cross-component planning and parent delegation in the parent TODO file.
+- Read this component's existing local instructions before editing source code.
+- Do not publish, deploy, run migrations, rotate secrets, or mutate production resources without explicit user approval.
