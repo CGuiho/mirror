@@ -146,13 +146,14 @@ write_changelog = true
 changelog_path = "CHANGELOG.md"
 auto_agents_md = true
 auto_skill_install = true
+skill_tool = "agents"
 ```
 
 Supported version sources and outputs are `package.json`, `jsr.json`, and `git`. Supported Git tag templates are `v{version}`, `{name}@{version}`, and `{name}/v{version}`.
 
 Use `[package].auxiliary_paths` for extra package.json files that should mirror the main package version when `package.json` is in `[version].output`.
 
-Agent automation options default to true. Set `write_changelog = false` to tell agents to skip changelog edits, `changelog_path = "docs/CHANGELOG.md"` to specify the changelog file, `auto_agents_md = false` to stop Mirror from inserting its AGENTS.md section, and `auto_skill_install = false` to stop Mirror from installing `guiho-s-mirror` globally when missing.
+Agent automation options default to true. Set `write_changelog = false` to tell agents to skip changelog edits, `changelog_path = "docs/CHANGELOG.md"` to specify the changelog file, `auto_agents_md = false` to stop Mirror from inserting its instruction section, `auto_skill_install = false` to stop Mirror from installing `guiho-s-mirror` globally when missing, and `skill_tool = "claude"` or `skill_tool = "all"` to target Claude Code skill directories. Use `--tool claude` or `--tool all` as a one-off override.
 
 ## CLI Reference
 
@@ -169,6 +170,7 @@ mirror config schema
 mirror config schema --format json
 mirror agents install local
 mirror agents install global
+mirror agents install global --tool all
 mirror agents instructions
 mirror version current
 mirror version next <target>
