@@ -2,7 +2,7 @@
  * @copyright Copyright (c) 2026 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
  */
 
-import { ensureMirrorAgentsInstructions, installMirrorSkill, runMirrorAgentAutomation } from './agents.js'
+import { ensureMirrorAgentInstructionFiles, installMirrorSkills, runMirrorAgentAutomation } from './agents.js'
 import { MirrorError } from './errors.js'
 import { readCurrentVersion, resolveProjectName } from './adapters.js'
 import { configPathForDisplay, discoverMirrorConfig, loadMirrorConfig, relativeFromCwd, writeInitConfigFromAnswers } from './config.js'
@@ -102,13 +102,20 @@ const runCommand = async (context: CommandContext) => {
   }
 
   if (group === 'agents' && command === 'install' && (subcommand === 'local' || subcommand === 'global')) {
-    const result = await installMirrorSkill(subcommand, { cwd: resolvePath(context.options.cwd ?? process.cwd()) })
+    const results = await installMirrorSkills(subcommand, context.options.tool ?? 'agents', { cwd: resolvePath(context.options.cwd ?? process.cwd()) })
+    const result = results.length === 1 ? results[0]! : results
     process.stdout.write(reportSkillInstall(result, context.options.format))
     return
   }
 
   if (group === 'agents' && command === 'instructions') {
-    const result = await ensureMirrorAgentsInstructions(resolvePath(context.options.cwd ?? process.cwd()), true)
+    const results = await ensureMirrorAgentInstructionFiles(
+      resolvePath(context.options.cwd ?? process.cwd()),
+      context.options.tool ?? 'agents',
+      true,
+      context.options.tool === undefined,
+    )
+    const result = results.length === 1 ? results[0]! : results
     process.stdout.write(reportAgentsInstructions(result, context.options.format))
     return
   }
@@ -261,7 +268,7 @@ const printHelp = async (context: CommandContext) => {
     '',
     '  mirror init [package.json|jsr.json|git] [options]',
     '  mirror config show|check|schema [options]',
-    '  mirror agents install local|global [options]',
+    '  mirror agents install local|global [--tool agents|claude|all] [options]',
     '  mirror agents instructions [options]',
     '  mirror version current [options]',
     '  mirror version next|plan|apply <target> [options]',
@@ -271,6 +278,8 @@ const printHelp = async (context: CommandContext) => {
     '  --config <path>       Path to mirror.config.toml',
     '  --cwd <path>          Run as if Mirror started in this directory',
     '  --format text|json    Output format',
+    '  --tool agents|claude|all',
+    '                        Agent skill target override',
     '  --no-color            Disable color output',
     '  --verbose             Show full error details',
     '  --help                Show help',
@@ -283,6 +292,7 @@ const printHelp = async (context: CommandContext) => {
     '  mirror version apply minor --commit --yes',
     '  mirror version plan patch --output=package.json,jsr.json,git',
     '  mirror agents install local',
+    '  mirror agents install global --tool all',
     '  mirror agents instructions',
     '  mirror config schema',
     '',
