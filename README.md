@@ -102,9 +102,9 @@ Validates and inspects configuration.
 
 #### `mirror agents`
 Installs Mirror-aware agent guidance for projects that use AI coding agents.
-- `mirror agents install local`: Synchronizes the bundled `guiho-s-mirror` skill at `.agents/skills/guiho-s-mirror/SKILL.md`.
-- `mirror agents install global`: Synchronizes the bundled `guiho-s-mirror` skill at `~/.agents/skills/guiho-s-mirror/SKILL.md`.
-- `mirror agents instructions`: Creates or updates `AGENTS.md` with the GUIHO Mirror semantic versioning section.
+- `mirror agents install local [--tool agents|claude|all]`: Synchronizes the bundled `guiho-s-mirror` skill locally. The default target is `.agents/skills`; Claude Code uses `.claude/skills`.
+- `mirror agents install global [--tool agents|claude|all]`: Synchronizes the bundled `guiho-s-mirror` skill globally. The default target is `~/.agents/skills`; Claude Code uses `~/.claude/skills`.
+- `mirror agents instructions [--tool agents|claude|all]`: Creates or updates Mirror guidance in `AGENTS.md` and/or `CLAUDE.md`.
 
 #### `mirror version`
 Manages the version lifecycle.
@@ -148,13 +148,18 @@ allow_dirty = false                    # Optional. Allow dirty Git worktree. Def
 [agents]
 write_changelog = true                 # Optional. Tell agents changelog edits are allowed. Default: true.
 changelog_path = "CHANGELOG.md"         # Optional. Changelog file path for agents. Default: "CHANGELOG.md".
-auto_agents_md = true                  # Optional. Insert Mirror guidance into AGENTS.md when present. Default: true.
+auto_agents_md = true                  # Optional. Insert Mirror guidance into AGENTS.md/CLAUDE.md. Default: true.
 auto_skill_install = true              # Optional. Install guiho-s-mirror globally when missing or outdated. Default: true.
+skill_tool = "agents"                  # Optional. "agents", "claude", or "all". Default: "agents".
 ```
 
 ### Agent Automation
 
-Mirror is designed to be safely used by AI agents. Project commands automatically check for `AGENTS.md` and the `guiho-s-mirror` skill, then add the Mirror guidance or install the missing, legacy-named, or outdated skill when automation is enabled. Running `mirror` with no arguments also performs this configured agent setup before showing help.
+Mirror is designed to be safely used by AI agents. Project commands automatically check for Mirror guidance and the `guiho-s-mirror` skill, then add guidance or install the missing, legacy-named, or outdated skill when automation is enabled. `AGENTS.md` and `.agents/skills` remain the default. Set `skill_tool = "claude"` for Claude Code, or `skill_tool = "all"` to install both `~/.agents/skills` and `~/.claude/skills`.
+
+Use `--tool claude` or `--tool all` as a one-off CLI override when you do not want to edit `mirror.config.toml`.
+
+Instruction-file automation updates both `AGENTS.md` and `CLAUDE.md` when both exist. If only `CLAUDE.md` exists, Mirror updates it. If only `AGENTS.md` exists, Mirror updates it. If neither exists, Mirror creates `AGENTS.md` because it is the standard default. Running `mirror` with no arguments also performs this configured agent setup before showing help.
 
 Set `write_changelog = false` when agents should skip changelog edits during release preparation. Set `changelog_path = "docs/CHANGELOG.md"` when the changelog is not at the project root. Set `auto_agents_md = false` to opt out of automatic guidance insertion, or `auto_skill_install = false` to opt out of automatic global skill installation.
 
