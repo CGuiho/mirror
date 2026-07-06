@@ -10,6 +10,8 @@ export type MirrorFormat = 'text' | 'json'
 export type MirrorVersionTarget = ReleaseType | string
 export type MirrorJsonObject = Record<string, unknown>
 export type MirrorSkillInstallScope = 'local' | 'global'
+export type MirrorAgentTool = 'agents' | 'claude'
+export type MirrorAgentToolSelection = MirrorAgentTool | 'all'
 
 export type MirrorHookName =
   | 'before:everything' | 'after:everything'
@@ -62,6 +64,7 @@ export type MirrorRawConfig = Partial<{
     changelog_path: string
     auto_agents_md: boolean
     auto_skill_install: boolean
+    skill_tool: MirrorAgentToolSelection
   }>
   hooks: Record<string, MirrorHookCommand>
 }>
@@ -100,6 +103,7 @@ export type MirrorAgentSettings = {
   changelogPath: string
   autoAgentsMd: boolean
   autoSkillInstall: boolean
+  skillTool: MirrorAgentToolSelection
 }
 
 export type MirrorCliOptions = {
@@ -122,6 +126,7 @@ export type MirrorCliOptions = {
   nonInteractive?: boolean
   yes?: boolean
   verbose?: boolean
+  tool?: MirrorAgentToolSelection
 }
 
 export type MirrorInitAnswers = {
@@ -163,6 +168,7 @@ export type MirrorConfigDiscovery = {
 }
 
 export type MirrorSkillInstallResult = {
+  tool: MirrorAgentTool
   scope: MirrorSkillInstallScope
   path: string
   name: string
@@ -176,6 +182,7 @@ export type MirrorSkillInstallResult = {
 }
 
 export type MirrorAgentsInstructionsResult = {
+  tool: MirrorAgentTool
   path: string
   exists: boolean
   changed: boolean
@@ -184,8 +191,12 @@ export type MirrorAgentsInstructionsResult = {
 export type MirrorAgentAutomationResult = {
   settings: MirrorAgentSettings
   agentsMd?: MirrorAgentsInstructionsResult
+  claudeMd?: MirrorAgentsInstructionsResult
+  instructionFiles?: MirrorAgentsInstructionsResult[]
   localSkill?: MirrorSkillInstallResult
+  localSkills?: MirrorSkillInstallResult[]
   globalSkill?: MirrorSkillInstallResult
+  globalSkills?: MirrorSkillInstallResult[]
 }
 
 export type MirrorProject = {
