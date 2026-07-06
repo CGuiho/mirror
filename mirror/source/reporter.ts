@@ -50,6 +50,7 @@ export const reportConfig = (config: MirrorConfig, format: MirrorFormat = 'text'
     `changelog_path: ${config.agents.changelogPath}`,
     `auto_agents_md: ${String(config.agents.autoAgentsMd)}`,
     `auto_skill_install: ${String(config.agents.autoSkillInstall)}`,
+    `skill_tool: ${config.agents.skillTool}`,
     '',
   ].join('\n')
 }
@@ -91,8 +92,9 @@ export const reportConfigSchema = (format: MirrorFormat = 'text') => {
     '  [agents]',
     '  write_changelog = true | false            Optional. Tell agents to write changelog entries. Default: true.',
     '  changelog_path = "<path>"                 Optional. Changelog file path for agents. Default: "CHANGELOG.md".',
-    '  auto_agents_md = true | false             Optional. Insert Mirror guidance into AGENTS.md when present. Default: true.',
+    '  auto_agents_md = true | false             Optional. Insert Mirror guidance into AGENTS.md/CLAUDE.md. Default: true.',
     '  auto_skill_install = true | false         Optional. Install guiho-s-mirror globally when missing or outdated. Default: true.',
+    '  skill_tool = "agents" | "claude" | "all"  Optional. Agent skill target for automatic installs. Default: "agents".',
     '',
     '  [hooks]',
     '  before_everything = "<command>"           Optional. Shell command(s) before any release work.',
@@ -113,33 +115,39 @@ export const reportConfigSchema = (format: MirrorFormat = 'text') => {
   ].join('\n')
 }
 
-export const reportSkillInstall = (result: MirrorSkillInstallResult, format: MirrorFormat = 'text') => {
+export const reportSkillInstall = (result: MirrorSkillInstallResult | MirrorSkillInstallResult[], format: MirrorFormat = 'text') => {
   if (format === 'json') return `${JSON.stringify(result, null, 2)}\n`
 
-  return [
-    `skill: ${result.name}`,
-    `version: ${result.version}`,
-    `scope: ${result.scope}`,
-    `path: ${result.path}`,
-    `installed: ${String(result.installed)}`,
-    `updated: ${String(result.updated)}`,
-    `migrated: ${String(result.migrated)}`,
-    `previous_name: ${result.previousName ?? '(none)'}`,
-    `previous_version: ${result.previousVersion ?? '(none)'}`,
-    `removed: ${result.removed.join(', ') || '(none)'}`,
+  const results = Array.isArray(result) ? result : [result]
+
+  return `${results.map((item) => [
+    `skill: ${item.name}`,
+    `version: ${item.version}`,
+    `tool: ${item.tool}`,
+    `scope: ${item.scope}`,
+    `path: ${item.path}`,
+    `installed: ${String(item.installed)}`,
+    `updated: ${String(item.updated)}`,
+    `migrated: ${String(item.migrated)}`,
+    `previous_name: ${item.previousName ?? '(none)'}`,
+    `previous_version: ${item.previousVersion ?? '(none)'}`,
+    `removed: ${item.removed.join(', ') || '(none)'}`,
     '',
-  ].join('\n')
+  ].join('\n')).join('\n')}`
 }
 
-export const reportAgentsInstructions = (result: MirrorAgentsInstructionsResult, format: MirrorFormat = 'text') => {
+export const reportAgentsInstructions = (result: MirrorAgentsInstructionsResult | MirrorAgentsInstructionsResult[], format: MirrorFormat = 'text') => {
   if (format === 'json') return `${JSON.stringify(result, null, 2)}\n`
 
-  return [
-    `agents_md: ${result.path}`,
-    `exists: ${String(result.exists)}`,
-    `changed: ${String(result.changed)}`,
+  const results = Array.isArray(result) ? result : [result]
+
+  return `${results.map((item) => [
+    `${item.tool === 'claude' ? 'claude_md' : 'agents_md'}: ${item.path}`,
+    `tool: ${item.tool}`,
+    `exists: ${String(item.exists)}`,
+    `changed: ${String(item.changed)}`,
     '',
-  ].join('\n')
+  ].join('\n')).join('\n')}`
 }
 
 export const reportPlan = (plan: MirrorVersionPlan, format: MirrorFormat = 'text') => {
