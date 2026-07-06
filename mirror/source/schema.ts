@@ -117,11 +117,15 @@ export const mirrorConfigJsonSchema = {
         },
         auto_agents_md: {
           type: 'boolean',
-          description: 'Insert Mirror guidance into AGENTS.md when present.',
+          description: 'Insert Mirror guidance into AGENTS.md and/or CLAUDE.md.',
         },
         auto_skill_install: {
           type: 'boolean',
           description: 'Install guiho-s-mirror globally when missing or outdated.',
+        },
+        skill_tool: {
+          enum: ['agents', 'claude', 'all'],
+          description: 'Agent skill target for automatic installs.',
         },
       },
     },
