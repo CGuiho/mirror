@@ -8,6 +8,7 @@ import type {
   MirrorConfig,
   MirrorConfigDiscovery,
   MirrorInitAnswers,
+  MirrorAgentToolSelection,
   MirrorProjectNameSource,
   MirrorRawConfig,
 } from './types.js'
@@ -19,6 +20,7 @@ import { fileExists, readTextFile, writeTextFile } from './runtime.js'
 
 const adapters = new Set(['package.json', 'jsr.json', 'git'])
 const projectNameSources = new Set(['package.json', 'jsr.json'])
+const agentToolSelections = new Set(['agents', 'claude', 'all'])
 
 export const resolveMirrorPath = (cwd: string, path: string) => (isAbsolutePath(path) ? resolvePath(path) : resolvePath(cwd, path))
 
@@ -95,6 +97,7 @@ export const normalizeMirrorConfig = (
   const changelogPath = optionalString(raw.agents?.changelog_path, 'agents.changelog_path') ?? 'CHANGELOG.md'
   const autoAgentsMd = optionalBoolean(raw.agents?.auto_agents_md, 'agents.auto_agents_md') !== false
   const autoSkillInstall = optionalBoolean(raw.agents?.auto_skill_install, 'agents.auto_skill_install') !== false
+  const skillTool = options.tool ?? optionalAgentToolSelection(raw.agents?.skill_tool, 'agents.skill_tool') ?? 'agents'
   const hooks = normalizeHooksConfig(raw.hooks)
 
   return {
@@ -129,6 +132,7 @@ export const normalizeMirrorConfig = (
       changelogPath,
       autoAgentsMd,
       autoSkillInstall,
+      skillTool,
     },
     hooks,
   }
@@ -183,6 +187,7 @@ export const generateInitConfig = (answers: MirrorInitAnswers, cwd: string) => {
   lines.push('changelog_path = "CHANGELOG.md"')
   lines.push('auto_agents_md = true')
   lines.push('auto_skill_install = true')
+  lines.push('skill_tool = "agents"')
 
   return `${lines.join('\n')}\n`
 }
@@ -270,6 +275,12 @@ const optionalBoolean = (value: unknown, key: string) => {
   if (value === undefined) return undefined
   if (typeof value !== 'boolean') throw new MirrorError(`Invalid ${key}. Expected true or false.`)
   return value
+}
+
+const optionalAgentToolSelection = (value: unknown, key: string): MirrorAgentToolSelection | undefined => {
+  if (value === undefined) return undefined
+  if (typeof value !== 'string' || !agentToolSelections.has(value)) throw new MirrorError(`Invalid ${key}. Expected agents, claude, or all.`)
+  return value as MirrorAgentToolSelection
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
