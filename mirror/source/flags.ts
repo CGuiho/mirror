@@ -2,11 +2,12 @@
  * @copyright Copyright (c) 2026 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
  */
 
-import type { MirrorAdapterName, MirrorCliOptions, MirrorFormat } from './types.js'
+import type { MirrorAdapterName, MirrorAgentToolSelection, MirrorCliOptions, MirrorFormat } from './types.js'
 import { MirrorError } from './errors.js'
 
 const booleanFlags = new Set(['dry-run', 'commit', 'push', 'allow-dirty', 'non-interactive', 'yes', 'no-color', 'verbose', 'help', 'version'])
 const adapterNames = new Set(['package.json', 'jsr.json', 'git'])
+const agentToolSelections = new Set(['agents', 'claude', 'all'])
 
 const shortFlagAliases: Record<string, string> = {
   '-dy': '--dry-run',
@@ -82,6 +83,7 @@ export const parseMirrorCliOptions = (rawArgs: string[]): MirrorCliOptions => {
     nonInteractive: parsed['nonInteractive'] === true,
     yes: parsed['yes'] === true,
     verbose: parsed['verbose'] === true,
+    tool: typeof parsed['tool'] === 'string' ? assertAgentToolSelection(parsed['tool'], '--tool') : undefined,
   }
 }
 
@@ -93,4 +95,9 @@ const assertAdapter = (value: string, flagName: string): MirrorAdapterName => {
 const assertFormat = (value: string): MirrorFormat => {
   if (value !== 'text' && value !== 'json') throw new MirrorError(`Invalid --format value: ${value}`)
   return value
+}
+
+const assertAgentToolSelection = (value: string, flagName: string): MirrorAgentToolSelection => {
+  if (!agentToolSelections.has(value)) throw new MirrorError(`Invalid ${flagName} value: ${value}`)
+  return value as MirrorAgentToolSelection
 }
