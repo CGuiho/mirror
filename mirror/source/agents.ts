@@ -3,6 +3,8 @@
  */
 
 import type {
+  MirrorAgentTool,
+  MirrorAgentToolSelection,
   MirrorAgentAutomationResult,
   MirrorAgentSettings,
   MirrorAgentsInstructionsResult,
@@ -23,12 +25,15 @@ export const mirrorSkillVersion = typeof packageJson.version === 'string' ? pack
 export const mirrorAgentsSectionStartMarker = '<!-- BEGIN GUIHO MIRROR - DO NOT EDIT THIS SECTION -->'
 export const mirrorAgentsSectionEndMarker = '<!-- END GUIHO MIRROR -->'
 export const mirrorAgentsSectionHeading = '## Semantic Project Versioning -- GUIHO Mirror'
+export const mirrorAgentTools = ['agents', 'claude'] as const
+export const mirrorAgentToolSelections = [...mirrorAgentTools, 'all'] as const
 
 export const defaultMirrorAgentSettings: MirrorAgentSettings = {
   writeChangelog: true,
   changelogPath: 'CHANGELOG.md',
   autoAgentsMd: true,
   autoSkillInstall: true,
+  skillTool: 'agents',
 }
 
 const mirrorAgentsSectionBody = `${mirrorAgentsSectionHeading}
@@ -58,6 +63,7 @@ ${mirrorAgentsSectionEndMarker}`
 type MirrorSkillPathOptions = {
   cwd?: string
   homeDirectory?: string
+  tool?: MirrorAgentTool
 }
 
 type MirrorSkillInstallOptions = MirrorSkillPathOptions & {
@@ -71,11 +77,25 @@ type InstalledMirrorSkill = {
   version?: string
 }
 
+type MirrorAgentInstructionTarget = {
+  tool: MirrorAgentTool
+  path: string
+  create: boolean
+}
+
 type MirrorAgentAutomationOptions = MirrorCliOptions & {
   homeDirectory?: string
 }
 
 const mirrorSkillInstallNames = [...legacyMirrorSkillNames, mirrorSkillName] as const
+const mirrorAgentInstructionFiles: Record<MirrorAgentTool, string> = {
+  agents: 'AGENTS.md',
+  claude: 'CLAUDE.md',
+}
+const mirrorAgentInstructionHeadings: Record<MirrorAgentTool, string> = {
+  agents: 'Project Agents',
+  claude: 'Claude Code',
+}
 
 export const resolveMirrorSkillPath = (scope: MirrorSkillInstallScope, options: MirrorSkillPathOptions = {}) => {
   return resolveMirrorSkillPathForName(scope, mirrorSkillName, options)
@@ -88,6 +108,7 @@ export const installMirrorSkill = async (
   scope: MirrorSkillInstallScope,
   options: MirrorSkillInstallOptions = {},
 ): Promise<MirrorSkillInstallResult> => {
+  const tool = options.tool ?? 'agents'
   const path = resolveMirrorSkillPath(scope, options)
   const content = await readBundledMirrorSkill()
   const version = readMirrorSkillVersion(content) ?? mirrorSkillVersion
@@ -98,6 +119,7 @@ export const installMirrorSkill = async (
 
   if (!shouldWriteBundledMirrorSkill(installedSkills, content, version, options.overwrite)) {
     return {
+      tool,
       scope,
       path,
       name: mirrorSkillName,
@@ -117,6 +139,7 @@ export const installMirrorSkill = async (
   await writeTextFile(path, content)
 
   return {
+    tool,
     scope,
     path,
     name: mirrorSkillName,
@@ -130,43 +153,152 @@ export const installMirrorSkill = async (
   }
 }
 
+export const installMirrorSkills = async (
+  scope: MirrorSkillInstallScope,
+  tool: MirrorAgentToolSelection = 'agents',
+  options: MirrorSkillInstallOptions = {},
+) => {
+  const results: MirrorSkillInstallResult[] = []
+
+  for (const targetTool of resolveMirrorAgentTools(tool)) {
+    results.push(await installMirrorSkill(scope, { ...options, tool: targetTool }))
+  }
+
+  return results
+}
+
 export const ensureMirrorAgentsInstructions = async (cwd: string, create = false): Promise<MirrorAgentsInstructionsResult> => {
-  const path = await findAgentsFile(cwd) ?? resolvePath(cwd, 'AGENTS.md')
+  return ensureMirrorAgentInstructions(cwd, 'agents', create)
+}
+
+export const ensureMirrorAgentInstructions = async (
+  cwd: string,
+  tool: MirrorAgentTool,
+  create = false,
+): Promise<MirrorAgentsInstructionsResult> => {
+  const path = await findMirrorAgentInstructionsFile(cwd, tool) ?? resolvePath(cwd, mirrorAgentInstructionFiles[tool])
   const exists = await fileExists(path)
 
-  if (!exists && !create) return { path, exists: false, changed: false }
+  if (!exists && !create) return { tool, path, exists: false, changed: false }
 
   if (!exists) {
-    await writeTextFile(path, `# Project Agents\n\n${mirrorAgentsSection}\n`)
-    return { path, exists: true, changed: true }
+    await writeTextFile(path, `# ${mirrorAgentInstructionHeadings[tool]}\n\n${mirrorAgentsSection}\n`)
+    return { tool, path, exists: true, changed: true }
   }
 
   const content = await readTextFile(path)
-  if (hasCurrentMirrorAgentsSection(content)) return { path, exists: true, changed: false }
+  if (hasCurrentMirrorAgentsSection(content)) return { tool, path, exists: true, changed: false }
 
   const replacedContent = replaceExistingMirrorAgentsSection(content)
   if (replacedContent !== content) {
     await writeTextFile(path, replacedContent)
-    return { path, exists: true, changed: true }
+    return { tool, path, exists: true, changed: true }
   }
 
   const nextContent = `${content.trimEnd()}\n\n${mirrorAgentsSection}\n`
   await writeTextFile(path, nextContent)
 
-  return { path, exists: true, changed: true }
+  return { tool, path, exists: true, changed: true }
+}
+
+export const ensureMirrorAgentInstructionFiles = async (
+  cwd: string,
+  tool: MirrorAgentToolSelection = 'agents',
+  create = false,
+  detectExisting = true,
+): Promise<MirrorAgentsInstructionsResult[]> => {
+  const targets = await resolveMirrorAgentInstructionTargets(cwd, tool, create, detectExisting)
+  const results: MirrorAgentsInstructionsResult[] = []
+
+  for (const target of targets) {
+    results.push(await ensureMirrorAgentInstructionsAtPath(target.path, target.tool, target.create))
+  }
+
+  return results
 }
 
 export const findAgentsFile = async (cwd: string): Promise<string | undefined> => {
+  return findMirrorAgentInstructionsFile(cwd, 'agents')
+}
+
+export const findMirrorAgentInstructionsFile = async (cwd: string, tool: MirrorAgentTool): Promise<string | undefined> => {
   let current = resolvePath(cwd)
 
   while (true) {
-    const path = resolvePath(current, 'AGENTS.md')
+    const path = resolvePath(current, mirrorAgentInstructionFiles[tool])
     if (await fileExists(path)) return path
 
     const parent = dirnamePath(current)
     if (parent === current) return undefined
     current = parent
   }
+}
+
+const ensureMirrorAgentInstructionsAtPath = async (
+  path: string,
+  tool: MirrorAgentTool,
+  create: boolean,
+): Promise<MirrorAgentsInstructionsResult> => {
+  const exists = await fileExists(path)
+
+  if (!exists && !create) return { tool, path, exists: false, changed: false }
+
+  if (!exists) {
+    await writeTextFile(path, `# ${mirrorAgentInstructionHeadings[tool]}\n\n${mirrorAgentsSection}\n`)
+    return { tool, path, exists: true, changed: true }
+  }
+
+  const content = await readTextFile(path)
+  if (hasCurrentMirrorAgentsSection(content)) return { tool, path, exists: true, changed: false }
+
+  const replacedContent = replaceExistingMirrorAgentsSection(content)
+  if (replacedContent !== content) {
+    await writeTextFile(path, replacedContent)
+    return { tool, path, exists: true, changed: true }
+  }
+
+  const nextContent = `${content.trimEnd()}\n\n${mirrorAgentsSection}\n`
+  await writeTextFile(path, nextContent)
+
+  return { tool, path, exists: true, changed: true }
+}
+
+const resolveMirrorAgentInstructionTargets = async (
+  cwd: string,
+  selection: MirrorAgentToolSelection,
+  create: boolean,
+  detectExisting: boolean,
+): Promise<MirrorAgentInstructionTarget[]> => {
+  const normalizedCwd = resolvePath(cwd)
+
+  if (selection === 'all' || selection === 'claude' || !detectExisting) {
+    const targets: MirrorAgentInstructionTarget[] = []
+
+    for (const tool of resolveMirrorAgentTools(selection)) {
+      targets.push({
+        tool,
+        path: await findMirrorAgentInstructionsFile(normalizedCwd, tool) ?? resolvePath(normalizedCwd, mirrorAgentInstructionFiles[tool]),
+        create,
+      })
+    }
+
+    return targets
+  }
+
+  const existingTargets: MirrorAgentInstructionTarget[] = []
+
+  for (const tool of mirrorAgentTools) {
+    const path = await findMirrorAgentInstructionsFile(normalizedCwd, tool)
+    if (path) existingTargets.push({ tool, path, create: false })
+  }
+
+  if (existingTargets.length > 0) return existingTargets
+
+  return [{
+    tool: 'agents' as const,
+    path: resolvePath(normalizedCwd, mirrorAgentInstructionFiles.agents),
+    create,
+  }]
 }
 
 export const resolveMirrorAgentSettings = async (options: MirrorCliOptions = {}): Promise<MirrorAgentSettings> => {
@@ -181,6 +313,7 @@ export const resolveMirrorAgentSettings = async (options: MirrorCliOptions = {})
     changelogPath: optionalString(discovered.raw.agents?.changelog_path, 'agents.changelog_path') ?? 'CHANGELOG.md',
     autoAgentsMd: optionalBoolean(discovered.raw.agents?.auto_agents_md, 'agents.auto_agents_md') !== false,
     autoSkillInstall: optionalBoolean(discovered.raw.agents?.auto_skill_install, 'agents.auto_skill_install') !== false,
+    skillTool: options.tool ?? optionalMirrorAgentToolSelection(discovered.raw.agents?.skill_tool, 'agents.skill_tool') ?? 'agents',
   }
 }
 
@@ -192,16 +325,24 @@ export const runMirrorAgentAutomation = async (
   const settings = await resolveMirrorAgentSettings(options)
   const result: MirrorAgentAutomationResult = { settings }
 
-  if (settings.autoAgentsMd) result.agentsMd = await ensureMirrorAgentsInstructions(cwd, false)
+  if (settings.autoAgentsMd) {
+    const instructionFiles = await ensureMirrorAgentInstructionFiles(cwd, settings.skillTool, true)
+    result.instructionFiles = instructionFiles
+    result.agentsMd = instructionFiles.find((file) => file.tool === 'agents')
+    result.claudeMd = instructionFiles.find((file) => file.tool === 'claude')
+  }
 
   if (settings.autoSkillInstall) {
     const scope = 'global'
-    const globalSkill = await installMirrorSkill(scope, { cwd, homeDirectory: options.homeDirectory, overwrite: false })
+    const globalSkills = await installMirrorSkills(scope, settings.skillTool, { cwd, homeDirectory: options.homeDirectory, overwrite: false })
+    const changedSkills = globalSkills.filter((skill) => skill.installed || skill.updated || skill.migrated)
 
-    if (globalSkill.installed || globalSkill.updated || globalSkill.migrated) {
-      notify(`notice: ${mirrorSkillName} skill ${describeMirrorSkillInstallReason(globalSkill)} ${scope}; Mirror is installing it at ${globalSkill.path}`)
-      result.globalSkill = globalSkill
+    for (const globalSkill of changedSkills) {
+      notify(`notice: ${mirrorSkillName} skill for ${globalSkill.tool} ${describeMirrorSkillInstallReason(globalSkill)} ${scope}; Mirror is installing it at ${globalSkill.path}`)
     }
+
+    if (changedSkills.length > 0) result.globalSkills = changedSkills
+    result.globalSkill = changedSkills.find((skill) => skill.tool === 'agents')
   }
 
   return result
@@ -215,10 +356,18 @@ const readBundledMirrorSkill = async () => {
   }
 }
 
-const resolveMirrorSkillPathForName = (scope: MirrorSkillInstallScope, name: string, options: MirrorSkillPathOptions = {}) => {
-  if (scope === 'local') return resolvePath(options.cwd ?? process.cwd(), '.agents', 'skills', name, 'SKILL.md')
+export const resolveMirrorAgentTools = (selection: MirrorAgentToolSelection = 'agents'): MirrorAgentTool[] => {
+  if (selection === 'all') return [...mirrorAgentTools]
+  return [selection]
+}
 
-  return resolvePath(resolveMirrorAgentHome(options.homeDirectory), '.agents', 'skills', name, 'SKILL.md')
+const resolveMirrorSkillPathForName = (scope: MirrorSkillInstallScope, name: string, options: MirrorSkillPathOptions = {}) => {
+  const tool = options.tool ?? 'agents'
+  const directory = tool === 'claude' ? '.claude' : '.agents'
+
+  if (scope === 'local') return resolvePath(options.cwd ?? process.cwd(), directory, 'skills', name, 'SKILL.md')
+
+  return resolvePath(resolveMirrorAgentHome(options.homeDirectory), directory, 'skills', name, 'SKILL.md')
 }
 
 const readInstalledMirrorSkills = async (scope: MirrorSkillInstallScope, options: MirrorSkillPathOptions = {}) => {
@@ -302,6 +451,15 @@ const optionalString = (value: unknown, key: string) => {
   return value
 }
 
+const optionalMirrorAgentToolSelection = (value: unknown, key: string): MirrorAgentToolSelection | undefined => {
+  if (value === undefined) return undefined
+  if (typeof value !== 'string' || !mirrorAgentToolSelections.includes(value as MirrorAgentToolSelection)) {
+    throw new MirrorError(`Invalid ${key}. Expected agents, claude, or all.`)
+  }
+
+  return value as MirrorAgentToolSelection
+}
+
 const hasCurrentMirrorAgentsSection = (content: string) => {
   const normalizedContent = normalizeMirrorAgentsSection(content)
 
@@ -378,9 +536,9 @@ const embeddedMirrorSkillContent = [
   '',
   'Mirror searches for configuration via `--config <path>`, `./mirror.config.toml`, or `./config/mirror.config.toml`.',
   '',
-  'Common configuration keys: `[version].source`, `[version].output`, `[version].prerelease_id`, `[git].tag_template`, `[git].commit`, `[git].push`, `[git].allow_dirty`, `[agents].write_changelog`, `[agents].changelog_path`, `[agents].auto_agents_md`, and `[agents].auto_skill_install`.',
+  'Common configuration keys: `[version].source`, `[version].output`, `[version].prerelease_id`, `[git].tag_template`, `[git].commit`, `[git].push`, `[git].allow_dirty`, `[agents].write_changelog`, `[agents].changelog_path`, `[agents].auto_agents_md`, `[agents].auto_skill_install`, and `[agents].skill_tool`.',
   '',
-  'Agent automation options default to true. Set `write_changelog = false` to tell agents to skip changelog edits, `changelog_path = "docs/CHANGELOG.md"` to specify the changelog file, `auto_agents_md = false` to stop Mirror from inserting its AGENTS.md section, and `auto_skill_install = false` to stop Mirror from installing `guiho-s-mirror` globally when missing.',
+  'Agent automation options default to true. Set `write_changelog = false` to tell agents to skip changelog edits, `changelog_path = "docs/CHANGELOG.md"` to specify the changelog file, `auto_agents_md = false` to stop Mirror from inserting its instruction section, `auto_skill_install = false` to stop Mirror from installing `guiho-s-mirror` globally when missing, and `skill_tool = "claude"` or `skill_tool = "all"` to target Claude Code skill directories. Use `--tool claude` or `--tool all` as a one-off override.',
   '',
   '## CLI Reference',
   '',
@@ -389,6 +547,7 @@ const embeddedMirrorSkillContent = [
   '- `mirror config schema`',
   '- `mirror agents install local`',
   '- `mirror agents install global`',
+  '- `mirror agents install global --tool all`',
   '- `mirror agents instructions`',
   '- `mirror version current`',
   '- `mirror version next <target>`',
