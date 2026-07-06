@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added Claude Code agent support with `--tool agents|claude|all`, `agents.skill_tool`, `CLAUDE.md` guidance sync, and `.claude/skills` installation paths.
+
 ## [3.3.1] - 2026-07-02
 
 ### Added
