@@ -37,6 +37,7 @@ import {
   writeJsrVersion,
   writePackageVersion,
 } from './guiho-mirror.js'
+import { ensureMirrorAgentInstructionFiles, installMirrorSkills } from './agents.js'
 import type { MirrorAdapterName, MirrorInitPrompter, MirrorVersionPlan } from './guiho-mirror.js'
 import { dirnamePath, joinPath } from './path.js'
 import { ensureDirectory, makeTempDirectory, readTextFile, removePath, writeTextFile } from './runtime.js'
@@ -74,6 +75,8 @@ describe('Mirror v3', () => {
       '--push',
       '--allow-dirty',
       '--yes',
+      '--tool',
+      'all',
     ])
 
     expect(options).toMatchObject({
@@ -87,6 +90,7 @@ describe('Mirror v3', () => {
       push: true,
       allowDirty: true,
       yes: true,
+      tool: 'all',
     })
   })
 
@@ -178,13 +182,16 @@ describe('Mirror v3', () => {
     await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'] }))
 
     const defaults = await loadMirrorConfig({ cwd })
+    const override = await loadMirrorConfig({ cwd, tool: 'all' })
 
     expect(defaults.agents).toEqual({
       writeChangelog: true,
       changelogPath: 'CHANGELOG.md',
       autoAgentsMd: true,
       autoSkillInstall: true,
+      skillTool: 'agents',
     })
+    expect(override.agents.skillTool).toBe('all')
 
     await writeText(join(cwd, 'mirror.config.toml'), packageConfig({
       output: ['package.json'],
@@ -192,6 +199,7 @@ describe('Mirror v3', () => {
       changelogPath: 'docs/CHANGELOG.md',
       autoAgentsMd: false,
       autoSkillInstall: false,
+      skillTool: 'claude',
     }))
 
     const disabled = await loadMirrorConfig({ cwd })
@@ -201,6 +209,7 @@ describe('Mirror v3', () => {
       changelogPath: 'docs/CHANGELOG.md',
       autoAgentsMd: false,
       autoSkillInstall: false,
+      skillTool: 'claude',
     })
   })
 
@@ -277,6 +286,44 @@ describe('Mirror v3', () => {
     expect(await readFile(join(cwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
   })
 
+  test('syncs Mirror guidance to discovered AGENTS.md and CLAUDE.md files', async () => {
+    const cwd = await createTempDir()
+    await writeText(join(cwd, 'AGENTS.md'), '# Agents\n')
+    await writeText(join(cwd, 'CLAUDE.md'), '# Claude\n')
+
+    const results = await ensureMirrorAgentInstructionFiles(cwd, 'agents', true)
+
+    expect(results.map((result) => result.tool).sort()).toEqual(['agents', 'claude'])
+    expect(await readFile(join(cwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
+    expect(await readFile(join(cwd, 'CLAUDE.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
+  })
+
+  test('uses CLAUDE.md when it is the only discovered instruction file', async () => {
+    const cwd = await createTempDir()
+    await writeText(join(cwd, 'CLAUDE.md'), '# Claude\n')
+
+    const results = await ensureMirrorAgentInstructionFiles(cwd, 'agents', true)
+
+    expect(results).toHaveLength(1)
+    expect(results[0]?.tool).toBe('claude')
+    expect(await existsSync(join(cwd, 'AGENTS.md'))).toBe(false)
+    expect(await readFile(join(cwd, 'CLAUDE.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
+  })
+
+  test('creates AGENTS.md by default and creates both files when requested', async () => {
+    const cwd = await createTempDir()
+    const defaultResults = await ensureMirrorAgentInstructionFiles(cwd, 'agents', true)
+    const allCwd = await createTempDir()
+    const allResults = await ensureMirrorAgentInstructionFiles(allCwd, 'all', true)
+
+    expect(defaultResults.map((result) => result.tool)).toEqual(['agents'])
+    expect(await readFile(join(cwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
+    expect(await existsSync(join(cwd, 'CLAUDE.md'))).toBe(false)
+    expect(allResults.map((result) => result.tool).sort()).toEqual(['agents', 'claude'])
+    expect(await readFile(join(allCwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
+    expect(await readFile(join(allCwd, 'CLAUDE.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
+  })
+
   test('installs the guiho-s-mirror skill locally and globally', async () => {
     const cwd = await createTempDir()
     const homeDirectory = await createTempDir()
@@ -298,6 +345,24 @@ describe('Mirror v3', () => {
     expect(await readFile(local.path, 'utf8')).toContain(`name: ${mirrorSkillName}`)
     expect(await readFile(local.path, 'utf8')).toContain(`version: ${mirrorSkillVersion}`)
     expect(await readFile(global.path, 'utf8')).toContain(`name: ${mirrorSkillName}`)
+  })
+
+  test('installs the guiho-s-mirror skill for Claude Code and all tools', async () => {
+    const cwd = await createTempDir()
+    const homeDirectory = await createTempDir()
+
+    const claudeLocal = await installMirrorSkill('local', { cwd, homeDirectory, tool: 'claude' })
+    const globalAll = await installMirrorSkills('global', 'all', { cwd, homeDirectory })
+
+    expect(claudeLocal.tool).toBe('claude')
+    expect(claudeLocal.path).toBe(join(cwd, '.claude', 'skills', mirrorSkillName, 'SKILL.md'))
+    expect(globalAll.map((result) => result.tool).sort()).toEqual(['agents', 'claude'])
+    expect(globalAll.map((result) => result.path).sort()).toEqual([
+      join(homeDirectory, '.agents', 'skills', mirrorSkillName, 'SKILL.md'),
+      join(homeDirectory, '.claude', 'skills', mirrorSkillName, 'SKILL.md'),
+    ].sort())
+    expect(await readFile(claudeLocal.path, 'utf8')).toContain(`name: ${mirrorSkillName}`)
+    expect(await readFile(resolveMirrorSkillPath('global', { cwd, homeDirectory, tool: 'claude' }), 'utf8')).toContain(`version: ${mirrorSkillVersion}`)
   })
 
   test('migrates legacy Mirror skill installs and removes stale current copies', async () => {
@@ -381,6 +446,27 @@ describe('Mirror v3', () => {
     expect(disabled.globalSkill).toBeUndefined()
     expect(await readFile(join(disabledCwd, 'AGENTS.md'), 'utf8')).not.toContain(mirrorAgentsSectionHeading)
     expect(await existsSync(resolveMirrorSkillPath('local', { cwd: disabledCwd, homeDirectory: disabledHome }))).toBe(false)
+  })
+
+  test('runs agent automation for Claude Code when configured', async () => {
+    const cwd = await createPackageAndJsrFixture()
+    const homeDirectory = await createTempDir()
+    await writeText(join(cwd, 'AGENTS.md'), '# Agents\n')
+    await writeText(join(cwd, 'CLAUDE.md'), '# Claude\n')
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'], skillTool: 'all' }))
+
+    const notices: string[] = []
+    const result = await runMirrorAgentAutomation({ cwd, homeDirectory }, (message) => notices.push(message))
+
+    expect(result.settings.skillTool).toBe('all')
+    expect(result.instructionFiles?.map((file) => file.tool).sort()).toEqual(['agents', 'claude'])
+    expect(result.globalSkills?.map((skill) => skill.tool).sort()).toEqual(['agents', 'claude'])
+    expect(notices.join('\n')).toContain('skill for agents not found global')
+    expect(notices.join('\n')).toContain('skill for claude not found global')
+    expect(await readFile(join(cwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
+    expect(await readFile(join(cwd, 'CLAUDE.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
+    expect(await existsSync(resolveMirrorSkillPath('global', { cwd, homeDirectory }))).toBe(true)
+    expect(await existsSync(resolveMirrorSkillPath('global', { cwd, homeDirectory, tool: 'claude' }))).toBe(true)
   })
 
   test('updates an outdated global Mirror skill during automation', async () => {
@@ -598,6 +684,7 @@ describe('Mirror v3', () => {
     expect(show.stdout).toContain('source: git')
     expect(show.stdout).toContain('write_changelog: true')
     expect(show.stdout).toContain('changelog_path: CHANGELOG.md')
+    expect(show.stdout).toContain('skill_tool: agents')
     expect(check.exitCode).toBe(0)
     expect(check.stdout.trim()).toBe('ok')
   })
@@ -610,8 +697,10 @@ describe('Mirror v3', () => {
 
     expect(config.exitCode).toBe(0)
     expect(await readFile(join(cwd, 'mirror.config.toml'), 'utf8')).toContain('changelog_path = "CHANGELOG.md"')
+    expect(await readFile(join(cwd, 'mirror.config.toml'), 'utf8')).toContain('skill_tool = "agents"')
     expect(schema.exitCode).toBe(0)
     expect(schema.stdout).toContain('changelog_path = "<path>"')
+    expect(schema.stdout).toContain('skill_tool = "agents" | "claude" | "all"')
   })
 
   test('reconciles init defaults into existing configuration without overwriting values', async () => {
@@ -707,6 +796,7 @@ path = "custom-package.json"
     expect(content).toContain('output = ["package.json", "git"]')
     expect(content).toContain('auxiliary_paths = ["package.build.json"]')
     expect(content).toContain('commit = true')
+    expect(content).toContain('skill_tool = "agents"')
   })
 
   test('runs CLI init non-interactively from flags', async () => {
@@ -797,21 +887,26 @@ path = "custom-package.json"
 
     const local = await runMirrorCliWithEnv(env, 'agents', 'install', 'local', '--cwd', cwd)
     const global = await runMirrorCliWithEnv(env, 'agents', 'install', 'global', '--cwd', cwd)
+    const globalAll = await runMirrorCliWithEnv(env, 'agents', 'install', 'global', '--tool', 'all', '--cwd', cwd)
     const instructions = await runMirrorCliWithEnv(env, 'agents', 'instructions', '--cwd', cwd)
 
     expect(local.exitCode).toBe(0)
     expect(global.exitCode).toBe(0)
+    expect(globalAll.exitCode).toBe(0)
     expect(instructions.exitCode).toBe(0)
     expect(local.stdout).toContain('scope: local')
     expect(global.stdout).toContain('scope: global')
+    expect(globalAll.stdout).toContain('tool: claude')
     expect(instructions.stdout).toContain('changed: true')
     expect(await readFile(resolveMirrorSkillPath('local', { cwd, homeDirectory }), 'utf8')).toContain(`name: ${mirrorSkillName}`)
     expect(await readFile(resolveMirrorSkillPath('global', { cwd, homeDirectory }), 'utf8')).toContain(`name: ${mirrorSkillName}`)
+    expect(await readFile(resolveMirrorSkillPath('global', { cwd, homeDirectory, tool: 'claude' }), 'utf8')).toContain(`name: ${mirrorSkillName}`)
     expect(await readFile(join(cwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
   })
 
   test('runs the top-level CLI as successful help output', async () => {
-    const result = await runMirrorCli()
+    const cwd = await createTempDir()
+    const result = await runMirrorCliFromCwd(cwd, await createTempDir())
 
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toMatch(/mirror v\d+\.\d+\.\d+/)
@@ -828,7 +923,7 @@ path = "custom-package.json"
 
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toContain('USAGE')
-    expect(result.stderr).toContain('guiho-s-mirror skill not found global')
+    expect(result.stderr).toContain('guiho-s-mirror skill for agents not found global')
     expect(await readFile(join(cwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
     expect(await existsSync(resolveMirrorSkillPath('local', { cwd, homeDirectory }))).toBe(false)
     expect(await readFile(resolveMirrorSkillPath('global', { cwd, homeDirectory }), 'utf8')).toContain(`name: ${mirrorSkillName}`)
@@ -976,7 +1071,7 @@ path = "custom-package.json"
       package: { path: 'package.json', auxiliaryPaths: [] },
       jsr: { path: 'jsr.json' },
       git: { tagTemplate: 'v{version}', commit: true, push: false, allowDirty: false },
-      agents: { writeChangelog: true, changelogPath: 'CHANGELOG.md', autoAgentsMd: true, autoSkillInstall: true },
+      agents: { writeChangelog: true, changelogPath: 'CHANGELOG.md', autoAgentsMd: true, autoSkillInstall: true, skillTool: 'agents' },
       hooks: {},
       project: {},
     }, 'patch')
@@ -1209,6 +1304,7 @@ const packageConfig = ({
   changelogPath,
   autoAgentsMd,
   autoSkillInstall,
+  skillTool,
 }: {
   output: string[]
   source?: string
@@ -1220,6 +1316,7 @@ const packageConfig = ({
   changelogPath?: string
   autoAgentsMd?: boolean
   autoSkillInstall?: boolean
+  skillTool?: string
 }) => `${agentConfig(`schema = 1
 
 [project]
@@ -1243,13 +1340,14 @@ tag_template = "${tagTemplate}"
 commit = false
 push = false
 allow_dirty = false
-`, { writeChangelog, changelogPath, autoAgentsMd, autoSkillInstall })}`
+`, { writeChangelog, changelogPath, autoAgentsMd, autoSkillInstall, skillTool })}`
 
 const gitConfig = (options: {
   writeChangelog?: boolean
   changelogPath?: string
   autoAgentsMd?: boolean
   autoSkillInstall?: boolean
+  skillTool?: string
 } = {}) => `${agentConfig(`schema = 1
 
 [project]
@@ -1275,6 +1373,7 @@ const agentConfig = (
     changelogPath?: string
     autoAgentsMd?: boolean
     autoSkillInstall?: boolean
+    skillTool?: string
   },
 ) => {
   const lines: string[] = []
@@ -1283,6 +1382,7 @@ const agentConfig = (
   if (options.changelogPath !== undefined) lines.push(`changelog_path = "${options.changelogPath}"`)
   if (options.autoAgentsMd !== undefined) lines.push(`auto_agents_md = ${String(options.autoAgentsMd)}`)
   if (options.autoSkillInstall !== undefined) lines.push(`auto_skill_install = ${String(options.autoSkillInstall)}`)
+  if (options.skillTool !== undefined) lines.push(`skill_tool = "${options.skillTool}"`)
 
   if (lines.length === 0) return content
 
