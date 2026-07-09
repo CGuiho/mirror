@@ -98,7 +98,8 @@ function Get-DownloadUrl {
 }
 
 # === Main ===
-Write-Host "mirror: $Version  os=windows  arch=$detectedArch$($Variant ? " variant=$Variant" : "")"
+$variantLabel = if ($Variant) { " variant=$Variant" } else { "" }
+Write-Host "mirror: $Version  os=windows  arch=$detectedArch$variantLabel"
 
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 $destination = Join-Path $InstallDir 'mirror.exe'
