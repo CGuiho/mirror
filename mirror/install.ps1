@@ -36,14 +36,14 @@ Environment variables:
   exit 0
 }
 
-# === Detect architecture ===
+# === Detect architecture (compatible with PowerShell 5.1+) ===
 $detectedArch = if ($Arch) {
   $Arch
 } else {
-  switch ([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture) {
-    'X64'   { 'x64' }
-    'Arm64' { 'arm64' }
-    default { throw "Unsupported architecture: $([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)" }
+  switch ($env:PROCESSOR_ARCHITECTURE) {
+    'AMD64' { 'x64' }
+    'ARM64' { 'arm64' }
+    default { throw "Unsupported architecture: $env:PROCESSOR_ARCHITECTURE. Must be AMD64 or ARM64." }
   }
 }
 
