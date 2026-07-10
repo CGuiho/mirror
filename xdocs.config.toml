@@ -1,0 +1,18 @@
+schema = 1
+
+[extensions]
+supported = [".xdocs.md"]
+
+[ai]
+mode = "auto"
+
+[scan]
+exclude = ["node_modules", ".git", ".agents", ".claude", "dist", "build", "library", "bin", "bundle", "vendor", "coverage", ".next", ".react-router", ".turbo"]
+
+[project]
+name = "mirror"
+
+[agents]
+auto_agents_md = false
+auto_skill_install = false
+skill_tool = "agents"
