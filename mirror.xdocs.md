@@ -1,10 +1,13 @@
 ---
 subject: "mirror"
-description: "Repository root for GUIHO, including project metadata, documentation, configuration, and top-level modules."
+description: "Repository root for mirror, including project metadata, documentation, configuration, and top-level modules."
 parent: null
 children:
-  []
+  - "mirror-devops"
+  - "mirror-docs"
+  - "mirror-mirror"
 files:
+  ".gitignore": "Git ignore rules for generated or local-only files."
   "xdocs.config.toml": "TOML configuration file."
 documents:
   "AGENTS.md": "Agent instructions and repository guidance for this scope."
@@ -23,4 +26,4 @@ flags: []
 status: stable
 ---
 
-Repository root for GUIHO, including project metadata, documentation, configuration, and top-level modules. This descriptor documents the files, companion Markdown documents, and child modules in this directory.
+Repository root for mirror, including project metadata, documentation, configuration, and top-level modules. This descriptor documents files, companion Markdown documents, and child modules in this directory.
