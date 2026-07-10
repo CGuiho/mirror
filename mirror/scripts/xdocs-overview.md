@@ -2,7 +2,7 @@
 name: "Mirror/Scripts Overview"
 purpose: "Provide a companion overview for mirror-mirror-scripts."
 description: "Links to scripts.xdocs.md and summarizes the documented directory."
-created: "2026-07-10T18:06:35.697Z"
+created: "2026-07-10T18:07:41.706Z"
 flags:
   - generated
 tags:
