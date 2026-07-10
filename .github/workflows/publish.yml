@@ -12,9 +12,6 @@ jobs:
   publish:
     name: Publish
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: mirror
     steps:
       - name: Checkout
         run: |
@@ -30,13 +27,18 @@ jobs:
           "$HOME/.bun/bin/bun" --version
 
       - run: bun install --frozen-lockfile
+        working-directory: mirror
       - run: bun run typecheck
+        working-directory: mirror
       - run: bun test
+        working-directory: mirror
       - run: bun run build
+        working-directory: mirror
 
       - name: Publish native binaries to GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
+        working-directory: mirror
         run: |
           VERSION=$(bun -e "const p = await Bun.file('./package.json').json(); console.log(p.version)")
           RELEASE_FLAGS=()
@@ -56,6 +58,7 @@ jobs:
       - name: Verify GitHub release binary assets
         env:
           GH_TOKEN: ${{ github.token }}
+        working-directory: mirror
         run: |
           COUNT=$(gh release view "${GITHUB_REF_NAME}" --json assets --jq '[.assets[] | select(.name | startswith("guiho-mirror-"))] | length')
 

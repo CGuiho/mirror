@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed Node-based GitHub Actions and the production approval gate from native binary CI/publish workflows; workflows now use shell, Bun, git, and `gh` only.
 - Updated the bundled `guiho-s-mirror` skill to prefer the installed native CLI.
 
+### Fixed
+
+- Fixed Node-free CI/publish workflow checkout by applying the `mirror/` working directory only after the repository has been checked out.
+
 ## [3.3.1] - 2026-07-02
 
 ### Added

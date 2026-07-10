@@ -12,9 +12,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: mirror
     steps:
       - name: Checkout
         run: |
@@ -30,7 +27,12 @@ jobs:
           "$HOME/.bun/bin/bun" --version
 
       - run: bun install --frozen-lockfile
+        working-directory: mirror
       - run: bun run typecheck
+        working-directory: mirror
       - run: bun test
+        working-directory: mirror
       - run: bun run build
+        working-directory: mirror
       - run: bun run binary
+        working-directory: mirror
