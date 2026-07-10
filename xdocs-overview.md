@@ -1,8 +1,8 @@
 ---
 name: "Mirror Overview"
-purpose: "Provide a companion overview for the mirror xdocs descriptor."
+purpose: "Provide a companion overview for mirror."
 description: "Links to mirror.xdocs.md and summarizes the documented directory."
-created: "2026-07-10T17:59:22.988Z"
+created: "2026-07-10T18:06:35.697Z"
 flags:
   - generated
 tags:
@@ -22,4 +22,6 @@ This companion document links to [mirror.xdocs.md](mirror.xdocs.md), the xdocs d
 
 ## Child Modules
 
-- None.
+- [devops/](devops/): mirror-devops
+- [docs/](docs/): mirror-docs
+- [mirror/](mirror/): mirror-mirror
