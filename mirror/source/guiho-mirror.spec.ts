@@ -912,7 +912,7 @@ path = "custom-package.json"
     await writeText(join(packageRoot, 'package.json'), JSON.stringify({ version: '0.0.0-test.0' }, null, 2))
     await writeText(join(scriptsDir, 'mirror-bin.ts'), await readFile(join(import.meta.dir, '..', 'scripts', 'mirror-bin.ts'), 'utf8'))
     await writeText(join(scriptsDir, 'install-package.ts'), await readFile(join(import.meta.dir, '..', 'scripts', 'install-package.ts'), 'utf8'))
-    await Bun.write(join(binDir, packageAssetName()), Bun.file(process.execPath))
+    await writeMirrorStubBinary(join(binDir, packageAssetName()))
 
     const result = Bun.spawn([process.execPath, join(scriptsDir, 'mirror-bin.ts'), '--version'], {
       stdout: 'pipe',
@@ -925,7 +925,7 @@ path = "custom-package.json"
     expect(stdout.trim()).toMatch(/\d+\.\d+\.\d+$/)
     expect(stderr).toContain('first Mirror run is installing the native CLI binary')
     expect(await existsSync(vendorBinary)).toBe(true)
-  })
+  }, 30000)
 
   test('runs CLI agent installation and AGENTS.md commands', async () => {
     const cwd = await createTempDir()
@@ -1283,6 +1283,18 @@ const packageAssetName = () => {
       : 'linux'
   const arch = process.arch === 'arm64' ? 'arm64' : 'x64-baseline'
   return `guiho-mirror-${os}-${arch}${os === 'windows' ? '.exe' : ''}`
+}
+
+const writeMirrorStubBinary = async (path: string) => {
+  const source = `${path}.ts`
+  await writeText(source, "console.log('3.4.0')\n")
+  const result = Bun.spawn([process.execPath, 'build', source, '--compile', '--outfile', path], {
+    stdout: 'pipe',
+    stderr: 'pipe',
+  })
+  const [exitCode, stdout, stderr] = await Promise.all([result.exited, result.stdout.text(), result.stderr.text()])
+
+  if (exitCode !== 0) throw new Error(`failed to compile mirror stub binary\n${stderr}\n${stdout}`)
 }
 
 const createPackageAndJsrFixture = async () => {
