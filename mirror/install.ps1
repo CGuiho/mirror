@@ -1,128 +1,112 @@
 param(
   [string]$Version,
+  [string]$Repo,
   [string]$Arch,
   [string]$Variant,
-  [string]$InstallDir
+  [string]$InstallDir,
+  [switch]$Help
 )
 
 $ErrorActionPreference = 'Stop'
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-# === Defaults from env vars or sensible defaults ===
-if ([string]::IsNullOrWhiteSpace($Version)) {
-  $Version = if ($env:MIRROR_VERSION) { $env:MIRROR_VERSION } else { 'latest' }
-}
-$Repo = if ($env:MIRROR_REPO) { $env:MIRROR_REPO } else { 'CGuiho/mirror' }
-if ([string]::IsNullOrWhiteSpace($InstallDir)) {
-  $InstallDir = if ($env:MIRROR_INSTALL_DIR) { $env:MIRROR_INSTALL_DIR } else { Join-Path $HOME '.local\bin' }
-}
-
-# === Show help ===
-if ($Version -eq '--help' -or $Version -eq '-h') {
+if ($Help) {
   @"
-Install GUIHO Mirror — native CLI binary from GitHub Releases.
+Install GUIHO Mirror as a native CLI binary from GitHub Releases.
 
 Usage: install.ps1 [-Version VERSION] [-Arch ARCH] [-Variant VARIANT] [-InstallDir DIR]
 
 Parameters:
-  -Version      Version to install (default: latest).
-                Examples: latest, alpha, 3.3.1, @guiho/mirror@3.3.1
-  -Arch         Force architecture: x64 | arm64 (default: auto-detect)
-  -Variant      Force variant for x64: baseline | modern (default: baseline)
+  -Version      Version to install (default: latest)
+  -Arch         Force architecture: x64 | arm64
+  -Variant      Force x64 variant: baseline | default | modern
   -InstallDir   Install directory (default: `$HOME\.local\bin)
-
-Environment variables:
-  MIRROR_VERSION, MIRROR_REPO, MIRROR_INSTALL_DIR
 "@
   exit 0
 }
 
-# === Detect architecture (compatible with PowerShell 5.1+) ===
-$detectedArch = if ($Arch) {
-  $Arch
-} else {
+if ([string]::IsNullOrWhiteSpace($Version)) { $Version = if ($env:MIRROR_VERSION) { $env:MIRROR_VERSION } else { 'latest' } }
+if ([string]::IsNullOrWhiteSpace($Repo)) { $Repo = if ($env:MIRROR_REPO) { $env:MIRROR_REPO } else { 'CGuiho/mirror' } }
+if ([string]::IsNullOrWhiteSpace($InstallDir)) { $InstallDir = if ($env:MIRROR_INSTALL_DIR) { $env:MIRROR_INSTALL_DIR } else { Join-Path $HOME '.local\bin' } }
+
+$detectedArch = if ($Arch) { $Arch } else {
   switch ($env:PROCESSOR_ARCHITECTURE) {
     'AMD64' { 'x64' }
     'ARM64' { 'arm64' }
-    default { throw "Unsupported architecture: $env:PROCESSOR_ARCHITECTURE. Must be AMD64 or ARM64." }
+    default { throw "Unsupported architecture: $env:PROCESSOR_ARCHITECTURE" }
   }
 }
+if ($detectedArch -notin @('x64', 'arm64')) { throw "Invalid architecture: $detectedArch" }
+if (-not [Environment]::Is64BitOperatingSystem) { throw 'Unsupported platform: Windows 32-bit is not supported.' }
 
-if ($detectedArch -notin @('x64', 'arm64')) {
-  throw "Invalid architecture: $detectedArch. Must be x64 or arm64."
-}
-
-if (-not [Environment]::Is64BitOperatingSystem) {
-  throw 'Unsupported platform: Windows 32-bit is not supported.'
-}
-
-# === Build asset candidates (baseline-first for x64) ===
-$variant = if ($Variant) { $Variant } else { 'baseline' }
-
+$variantValue = if ($Variant) { $Variant } else { 'baseline' }
 $assetCandidates = if ($detectedArch -eq 'x64') {
-  switch ($variant) {
-    'baseline' { @(
-      "guiho-mirror-windows-x64-baseline.exe",
-      "guiho-mirror-windows-x64.exe",
-      "guiho-mirror-windows-x64-modern.exe"
-    )}
-    'modern' { @(
-      "guiho-mirror-windows-x64-modern.exe",
-      "guiho-mirror-windows-x64.exe",
-      "guiho-mirror-windows-x64-baseline.exe"
-    )}
-    default { @(
-      "guiho-mirror-windows-x64-$variant.exe",
-      "guiho-mirror-windows-x64-baseline.exe",
-      "guiho-mirror-windows-x64.exe",
-      "guiho-mirror-windows-x64-modern.exe"
-    )}
+  switch ($variantValue) {
+    'baseline' { @('guiho-mirror-windows-x64-baseline.exe', 'guiho-mirror-windows-x64.exe', 'guiho-mirror-windows-x64-modern.exe') }
+    'default' { @('guiho-mirror-windows-x64.exe', 'guiho-mirror-windows-x64-baseline.exe', 'guiho-mirror-windows-x64-modern.exe') }
+    'modern' { @('guiho-mirror-windows-x64-modern.exe', 'guiho-mirror-windows-x64.exe', 'guiho-mirror-windows-x64-baseline.exe') }
+    default { throw "Invalid variant: $variantValue. Must be baseline, default, or modern." }
   }
 } else {
-  @("guiho-mirror-windows-arm64.exe")
+  if ($Variant) { throw '-Variant is only valid for x64 installs.' }
+  @('guiho-mirror-windows-arm64.exe')
 }
 
-# === Build download URL ===
-function Get-DownloadUrl {
-  param([string]$Asset)
+function Get-DownloadUrl { param([string]$Asset)
+  if ($Version -eq 'latest') { return "https://github.com/$Repo/releases/latest/download/$Asset" }
+  $tag = if ($Version.StartsWith('@guiho/mirror@')) { $Version } elseif ($Version.StartsWith('@')) { $Version } else { "@guiho/mirror@$Version" }
+  return "https://github.com/$Repo/releases/download/$([Uri]::EscapeDataString($tag))/$Asset"
+}
 
-  if ($Version -eq 'latest') {
-    return "https://github.com/$Repo/releases/latest/download/$Asset"
+function Test-NativeBinary { param([string]$Path)
+  $bytes = [System.IO.File]::ReadAllBytes($Path)
+  return $bytes.Length -ge 2 -and $bytes[0] -eq 0x4D -and $bytes[1] -eq 0x5A
+}
+
+function Get-PathEntries { param([string]$PathValue)
+  if ([string]::IsNullOrWhiteSpace($PathValue)) { return @() }
+  return @($PathValue -split ';' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+}
+
+function Test-PathContains { param([string]$PathValue, [string]$Directory)
+  $target = $Directory.TrimEnd('\')
+  foreach ($entry in Get-PathEntries -PathValue $PathValue) {
+    if ($entry.TrimEnd('\').Equals($target, [StringComparison]::OrdinalIgnoreCase)) { return $true }
   }
-
-  $tag = if ($Version.StartsWith('@guiho/mirror@')) { $Version }
-         elseif ($Version.StartsWith('@')) { $Version }
-         else { "@guiho/mirror@$Version" }
-
-  $encodedTag = [Uri]::EscapeDataString($tag)
-  return "https://github.com/$Repo/releases/download/$encodedTag/$Asset"
+  return $false
 }
 
-# === Main ===
-$variantLabel = if ($Variant) { " variant=$Variant" } else { "" }
-Write-Host "mirror: $Version  os=windows  arch=$detectedArch$variantLabel"
+function Add-InstallDirToPath { param([string]$Directory)
+  $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+  if (-not (Test-PathContains -PathValue $userPath -Directory $Directory)) {
+    $newUserPath = (@($Directory) + @(Get-PathEntries -PathValue $userPath)) -join ';'
+    [Environment]::SetEnvironmentVariable('Path', $newUserPath.TrimEnd(';'), 'User')
+    Write-Host "Added $Directory to user PATH. Restart your terminal to use mirror globally."
+  }
+  if (-not (Test-PathContains -PathValue $env:Path -Directory $Directory)) { $env:Path = "$Directory;$env:Path" }
+}
 
+Write-Host "mirror: $Version  os=windows  arch=$detectedArch$(if ($Variant) { " variant=$Variant" } else { '' })"
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
+$InstallDir = (Resolve-Path -LiteralPath $InstallDir).Path
 $destination = Join-Path $InstallDir 'mirror.exe'
+$temporaryFile = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
 
 foreach ($asset in $assetCandidates) {
   $url = Get-DownloadUrl -Asset $asset
   Write-Host "  Trying $url"
   try {
-    Invoke-WebRequest -Uri $url -OutFile $destination -ErrorAction Stop
+    Invoke-WebRequest -Uri $url -OutFile $temporaryFile -UseBasicParsing -ErrorAction Stop
+    if (-not (Test-NativeBinary -Path $temporaryFile)) { Write-Host "  $asset was not a native Windows binary, trying next..."; continue }
+    Move-Item -Force -Path $temporaryFile -Destination $destination
     Write-Host "Installed mirror to $destination"
-
-    # Add to user PATH if not already there
-    $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
-    if (($userPath -split ';') -notcontains $InstallDir) {
-      [Environment]::SetEnvironmentVariable('Path', "$userPath;$InstallDir", 'User')
-      Write-Host "Added $InstallDir to user PATH. Restart your terminal to use mirror globally."
-    }
-
+    Add-InstallDirToPath -Directory $InstallDir
     Write-Host 'Run: mirror --version'
     exit 0
   } catch {
-    Write-Host "  not available, trying next..."
+    Write-Host '  not available, trying next...'
   }
 }
 
-throw "No compatible mirror binary found. Check available assets at: https://github.com/$Repo/releases"
+if (Test-Path -LiteralPath $temporaryFile) { Remove-Item -LiteralPath $temporaryFile -Force }
+throw "No compatible Mirror binary found. Check available assets at: https://github.com/$Repo/releases"

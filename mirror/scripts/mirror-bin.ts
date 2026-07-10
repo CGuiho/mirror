@@ -4,10 +4,23 @@
  */
 
 const binaryPath = new URL(`../vendor/mirror${process.platform === 'win32' ? '.exe' : ''}`, import.meta.url)
+const sourceEntrypointPath = new URL('../source/guiho-mirror-bin.ts', import.meta.url)
 const executablePath = Bun.fileURLToPath(binaryPath)
 const binary = Bun.file(binaryPath)
+const args = process.argv.slice(2)
 
 if (!(await binary.exists())) {
+  const sourceEntrypoint = Bun.file(sourceEntrypointPath)
+  if (await sourceEntrypoint.exists()) {
+    const proc = Bun.spawn([process.execPath, Bun.fileURLToPath(sourceEntrypointPath), ...args], {
+      stdin: 'inherit',
+      stdout: 'inherit',
+      stderr: 'inherit',
+    })
+    process.exit(await proc.exited)
+  }
+
+  console.error('notice: first Mirror run is installing the native CLI binary. This may take a moment...')
   const installerPath = new URL('install-package.ts', import.meta.url)
   const proc = Bun.spawn([process.execPath, Bun.fileURLToPath(installerPath)], {
     stdin: 'inherit',
@@ -22,7 +35,7 @@ if (!(await binary.exists())) {
   }
 }
 
-const proc = Bun.spawn([executablePath, ...process.argv.slice(2)], {
+const proc = Bun.spawn([executablePath, ...args], {
   stdin: 'inherit',
   stdout: 'inherit',
   stderr: 'inherit',

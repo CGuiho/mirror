@@ -20,6 +20,16 @@ const targets = [
   ['bun-darwin-x64-modern', 'bin/guiho-mirror-macos-x64-modern'],
 ] as const
 
+const expectedAssetCount = 12
+
+if (targets.length !== expectedAssetCount) {
+  throw new Error(`Expected ${expectedAssetCount} release binary targets, found ${targets.length}`)
+}
+
+if (new Set(targets.map(([, outfile]) => outfile)).size !== targets.length) {
+  throw new Error('Release binary target matrix contains duplicate output paths')
+}
+
 const main = async () => {
   await removeOutput('bin/mirror')
   await removeOutput('bin/mirror.exe')
@@ -61,6 +71,13 @@ const main = async () => {
   }
 
   if (failed) process.exit(1)
+
+  for (const [, outfile] of targets) {
+    const size = Bun.file(outfile).size
+    if (size === 0) throw new Error(`Built binary is empty: ${outfile}`)
+  }
+
+  console.log(`verified ${targets.length} native binary assets`)
 }
 
 await main()

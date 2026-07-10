@@ -18,7 +18,7 @@ Mirror is designed for human operators, CI jobs, and AI coding agents that need 
 - Package-manager launcher path: `scripts/mirror-bin.ts`
 - Standalone release assets: `bin/guiho-mirror-<os>-<arch>` or `bin/guiho-mirror-<os>-<arch>.exe`
 
-The public package exposes a CLI named `mirror`. It does not maintain a public TypeScript API contract.
+The public package exposes a CLI named `mirror`. It does not maintain a public TypeScript API contract. The native CLI can upgrade itself from GitHub Releases and uninstall its own executable.
 
 Mirror's implementation is Bun-native where Bun provides the runtime primitive. Runtime code uses Bun APIs for file IO, TOML parsing, shell/process execution, and binary compilation. Mirror uses an internal CLI router and keeps `semver` for semantic version calculations; do not add Node.js runtime imports or parser dependencies when Bun provides the capability.
 
@@ -84,7 +84,7 @@ Prerelease identifiers come from `[version].prerelease_id` or the `--preid` CLI 
 Install the native binary directly on macOS or Linux:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/mirror/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/mirror/install.sh | bash
 ```
 
 Install the native binary directly on Windows:
@@ -104,7 +104,18 @@ yarn add -D @guiho/mirror
 
 Package-manager installs use a small Bun launcher plus install-time tooling that downloads the matching native binary into `vendor/mirror` on POSIX systems or `vendor/mirror.exe` on Windows. When a package runner such as `bun x` starts without a populated vendor binary, the launcher runs the same installer on demand before executing the native binary. Direct installers are the no-runtime path; package-manager installs require Bun for the launcher and install helper.
 
-The installer prints progress messages so the user knows what is happening during the first-run download. On x64 platforms, installers always use the `x64-baseline` variant by default. This avoids "Illegal instruction" crashes on x86_64 CPUs that lack certain instruction-set extensions.
+The installer prints progress messages so the user knows what is happening during the first-run download. On x64 platforms, installers use the `x64-baseline` variant first, then fall back to the default and `modern` binaries. This avoids "Illegal instruction" crashes on x86_64 CPUs that lack certain instruction-set extensions while still supporting newer variants when requested.
+
+Mirror also self-manages after install:
+
+```bash
+mirror upgrade
+mirror upgrade check
+mirror upgrade list
+mirror uninstall --dry-run
+```
+
+Bare `mirror` invocations run configured agent automation and show help immediately. Installed native binaries also start a non-blocking background update check when the cache is missing or stale. If a newer release is known on a later run, Mirror prints a cached notice telling the user to run `mirror upgrade`.
 
 ## Quick Start
 
@@ -150,6 +161,8 @@ Global flags are available on commands that load configuration.
 - `--no-color`: Disable ANSI color output.
 - `--verbose`: Print full error details and stack traces.
 - `--tool agents|claude|all`: Override the configured agent skill target for commands that perform agent setup.
+- `--help-tree`: Show the command tree from the current command.
+- `--help-docs`: Print Markdown documentation for the current command.
 
 ### Override Flags
 
@@ -250,6 +263,32 @@ mirror version apply <target> --yes
 - `next`: Prints the next version without checking outputs.
 - `plan`: Builds and prints the read-only release plan.
 - `apply`: Applies the release plan.
+
+### `mirror upgrade`
+
+Upgrades the installed native Mirror binary from GitHub Releases. Source checkouts refuse self-upgrade to avoid replacing the Bun runtime or development launcher by mistake.
+
+```bash
+mirror upgrade
+mirror upgrade --dry-run
+mirror upgrade --version 3.4.0
+mirror upgrade --variant modern
+mirror upgrade check
+mirror upgrade list
+```
+
+Flags: `--version <version>`, `--arch <x64|arm64>`, `--variant <baseline|default|modern>`, `--dry-run`, `--format text|json`.
+
+### `mirror uninstall`
+
+Removes the installed native Mirror executable. On Windows, removal is scheduled after the current process exits because the executable cannot delete itself while locked.
+
+```bash
+mirror uninstall --dry-run
+mirror uninstall
+```
+
+Flags: `--dry-run`, `--format text|json`.
 
 ## Configuration Reference
 
@@ -519,6 +558,8 @@ Before a version is published, update this file and any other relevant user-faci
 - `source/guiho-mirror.ts`: internal source aggregation for tests and CLI internals, not a public API contract.
 - `source/guiho-mirror-bin.ts`: CLI binary entrypoint.
 - `source/cli.ts`: internal command router, CLI argument mapping, and process-facing error handling.
+- `source/help.ts`: data-driven help text, command-tree output, and Markdown help-doc rendering.
+- `source/self-management.ts`: background update checks, update cache, native binary upgrade, and uninstall helpers.
 - `source/config.ts`: Bun TOML discovery, schema validation, defaulting, init config generation, init reconciliation, and override merge.
 - `source/init.ts`: init answer resolution, interactive prompts (TTY-only), and defaults.
 - `source/schema.ts`: JSON Schema for `mirror.config.toml` and the `#:schema` reference.
@@ -572,6 +613,7 @@ Current tests cover:
 - Apply behavior, dry-run behavior, commits, tags, pushes, and dirty worktree checks.
 - Git unavailable behavior.
 - Agent automation settings, instruction-file insertion, skill installation, and changelog path guidance.
+- Native CLI self-management helpers, command help docs/tree rendering, and package launcher first-run behavior.
 
 Run all tests:
 
@@ -608,9 +650,9 @@ The binary build writes `bin/mirror` for local validation and platform release a
 - `guiho-mirror-macos-x64-baseline`
 - `guiho-mirror-macos-x64-modern`
 
-Do not publish the full `bin/` matrix inside the npm package; upload those files as GitHub release assets and let installers download the matching one. The publish workflow creates the tag release when missing, uploads or replaces `bin/guiho-mirror-*` assets, then publishes the npm package. The compiled binary embeds fallback `guiho-s-mirror` skill content so `mirror agents install local` and `mirror agents install global` still work when adjacent package files are not available.
+Do not publish the full `bin/` matrix inside the npm package; upload those files as GitHub release assets and let installers download the matching one. The publish workflow creates the tag release when missing, uploads or replaces `bin/guiho-mirror-*` assets, and verifies that all 12 release assets exist. The compiled binary embeds fallback `guiho-s-mirror` skill content so `mirror agents install local` and `mirror agents install global` still work when adjacent package files are not available.
 
-On x64 platforms, installers always use the `x64-baseline` variant by default. The `x64-baseline` variant avoids "Illegal instruction" crashes on x86_64 CPUs that lack certain instruction-set extensions. The `x64` and `x64-modern` variants are available as GitHub release assets for users who want to opt in manually.
+On x64 platforms, installers and self-upgrade use the `x64-baseline` variant first. The `x64-baseline` variant avoids "Illegal instruction" crashes on x86_64 CPUs that lack certain instruction-set extensions. The `x64` and `x64-modern` variants are available as fallback or explicit opt-in assets.
 
 ## Publishing Checklist
 
@@ -622,14 +664,14 @@ Before publishing a new version:
 4. Run `bun run typecheck`.
 5. Run `bun test`.
 6. Run `bun run binary`.
-7. Upload the generated platform binaries as release assets when publishing a binary release.
+7. Confirm the tag workflow uploads and verifies all 12 generated platform binaries as release assets.
 8. Run `mirror version plan <target>`.
 9. Commit release documentation updates before applying the version bump.
 10. Run `mirror version apply <target> --yes` with the required commit or push flags.
 
 Do not publish a new version when documentation is stale relative to the code being released.
 
-The GitHub Actions CI and publish workflows should use Node 24-compatible JavaScript actions. Keep first-party actions on current supported majors, currently `actions/checkout@v6` and `actions/setup-node@v6`, so the publish workflow does not depend on the deprecated Node 20 action runtime.
+The GitHub Actions CI and publish workflows are Bun-first and do not use Node-based actions or npm/node commands. They use shell `git`, shell Bun installation, Bun commands, and `gh` for GitHub Release asset publication.
 
 ## Troubleshooting
 

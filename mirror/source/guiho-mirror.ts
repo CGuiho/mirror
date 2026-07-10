@@ -21,13 +21,30 @@ export type {
   MirrorRawConfig,
   MirrorSkillInstallResult,
   MirrorSkillInstallScope,
+  MirrorUninstallResult,
+  MirrorUpdateCache,
   MirrorVersionPlan,
   MirrorVersionPlanAction,
   MirrorVersionTarget,
+  MirrorUpgradeResult,
 } from './types.js'
 
 export { MirrorError, invariant } from './errors.js'
 export { parseMirrorCliOptions } from './flags.js'
+export { showMirrorCommandHelp, showMirrorCommandHelpDocs, showMirrorCommandHelpTree, showMirrorHelp, showMirrorHelpDocs, showMirrorHelpTree } from './help.js'
+export {
+  checkForLatestVersion,
+  detectNativeArch,
+  detectNativePlatform,
+  listAvailableVersions,
+  readUpdateCache,
+  resolveCachePath,
+  resolveExecutablePath,
+  runBackgroundUpdateCheck,
+  scheduleBackgroundUpdateCheck,
+  uninstallSelf,
+  upgradeSelf,
+} from './self-management.js'
 export {
   defaultMirrorAgentSettings,
   ensureMirrorAgentsInstructions,

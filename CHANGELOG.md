@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added Claude Code agent support with `--tool agents|claude|all`, `agents.skill_tool`, `CLAUDE.md` guidance sync, and `.claude/skills` installation paths.
+- Added native CLI self-management with `mirror upgrade`, `mirror upgrade check`, `mirror upgrade list`, and `mirror uninstall`.
+- Added `--help-tree` and `--help-docs` output for command trees and Markdown command documentation.
+
+### Changed
+
+- Changed install scripts and package launchers to prioritize the native `mirror` CLI, support all x64 variants with baseline-first fallback, and print first-run native binary install notices.
+- Removed Node-based GitHub Actions and the production approval gate from native binary CI/publish workflows; workflows now use shell, Bun, git, and `gh` only.
+- Updated the bundled `guiho-s-mirror` skill to prefer the installed native CLI.
 
 ## [3.3.1] - 2026-07-02
 

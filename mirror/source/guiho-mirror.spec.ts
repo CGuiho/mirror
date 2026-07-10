@@ -30,6 +30,14 @@ import {
   resolveInitAnswers,
   resolveMirrorSkillPath,
   resolveNextVersion,
+  showMirrorCommandHelpDocs,
+  showMirrorCommandHelpTree,
+  showMirrorHelpDocs,
+  showMirrorHelpTree,
+  detectNativeArch,
+  readUpdateCache,
+  resolveCachePath,
+  upgradeSelf,
   runHooks,
   runMirrorAgentAutomation,
   validateMirrorConfig,
@@ -75,6 +83,8 @@ describe('Mirror v3', () => {
       '--push',
       '--allow-dirty',
       '--yes',
+      '--help-tree',
+      '--help-docs',
       '--tool',
       'all',
     ])
@@ -90,8 +100,45 @@ describe('Mirror v3', () => {
       push: true,
       allowDirty: true,
       yes: true,
+      helpTree: true,
+      helpDocs: true,
       tool: 'all',
     })
+  })
+
+  test('parses upgrade --version as a value flag', () => {
+    const options = parseMirrorCliOptions(['upgrade', '--version', '3.4.0'])
+
+    expect(options.upgradeVersion).toBe('3.4.0')
+    expect(options.version).toBe(false)
+  })
+
+  test('renders command tree and Markdown docs', () => {
+    expect(showMirrorHelpTree()).toContain('mirror upgrade')
+    expect(showMirrorCommandHelpTree(['upgrade'])).toContain('mirror upgrade check')
+    expect(showMirrorHelpDocs()).toContain('# mirror CLI')
+    expect(showMirrorCommandHelpDocs(['uninstall'])).toContain('mirror uninstall')
+  })
+
+  test('self-management helpers resolve cache and dry-run upgrade assets', async () => {
+    const dir = await createTempDir()
+    const executable = join(dir, platform() === 'win32' ? 'mirror.exe' : 'mirror')
+    const previousSelfPath = process.env['MIRROR_SELF_PATH']
+    try {
+      await writeText(executable, platform() === 'win32' ? 'MZ' : '\x7fELF')
+      process.env['MIRROR_SELF_PATH'] = executable
+
+      expect(detectNativeArch('x64')).toBe('x64')
+      expect(resolveCachePath({ cacheDir: dir })).toBe(join(dir, 'update.json'))
+      expect(await readUpdateCache({ cacheDir: dir })).toBeNull()
+
+      const result = await upgradeSelf({ version: '3.4.0', arch: 'x64', dryRun: true })
+      expect(result.asset).toBe(platform() === 'win32' ? 'guiho-mirror-windows-x64-baseline.exe' : platform() === 'darwin' ? 'guiho-mirror-macos-x64-baseline' : 'guiho-mirror-linux-x64-baseline')
+      expect(result.url).toContain('%40guiho%2Fmirror%403.4.0')
+    } finally {
+      if (previousSelfPath === undefined) delete process.env['MIRROR_SELF_PATH']
+      else process.env['MIRROR_SELF_PATH'] = previousSelfPath
+    }
   })
 
   test('expands short flag aliases -dy and -y', () => {
@@ -876,7 +923,7 @@ path = "custom-package.json"
     expect(exitCode).toBe(0)
     expect(stdout).toContain(`installed bundled GUIHO Mirror native binary: ${packageAssetName()}`)
     expect(stdout.trim()).toMatch(/\d+\.\d+\.\d+$/)
-    expect(stderr).toBe('')
+    expect(stderr).toContain('first Mirror run is installing the native CLI binary')
     expect(await existsSync(vendorBinary)).toBe(true)
   })
 

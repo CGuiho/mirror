@@ -24,7 +24,9 @@ import {
 import type { MirrorCliOptions, MirrorHookResult, MirrorInitFlags } from './types.js'
 import { resolveNextVersion } from './version.js'
 import { hookEnvForPlan, hookEnvForResult, hookEnvFromConfig, runHooks, runHooksQuiet } from './hooks.js'
+import { showMirrorCommandHelp, showMirrorCommandHelpDocs, showMirrorCommandHelpTree, showMirrorHelp } from './help.js'
 import { resolvePath } from './path.js'
+import { checkForLatestVersion, listAvailableVersions, readUpdateCache, runBackgroundUpdateCheck, scheduleBackgroundUpdateCheck, uninstallSelf, upgradeSelf } from './self-management.js'
 import packageJson from '../package.json' with { type: 'json' }
 
 const mirrorVersion = typeof packageJson.version === 'string' ? packageJson.version : '0.0.0'
@@ -49,8 +51,23 @@ export const runMirrorCli = async (rawArgs = process.argv.slice(2)) => {
     const context = createCommandContext(effectiveArgs)
     if (context.options.noColor) process.env['NO_COLOR'] = '1'
 
-    if (context.rawArgs.includes('--version')) {
+    if (context.options.mirrorUpdateCheckWorker) {
+      await runBackgroundUpdateCheck()
+      return
+    }
+
+    if (context.options.version) {
       process.stdout.write(`${mirrorVersion}\n`)
+      return
+    }
+
+    if (context.options.helpTree) {
+      process.stdout.write(showMirrorCommandHelpTree(context.positional) + '\n')
+      return
+    }
+
+    if (context.options.helpDocs) {
+      process.stdout.write(showMirrorCommandHelpDocs(context.positional))
       return
     }
 
@@ -72,6 +89,16 @@ const runCommand = async (context: CommandContext) => {
 
   if (!group) {
     await printHelp(context)
+    return
+  }
+
+  if (group === 'upgrade') {
+    await runUpgrade(context)
+    return
+  }
+
+  if (group === 'uninstall') {
+    await runUninstall(context)
     return
   }
 
@@ -261,42 +288,96 @@ const printHelp = async (context: CommandContext) => {
   const discovery = await discoverMirrorConfig(cwd, context.options.config)
   const configDisplay = discovery.path ? relativeFromCwd(cwd, discovery.path) : ''
   process.stdout.write(mirrorBanner(configDisplay))
-  process.stdout.write([
-    `mirror v${mirrorVersion}`,
-    '',
-    'USAGE',
-    '',
-    '  mirror init [package.json|jsr.json|git] [options]',
-    '  mirror config show|check|schema [options]',
-    '  mirror agents install local|global [--tool agents|claude|all] [options]',
-    '  mirror agents instructions [options]',
-    '  mirror version current [options]',
-    '  mirror version next|plan|apply <target> [options]',
-    '',
-    'GLOBAL OPTIONS',
-    '',
-    '  --config <path>       Path to mirror.config.toml',
-    '  --cwd <path>          Run as if Mirror started in this directory',
-    '  --format text|json    Output format',
-    '  --tool agents|claude|all',
-    '                        Agent skill target override',
-    '  --no-color            Disable color output',
-    '  --verbose             Show full error details',
-    '  --help                Show help',
-    '  --version             Show version',
-    '',
-    'EXAMPLES',
-    '',
-    '  mirror version current',
-    '  mirror version plan patch',
-    '  mirror version apply minor --commit --yes',
-    '  mirror version plan patch --output=package.json,jsr.json,git',
-    '  mirror agents install local',
-    '  mirror agents install global --tool all',
-    '  mirror agents instructions',
-    '  mirror config schema',
-    '',
-  ].join('\n'))
+  await printCachedUpdateNotice()
+  if (context.positional.length > 0) process.stdout.write(showMirrorCommandHelp(context.positional, mirrorVersion))
+  else process.stdout.write(showMirrorHelp(mirrorVersion))
+  if (context.rawArgs.length === 0) void scheduleBackgroundUpdateCheck()
+}
+
+const runUpgrade = async (context: CommandContext) => {
+  const subcommand = context.positional[1]
+
+  if (subcommand === 'check') {
+    const result = await checkForLatestVersion()
+    if (context.options.format === 'json') {
+      process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
+      return
+    }
+    process.stdout.write(`current: ${result.currentVersion}\n`)
+    process.stdout.write(`latest: ${result.latestVersion}\n`)
+    process.stdout.write(`update_available: ${String(result.updateAvailable)}\n`)
+    if (result.updateAvailable) process.stdout.write('Run: mirror upgrade\n')
+    return
+  }
+
+  if (subcommand === 'list') {
+    const versions = await listAvailableVersions()
+    if (context.options.format === 'json') {
+      process.stdout.write(`${JSON.stringify({ versions }, null, 2)}\n`)
+      return
+    }
+    process.stdout.write('Available Mirror versions\n\n')
+    for (const [index, version] of versions.entries()) process.stdout.write(index === 0 ? `  latest  ${version}\n` : `          ${version}\n`)
+    return
+  }
+
+  const result = await upgradeSelf({
+    version: context.options.upgradeVersion,
+    arch: context.options.arch,
+    variant: context.options.variant,
+    dryRun: context.options.dryRun,
+  })
+  if (context.options.format === 'json') {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
+    return
+  }
+  process.stdout.write('------------------------------------------------------------\n')
+  process.stdout.write('  mirror upgrade\n')
+  process.stdout.write('------------------------------------------------------------\n')
+  process.stdout.write(`  current : ${result.currentVersion}\n`)
+  process.stdout.write(`  target  : ${result.targetVersion}\n`)
+  process.stdout.write(`  binary  : ${result.asset}\n`)
+  process.stdout.write(`  path    : ${result.executablePath}\n`)
+  process.stdout.write('------------------------------------------------------------\n')
+  if (result.dryRun) {
+    process.stdout.write(`  url     : ${result.url}\n`)
+    process.stdout.write('  dry_run : true\n')
+    return
+  }
+  process.stdout.write(result.scheduled ? 'Upgrade downloaded. Replacement is scheduled after this mirror process exits.\n' : 'Upgrade complete.\n')
+}
+
+const runUninstall = async (context: CommandContext) => {
+  const result = await uninstallSelf({ dryRun: context.options.dryRun })
+  if (context.options.format === 'json') {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
+    return
+  }
+  process.stdout.write('mirror uninstall\n')
+  process.stdout.write(`path: ${result.executablePath}\n`)
+  if (result.dryRun) {
+    process.stdout.write('dry_run: true\n')
+    return
+  }
+  process.stdout.write(result.scheduled ? 'Uninstall scheduled after this mirror process exits.\n' : 'Uninstall complete.\n')
+}
+
+const printCachedUpdateNotice = async () => {
+  const cache = await readUpdateCache()
+  if (!cache?.updateAvailable) return
+  if (compareVersions(cache.latestVersion, mirrorVersion) <= 0) return
+  process.stderr.write(`notice: Mirror ${cache.latestVersion} is available. Run \`mirror upgrade\` to update.\n`)
+}
+
+const compareVersions = (a: string, b: string) => {
+  const left = a.split(/[.+-]/).map((part) => Number.parseInt(part, 10) || 0)
+  const right = b.split(/[.+-]/).map((part) => Number.parseInt(part, 10) || 0)
+  const length = Math.max(left.length, right.length)
+  for (let index = 0; index < length; index += 1) {
+    const diff = (left[index] ?? 0) - (right[index] ?? 0)
+    if (diff !== 0) return diff
+  }
+  return 0
 }
 
 const requireTarget = (context: CommandContext) => {
@@ -349,5 +430,5 @@ const stripColorFromProcessOutput = () => {
 
 const stripAnsiValue = (value: unknown) => (typeof value === 'string' ? stripAnsi(value) : value)
 
-const booleanFlags = new Set(['dry-run', 'commit', 'push', 'allow-dirty', 'non-interactive', 'yes', 'no-color', 'verbose', 'help', 'version'])
+const booleanFlags = new Set(['dry-run', 'commit', 'push', 'allow-dirty', 'non-interactive', 'yes', 'no-color', 'verbose', 'help', 'version', 'help-tree', 'help-docs', 'mirror-update-check-worker'])
 const shortBooleanFlags = new Set(['-dy', '-y'])

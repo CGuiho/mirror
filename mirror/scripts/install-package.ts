@@ -89,7 +89,7 @@ function detectAssetCandidates() {
   const ext = os === 'windows' ? '.exe' : ''
 
   if (arch === 'x64') {
-    return [`guiho-mirror-${os}-x64-baseline${ext}`]
+    return [`guiho-mirror-${os}-x64-baseline${ext}`, `guiho-mirror-${os}-x64${ext}`, `guiho-mirror-${os}-x64-modern${ext}`]
   }
 
   return [`guiho-mirror-${os}-${arch}${ext}`]

@@ -8,7 +8,7 @@ Mirror is a powerful, deterministic CLI for semantic project versioning. It read
 source -> version engine -> plan -> outputs
 ```
 
-Mirror ships as a **native Bun-compiled CLI binary**. Direct installers run the native binary without requiring Node.js or Bun at runtime. Package-manager installs use a small Bun launcher with install-time and on-demand native binary download. Git is required **only** for Git-based workflows (`source: "git"`, `output: ["git"]`, or commit/tag/push operations).
+Mirror ships as a **native Bun-compiled CLI binary**. Direct installers run the native binary without requiring Node.js or Bun at runtime. Package-manager installs use a small Bun launcher with install-time and on-demand native binary download. The installed CLI can upgrade and uninstall itself. Git is required **only** for Git-based workflows (`source: "git"`, `output: ["git"]`, or commit/tag/push operations).
 
 ---
 
@@ -27,7 +27,7 @@ bun add -d @guiho/mirror
 Direct native binary install on macOS/Linux:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/mirror/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/mirror/install.sh | bash
 ```
 
 Direct native binary install on Windows:
@@ -35,6 +35,9 @@ Direct native binary install on Windows:
 ```powershell
 irm https://raw.githubusercontent.com/CGuiho/mirror/main/mirror/install.ps1 | iex
 ```
+
+x64 installs prefer the `baseline` binary first, then fall back to default and
+`modern`. The installers add the install directory to PATH where possible.
 
 ### Initializing
 
@@ -59,6 +62,12 @@ mirror version plan patch
 
 # Apply a minor release and create a Git commit & tag
 mirror version apply minor --commit --yes
+
+# Upgrade the installed native Mirror CLI
+mirror upgrade
+
+# Preview uninstalling the installed native Mirror CLI
+mirror uninstall --dry-run
 ```
 
 ---
@@ -105,6 +114,24 @@ Installs Mirror-aware agent guidance for projects that use AI coding agents.
 - `mirror agents install local [--tool agents|claude|all]`: Synchronizes the bundled `guiho-s-mirror` skill locally. The default target is `.agents/skills`; Claude Code uses `.claude/skills`.
 - `mirror agents install global [--tool agents|claude|all]`: Synchronizes the bundled `guiho-s-mirror` skill globally. The default target is `~/.agents/skills`; Claude Code uses `~/.claude/skills`.
 - `mirror agents instructions [--tool agents|claude|all]`: Creates or updates Mirror guidance in `AGENTS.md` and/or `CLAUDE.md`.
+
+#### `mirror upgrade`
+Upgrades the installed native Mirror binary from GitHub Releases.
+- `mirror upgrade`: Upgrade to latest compatible release.
+- `mirror upgrade check`: Check latest release metadata.
+- `mirror upgrade list`: List available release versions.
+- Flags: `--version`, `--arch`, `--variant baseline|default|modern`, `--dry-run`, `--format text|json`.
+
+#### `mirror uninstall`
+Removes the installed native Mirror executable. On Windows, removal is scheduled after the current process exits.
+- `mirror uninstall --dry-run`: Preview the executable that would be removed.
+- `mirror uninstall`: Remove the installed native binary.
+
+#### Help output
+All commands support:
+- `--help`: Text help for the current command.
+- `--help-tree`: Tree view from the current command down through subcommands and flags.
+- `--help-docs`: Markdown documentation for the current command.
 
 #### `mirror version`
 Manages the version lifecycle.

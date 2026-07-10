@@ -12,6 +12,9 @@ export type MirrorJsonObject = Record<string, unknown>
 export type MirrorSkillInstallScope = 'local' | 'global'
 export type MirrorAgentTool = 'agents' | 'claude'
 export type MirrorAgentToolSelection = MirrorAgentTool | 'all'
+export type MirrorNativePlatform = 'linux' | 'macos' | 'windows'
+export type MirrorNativeArch = 'x64' | 'arm64'
+export type MirrorNativeVariant = 'baseline' | 'default' | 'modern'
 
 export type MirrorHookName =
   | 'before:everything' | 'after:everything'
@@ -111,6 +114,10 @@ export type MirrorCliOptions = {
   config?: string
   format?: MirrorFormat
   noColor?: boolean
+  version?: boolean
+  helpTree?: boolean
+  helpDocs?: boolean
+  mirrorUpdateCheckWorker?: boolean
   source?: MirrorAdapterName
   output?: MirrorAdapterName[]
   packageFile?: string
@@ -127,6 +134,33 @@ export type MirrorCliOptions = {
   yes?: boolean
   verbose?: boolean
   tool?: MirrorAgentToolSelection
+  upgradeVersion?: string
+  arch?: string
+  variant?: string
+}
+
+export type MirrorUpdateCache = {
+  checkedAt: string
+  currentVersion: string
+  latestVersion: string
+  updateAvailable: boolean
+  releaseUrl: string
+}
+
+export type MirrorUpgradeResult = {
+  currentVersion: string
+  targetVersion: string
+  asset: string
+  url: string
+  executablePath: string
+  dryRun: boolean
+  scheduled: boolean
+}
+
+export type MirrorUninstallResult = {
+  executablePath: string
+  dryRun: boolean
+  scheduled: boolean
 }
 
 export type MirrorInitAnswers = {

@@ -1,6 +1,6 @@
 ---
 name: guiho-s-mirror
-version: 3.3.0-alpha.2
+version: 3.4.0
 description: Use this skill whenever the user asks to version, bump, release, tag, initialize, configure, or troubleshoot a project with GUIHO Mirror (`@guiho/mirror`). This includes Bun, npm, JSR, package.json, jsr.json, Git tag, semantic versioning, changelog, release-plan, prerelease, and "what version comes next" workflows, even when the user only says "cut a patch" or "prepare a release" without naming Mirror.
 ---
 
@@ -16,15 +16,15 @@ Use Mirror for project versioning work instead of ad hoc edits to version fields
 
 ## Command Selection
 
-Choose the Mirror command in this order:
+Choose the installed native CLI first:
 
-1. Use `bun @guiho/mirror` when the package is installed locally and Bun is available.
-2. Use `mirror` when a global binary is available.
-3. Use `bunx @guiho/mirror` when running without installation.
+1. Use `mirror` when the CLI is installed on the system.
+2. Use `bun run source/guiho-mirror-bin.ts` only inside a Mirror source checkout while developing Mirror itself.
+3. Use `bunx @guiho/mirror` only as a last-resort bootstrap path when no native CLI is installed yet.
 
-When unsure, run a cheap availability check (`bun @guiho/mirror --help`, `mirror --help`, or `bunx @guiho/mirror --help`) and then reuse the working command consistently. Run `mirror --help` or `mirror <command> --help` for command-specific details when needed.
+When unsure, run a cheap availability check (`mirror --help`) and then reuse the working command consistently. Run `mirror --help`, `mirror <command> --help`, `mirror --help-tree`, or `mirror <command> --help-docs` for command-specific details when needed.
 
-Mirror ships as a Bun-compiled native CLI binary. The installed `mirror` command should not require Node.js or Bun at runtime. Bun is required for Mirror project development and binary compilation. Git is required only for Git-based workflows: `source = "git"`, `output = ["git"]`, commits, tags, or pushes.
+Mirror ships as a Bun-compiled native self-sufficient CLI binary. The installed `mirror` command should not require Node.js or Bun at runtime. It can check for updates, upgrade itself with `mirror upgrade`, and remove its native binary with `mirror uninstall`. Bun is required for Mirror project development and binary compilation. Git is required only for Git-based workflows: `source = "git"`, `output = ["git"]`, commits, tags, or pushes.
 
 ## Release Workflow
 

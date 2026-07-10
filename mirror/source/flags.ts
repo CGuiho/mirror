@@ -5,7 +5,7 @@
 import type { MirrorAdapterName, MirrorAgentToolSelection, MirrorCliOptions, MirrorFormat } from './types.js'
 import { MirrorError } from './errors.js'
 
-const booleanFlags = new Set(['dry-run', 'commit', 'push', 'allow-dirty', 'non-interactive', 'yes', 'no-color', 'verbose', 'help', 'version'])
+const booleanFlags = new Set(['dry-run', 'commit', 'push', 'allow-dirty', 'non-interactive', 'yes', 'no-color', 'verbose', 'help', 'version', 'help-tree', 'help-docs', 'mirror-update-check-worker'])
 const adapterNames = new Set(['package.json', 'jsr.json', 'git'])
 const agentToolSelections = new Set(['agents', 'claude', 'all'])
 
@@ -21,6 +21,7 @@ const expandShortFlags = (rawArgs: string[]) => rawArgs.map((token) => shortFlag
 export const parseMirrorCliOptions = (rawArgs: string[]): MirrorCliOptions => {
   const parsed: Record<string, string | boolean | string[]> = {}
   const args = expandShortFlags(rawArgs)
+  const commandName = args.find((token) => token && !token.startsWith('-'))
 
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index]
@@ -30,9 +31,9 @@ export const parseMirrorCliOptions = (rawArgs: string[]): MirrorCliOptions => {
     const withoutPrefix = token.slice(2)
     const equalsIndex = withoutPrefix.indexOf('=')
     const rawKey = equalsIndex >= 0 ? withoutPrefix.slice(0, equalsIndex) : withoutPrefix
-    const key = normalizeKey(rawKey)
+    const key = commandName === 'upgrade' && rawKey === 'version' ? 'upgradeVersion' : normalizeKey(rawKey)
 
-    if (booleanFlags.has(rawKey)) {
+    if (booleanFlags.has(rawKey) && !(commandName === 'upgrade' && rawKey === 'version')) {
       parsed[key] = true
       continue
     }
@@ -68,6 +69,10 @@ export const parseMirrorCliOptions = (rawArgs: string[]): MirrorCliOptions => {
     config: typeof parsed['config'] === 'string' ? parsed['config'] : undefined,
     format: typeof parsed['format'] === 'string' ? assertFormat(parsed['format']) : undefined,
     noColor: parsed['noColor'] === true,
+    version: parsed['version'] === true,
+    helpTree: parsed['helpTree'] === true,
+    helpDocs: parsed['helpDocs'] === true,
+    mirrorUpdateCheckWorker: parsed['mirrorUpdateCheckWorker'] === true,
     source: typeof parsed['source'] === 'string' ? assertAdapter(parsed['source'], '--source') : undefined,
     output: Array.isArray(parsed['output']) ? parsed['output'].map((value) => assertAdapter(value, '--output')) : undefined,
     packageFile: typeof parsed['packageFile'] === 'string' ? parsed['packageFile'] : undefined,
@@ -84,6 +89,9 @@ export const parseMirrorCliOptions = (rawArgs: string[]): MirrorCliOptions => {
     yes: parsed['yes'] === true,
     verbose: parsed['verbose'] === true,
     tool: typeof parsed['tool'] === 'string' ? assertAgentToolSelection(parsed['tool'], '--tool') : undefined,
+    upgradeVersion: typeof parsed['upgradeVersion'] === 'string' ? parsed['upgradeVersion'] : undefined,
+    arch: typeof parsed['arch'] === 'string' ? parsed['arch'] : undefined,
+    variant: typeof parsed['variant'] === 'string' ? parsed['variant'] : undefined,
   }
 }
 
