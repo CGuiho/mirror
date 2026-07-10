@@ -7,7 +7,7 @@ supported = [".xdocs.md"]
 mode = "auto"
 
 [scan]
-exclude = ["node_modules", ".git", ".agents", ".claude", "dist", "build", "library", "bin", "bundle", "vendor", "coverage", ".next", ".react-router", ".turbo"]
+exclude = ["node_modules", ".git", ".agents", ".claude", ".github", ".vscode", "dist", "build", "library", "bin", "bundle", "vendor", "coverage", ".next", ".react-router", ".turbo", "sql\meta", "sql-meta"]
 
 [project]
 name = "mirror"
