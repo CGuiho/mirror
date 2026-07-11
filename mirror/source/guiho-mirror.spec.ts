@@ -956,8 +956,9 @@ path = "custom-package.json"
     const result = await runMirrorCliFromCwd(cwd, await createTempDir())
 
     expect(result.exitCode).toBe(0)
-    expect(result.stdout).toMatch(/mirror v\d+\.\d+\.\d+/)
-    expect(result.stdout).toContain('USAGE')
+    expect(result.stdout).toMatch(/mirror \d+\.\d+\.\d+/)
+    expect(result.stdout).toContain('Usage')
+    expect(result.stdout).toContain('Version Commands')
   })
 
   test('runs configured agent automation with no arguments', async () => {
@@ -969,7 +970,7 @@ path = "custom-package.json"
     const result = await runMirrorCliFromCwd(cwd, homeDirectory)
 
     expect(result.exitCode).toBe(0)
-    expect(result.stdout).toContain('USAGE')
+    expect(result.stdout).toContain('Usage')
     expect(result.stderr).toContain('guiho-s-mirror skill for agents not found global')
     expect(await readFile(join(cwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
     expect(await existsSync(resolveMirrorSkillPath('local', { cwd, homeDirectory }))).toBe(false)
@@ -980,7 +981,7 @@ path = "custom-package.json"
     const result = await runMirrorCli('--no-color', '--help')
 
     expect(result.exitCode).toBe(0)
-    expect(result.stdout).toContain('USAGE')
+    expect(result.stdout).toContain('Usage')
     expect(result.stdout).not.toContain('\u001B[')
   })
 

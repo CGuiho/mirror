@@ -15,7 +15,7 @@ files:
   "guiho-mirror-bin.ts": "TypeScript source module."
   "guiho-mirror.spec.ts": "TypeScript source module."
   "guiho-mirror.ts": "TypeScript source module."
-  "help.ts": "TypeScript source module."
+  "help.ts": "Versioned root help, command help, help-tree, and Markdown help-doc rendering."
   "hooks.ts": "TypeScript source module."
   "init.ts": "TypeScript source module."
   "path.ts": "TypeScript source module."

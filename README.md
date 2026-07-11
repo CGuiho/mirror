@@ -36,6 +36,8 @@ Direct native binary install on Windows:
 irm https://raw.githubusercontent.com/CGuiho/mirror/main/mirror/install.ps1 | iex
 ```
 
+The Windows PowerShell installer returns after success instead of calling `exit`, so it does not intentionally close the host PowerShell session.
+
 x64 installs prefer the `baseline` binary first, then fall back to default and
 `modern`. The installers add the install directory to PATH where possible.
 

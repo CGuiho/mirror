@@ -22,7 +22,7 @@ Parameters:
   -Variant      Force x64 variant: baseline | default | modern
   -InstallDir   Install directory (default: `$HOME\.local\bin)
 "@
-  exit 0
+  return
 }
 
 if ([string]::IsNullOrWhiteSpace($Version)) { $Version = if ($env:MIRROR_VERSION) { $env:MIRROR_VERSION } else { 'latest' } }
@@ -102,7 +102,7 @@ foreach ($asset in $assetCandidates) {
     Write-Host "Installed mirror to $destination"
     Add-InstallDirToPath -Directory $InstallDir
     Write-Host 'Run: mirror --version'
-    exit 0
+    return
   } catch {
     Write-Host '  not available, trying next...'
   }

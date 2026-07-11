@@ -11,7 +11,7 @@ files:
   ".npmignore": "File in mirror."
   ".npmrc": "File in mirror."
   "bun.lock": "Bun lockfile for reproducible dependency installation."
-  "install.ps1": "File in mirror."
+  "install.ps1": "Windows PowerShell direct installer that installs the native Mirror binary and returns without closing the host session."
   "install.sh": "File in mirror."
   "jsr.json": "JSON configuration or structured data file."
   "mirror.config.toml": "TOML configuration file."

@@ -129,29 +129,33 @@ const mirrorHelpRecords: readonly HelpRecord[] = [
 
 function showMirrorHelp(version: string): string {
   return [
-    `mirror v${version}`,
+    `mirror ${version}`,
+    'Deterministic semantic versioning for GUIHO projects',
     '',
-    'USAGE',
+    'Usage',
     '',
-    '  mirror init [package.json|jsr.json|git] [options]',
-    '  mirror config show|check|schema [options]',
-    '  mirror agents install local|global [--tool agents|claude|all] [options]',
-    '  mirror agents instructions [options]',
-    '  mirror version current|next|plan|apply [target] [options]',
-    '  mirror upgrade [check|list] [options]',
-    '  mirror uninstall [options]',
+    '  mirror <command> [options]',
     '',
-    'GLOBAL OPTIONS',
+    'Version Commands',
+    ...mirrorHelpRecords
+      .filter((record) => ['init', 'config', 'version'].includes(record.name))
+      .map((record) => `  ${pad(record.name, 18)}${record.summary}`),
+    '',
+    'Agent Commands',
+    ...mirrorHelpRecords
+      .filter((record) => ['agents'].includes(record.name))
+      .map((record) => `  ${pad(record.name, 18)}${record.summary}`),
+    '',
+    'Binary Commands',
+    ...mirrorHelpRecords
+      .filter((record) => ['upgrade', 'uninstall'].includes(record.name))
+      .map((record) => `  ${pad(record.name, 18)}${record.summary}`),
+    '',
+    'Global Options',
     '',
     ...globalFlags.map((flag) => `  ${pad(flag.name, 28)}${flag.description}`),
     '',
-    'EXAMPLES',
-    '',
-    '  mirror version current',
-    '  mirror version plan patch',
-    '  mirror version apply minor --commit --yes',
-    '  mirror upgrade',
-    '  mirror uninstall --dry-run',
+    'Use `mirror <command> --help` for command-specific usage.',
     '',
   ].join('\n')
 }
