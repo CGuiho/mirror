@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [3.4.2] - 2026-07-14
+
 ### Added
 
 - Added Claude Code agent support with `--tool agents|claude|all`, `agents.skill_tool`, `CLAUDE.md` guidance sync, and `.claude/skills` installation paths.
@@ -21,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed recognized command groups such as `mirror version` being reported as unknown, added `-h` contextual help at every command scope, and made incomplete commands print their relevant help after the usage error.
 - Fixed Node-free CI/publish workflow checkout by applying the `mirror/` working directory only after the repository has been checked out.
 
 ## [3.3.1] - 2026-07-02
