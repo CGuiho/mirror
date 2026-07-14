@@ -1,7 +1,7 @@
 {
   "name": "@guiho/mirror",
   "description": "Open source project versioning for Bun, npm, JSR, and Git.",
-  "version": "3.4.1",
+  "version": "3.4.2",
   "type": "module",
   "bin": {
     "mirror": "scripts/mirror-bin.ts"
