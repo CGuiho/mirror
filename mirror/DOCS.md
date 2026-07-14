@@ -20,7 +20,7 @@ Mirror is designed for human operators, CI jobs, and AI coding agents that need 
 
 The public package exposes a CLI named `mirror`. It does not maintain a public TypeScript API contract. The native CLI can upgrade itself from GitHub Releases and uninstall its own executable.
 
-Mirror's implementation is Bun-native where Bun provides the runtime primitive. Runtime code uses Bun APIs for file IO, TOML parsing, shell/process execution, and binary compilation. Mirror uses an internal CLI router and keeps `semver` for semantic version calculations; do not add Node.js runtime imports or parser dependencies when Bun provides the capability.
+Mirror's implementation is Bun-native where Bun provides the runtime primitive. Runtime code uses Bun APIs for file IO, TOML parsing, shell/process execution, and binary compilation. Mirror uses `citty` as its declarative CLI parser, command router, alias registry, and ordinary usage generator, while `semver` remains responsible for semantic version calculations. Mirror source must not add Node.js runtime imports.
 
 ## Core Model
 
@@ -153,6 +153,8 @@ mirror version apply patch --commit --yes
 
 ## CLI Reference
 
+The complete command hierarchy is declared with Citty. Citty selects root and nested commands, parses scoped arguments, resolves `-h`/`--help` and `-v`/`--version`, and renders ordinary usage. Mirror retains custom `--help-tree` and `--help-docs` output, domain-specific `MirrorUsageError` handling, and two narrow compatibility adapters: legacy `-dy` normalization and repeatable/comma-separated `--output` and `--auxiliary` values. Unknown commands, unknown scoped flags, extra positionals, and missing targets exit nonzero with help for the nearest command and cannot select a release action.
+
 ### Global Flags
 
 Global flags are available on commands that load configuration.
@@ -272,6 +274,8 @@ mirror version apply <target> --yes
 ### `mirror upgrade`
 
 Upgrades the installed native Mirror binary from GitHub Releases. Source checkouts refuse self-upgrade to avoid replacing the Bun runtime or development launcher by mistake.
+
+When the resolved target matches the installed version, Mirror prints `Already up to date.` and exits successfully without downloading a binary, writing update cache state, or scheduling executable replacement. JSON output reports `upToDate: true`.
 
 ```bash
 mirror upgrade
@@ -562,7 +566,7 @@ Before a version is published, update this file and any other relevant user-faci
 
 - `source/guiho-mirror.ts`: internal source aggregation for tests and CLI internals, not a public API contract.
 - `source/guiho-mirror-bin.ts`: CLI binary entrypoint.
-- `source/cli.ts`: internal command router, CLI argument mapping, and process-facing error handling.
+- `source/cli.ts`: declarative Citty command tree, thin domain adapters, compatibility normalization, contextual usage handling, and process-facing error handling.
 - `source/help.ts`: data-driven help text, command-tree output, and Markdown help-doc rendering.
 - `source/self-management.ts`: background update checks, update cache, native binary upgrade, and uninstall helpers.
 - `source/config.ts`: Bun TOML discovery, schema validation, defaulting, init config generation, init reconciliation, and override merge.
@@ -608,7 +612,7 @@ The test suite uses `bun test` and `bun:test`.
 
 Current tests cover:
 
-- CLI flag parsing and short aliases.
+- Citty command routing, scoped flags, contextual usage, short aliases, and repeatable-value compatibility.
 - Config discovery and validation.
 - CLI overrides over config values.
 - Package and JSR version reads/writes.

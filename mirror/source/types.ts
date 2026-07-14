@@ -150,11 +150,12 @@ export type MirrorUpdateCache = {
 export type MirrorUpgradeResult = {
   currentVersion: string
   targetVersion: string
-  asset: string
-  url: string
+  asset?: string
+  url?: string
   executablePath: string
   dryRun: boolean
   scheduled: boolean
+  upToDate: boolean
 }
 
 export type MirrorUninstallResult = {

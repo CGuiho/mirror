@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## [3.5.0-alpha.0] - 2026-07-14
+
+### Added
+
+- Added Citty as Mirror's runtime CLI parser and declared the complete root and nested command hierarchy through one declarative command tree.
+- Added a package-local README and durable implementation and validation records for the Citty migration.
+
+### Changed
+
+- Replaced handwritten flag parsing, positional collection, and top-level command dispatch with Citty-owned scoped arguments, aliases, routing, and ordinary usage rendering.
+- Updated CLI tests, package documentation, AGENTS guidance, bundled skill guidance, and XDocs descriptors for the Citty architecture.
+- Isolated Windows test fixtures under `C:\tmp` so unrelated ancestor agent instructions cannot affect repository tests.
+
+### Fixed
+
+- Preserved contextual usage errors, `-dy`, repeated `--output` and `--auxiliary` values, global version behavior, and hidden update-worker behavior through narrow compatibility adapters.
+- Made self-upgrade return an explicit already-up-to-date result when the requested version matches the installed version.
+
 ## [3.4.2] - 2026-07-14
 
 ### Added

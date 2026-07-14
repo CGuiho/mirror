@@ -5,7 +5,7 @@ parent: "mirror-mirror-skills"
 children: []
 files: {}
 documents:
-  "SKILL.md": "Markdown companion document in mirror/skills/guiho-s-mirror."
+  "SKILL.md": "Bundled Mirror release-workflow skill, including Citty help, scoped-error, alias, and repeatable-flag guidance."
   "xdocs-overview.md": "Generated companion overview that links back to this directory xdocs descriptor."
 tags:
   - "module"

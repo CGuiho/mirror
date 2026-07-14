@@ -10,6 +10,8 @@ source -> version engine -> plan -> outputs
 
 Mirror ships as a **native Bun-compiled CLI binary**. Direct installers run the native binary without requiring Node.js or Bun at runtime. Package-manager installs use a small Bun launcher with install-time and on-demand native binary download. The installed CLI can upgrade and uninstall itself. Git is required **only** for Git-based workflows (`source: "git"`, `output: ["git"]`, or commit/tag/push operations).
 
+Mirror's command tree, scoped argument parsing, aliases, and ordinary usage output are powered by [Citty](https://github.com/unjs/citty). Unknown commands, unknown scoped flags, and missing required targets return contextual usage errors without falling through to a release action.
+
 ---
 
 ## 🚀 Quick Start
@@ -95,7 +97,7 @@ Adapters connect Mirror to different versioning ecosystems:
 
 ### CLI Commands
 
-Mirror provides a concise CLI with three main command groups:
+Mirror provides a declarative CLI with initialization, configuration, agent, version, upgrade, and uninstall commands:
 
 #### `mirror init`
 Creates or reconciles a `mirror.config.toml` file in the current directory. On an interactive terminal, `mirror init` asks step-by-step questions (version source, outputs, package path, auxiliary paths, tag template, commit/push) with defaults you accept by pressing Enter. Pass flags to answer non-interactively, and in CI / non-TTY environments it uses flags + defaults without prompting.
@@ -131,9 +133,12 @@ Removes the installed native Mirror executable. On Windows, removal is scheduled
 
 #### Help output
 All commands support:
-- `--help`: Text help for the current command.
+- `--help` or `-h`: Citty-generated text help for the current command.
 - `--help-tree`: Tree view from the current command down through subcommands and flags.
 - `--help-docs`: Markdown documentation for the current command.
+- `--version` or `-v`: Print the Mirror CLI version without loading project configuration.
+
+Release dry runs accept `--dry-run` and the legacy `-dy` alias. `--output` and `--auxiliary` accept repeated flags or comma-separated values.
 
 #### `mirror version`
 Manages the version lifecycle.

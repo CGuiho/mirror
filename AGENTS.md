@@ -2,7 +2,7 @@
 
 - The real package lives in `mirror/`; run package commands there unless editing root docs or `ci/`.
 - `@guiho/mirror` is a Bun-native CLI-only package. The CLI entrypoint is `mirror/source/guiho-mirror-bin.ts`; Bun compiles `mirror/bin/` for local validation and platform release assets.
-- Do not add Node.js runtime imports or public TypeScript API exports. Use Bun APIs for file IO, TOML parsing, process execution, and binary compilation. Keep `semver` for semantic version calculations; Mirror uses an internal CLI router instead of `citty`.
+- Do not add Node.js runtime imports or public TypeScript API exports. Use Bun APIs for file IO, TOML parsing, process execution, and binary compilation. Keep `semver` for semantic version calculations and `citty` as the sole general CLI parser, router, alias registry, and ordinary usage generator.
 - Use Bun, not npm/pnpm/yarn. Install from `mirror/` with `bun install`. Private `@guiho40` packages use Google Artifact Registry from `mirror/.npmrc`; auth helper is `bun _gaa` or `bunx google-artifactregistry-auth`.
 
 ## Commands

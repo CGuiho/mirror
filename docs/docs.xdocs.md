@@ -3,6 +3,7 @@ subject: "mirror-docs"
 description: "Durable documentation directory for docs."
 parent: "mirror"
 children:
+  - "mirror-docs-todo"
   - "mirror-docs-validation"
 files: {}
 documents:

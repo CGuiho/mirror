@@ -18,3 +18,13 @@ Add support for reading and updating Python package versions in Mirror. Initial 
 ## Python Source-To-Target Version Sync
 
 Add an option for Python version propagation from a source project to a target project. Initial planning should define what "source" and "target" mean for Python projects, how the target version is selected or derived, and whether this should be a CLI option, configuration field, or both.
+
+## Citty CLI Migration
+
+- Status: completed
+- Created: `2026-07-14`
+- Updated: `2026-07-14`
+- Outcome: Replace Mirror's handwritten argument parsing and command routing with Citty while preserving release safety, command compatibility, contextual help, native distribution, and domain behavior.
+- Spec: [docs/todo/citty-cli-migration.md](docs/todo/citty-cli-migration.md)
+- Implementation: [docs/todo/citty-cli-migration-implementation.md](docs/todo/citty-cli-migration-implementation.md)
+- Validation: [docs/validation/citty-cli-migration.md](docs/validation/citty-cli-migration.md)

@@ -19,7 +19,6 @@ import {
   mirrorAgentsSectionHeading,
   mirrorAgentsSectionStartMarker,
   normalizeHooksConfig,
-  parseMirrorCliOptions,
   readJsrName,
   readJsrVersion,
   readPackageName,
@@ -48,7 +47,7 @@ import {
 import { ensureMirrorAgentInstructionFiles, installMirrorSkills } from './agents.js'
 import type { MirrorAdapterName, MirrorInitPrompter, MirrorVersionPlan } from './guiho-mirror.js'
 import { dirnamePath, joinPath } from './path.js'
-import { ensureDirectory, makeTempDirectory, readTextFile, removePath, writeTextFile } from './runtime.js'
+import { ensureDirectory, readTextFile, removePath, writeTextFile } from './runtime.js'
 
 const existsSync = (path: string) => Bun.file(path).exists()
 const mkdir = (path: string, _options?: { recursive?: boolean }) => ensureDirectory(path)
@@ -66,53 +65,6 @@ afterEach(async () => {
 })
 
 describe('Mirror v3', () => {
-  test('parses operational and override flags', () => {
-    const options = parseMirrorCliOptions([
-      '--source',
-      'package.json',
-      '--output',
-      'package.json',
-      '--output=jsr.json,git',
-      '--package-file=custom-package.json',
-      '--jsr-file',
-      'custom-jsr.json',
-      '--preid',
-      'alpha',
-      '--dry-run',
-      '--commit',
-      '--push',
-      '--allow-dirty',
-      '--yes',
-      '--help-tree',
-      '--help-docs',
-      '--tool',
-      'all',
-    ])
-
-    expect(options).toMatchObject({
-      source: 'package.json',
-      output: ['package.json', 'jsr.json', 'git'],
-      packageFile: 'custom-package.json',
-      jsrFile: 'custom-jsr.json',
-      preid: 'alpha',
-      dryRun: true,
-      commit: true,
-      push: true,
-      allowDirty: true,
-      yes: true,
-      helpTree: true,
-      helpDocs: true,
-      tool: 'all',
-    })
-  })
-
-  test('parses upgrade --version as a value flag', () => {
-    const options = parseMirrorCliOptions(['upgrade', '--version', '3.4.0'])
-
-    expect(options.upgradeVersion).toBe('3.4.0')
-    expect(options.version).toBe(false)
-  })
-
   test('renders command tree and Markdown docs', () => {
     expect(showMirrorHelpTree()).toContain('mirror upgrade')
     expect(showMirrorCommandHelpTree(['upgrade'])).toContain('mirror upgrade check')
@@ -132,7 +84,20 @@ describe('Mirror v3', () => {
       expect(resolveCachePath({ cacheDir: dir })).toBe(join(dir, 'update.json'))
       expect(await readUpdateCache({ cacheDir: dir })).toBeNull()
 
+      const packageMetadata = await Bun.file(join(import.meta.dir, '..', 'package.json')).json() as { version: string }
+      const current = await upgradeSelf({ version: packageMetadata.version, arch: 'x64', cacheDir: dir })
+      expect(current.upToDate).toBe(true)
+      expect(current.scheduled).toBe(false)
+      expect(current.asset).toBeUndefined()
+      expect(await readUpdateCache({ cacheDir: dir })).toBeNull()
+
+      const cli = await runMirrorCliWithEnv({ ...process.env as Record<string, string | undefined>, MIRROR_SELF_PATH: executable }, 'upgrade', '--version', packageMetadata.version)
+      expect(cli.exitCode).toBe(0)
+      expect(cli.stdout).toContain('Already up to date.')
+      expect(cli.stdout).not.toContain('Upgrade downloaded.')
+
       const result = await upgradeSelf({ version: '3.4.0', arch: 'x64', dryRun: true })
+      expect(result.upToDate).toBe(false)
       expect(result.asset).toBe(platform() === 'win32' ? 'guiho-mirror-windows-x64-baseline.exe' : platform() === 'darwin' ? 'guiho-mirror-macos-x64-baseline' : 'guiho-mirror-linux-x64-baseline')
       expect(result.url).toContain('%40guiho%2Fmirror%403.4.0')
     } finally {
@@ -141,11 +106,37 @@ describe('Mirror v3', () => {
     }
   })
 
-  test('expands short flag aliases -dy and -y', () => {
-    const options = parseMirrorCliOptions(['-dy', '-y'])
+  test('routes global version and the hidden update worker without project configuration', async () => {
+    const packageMetadata = await Bun.file(join(import.meta.dir, '..', 'package.json')).json() as { version: string }
+    const env = { ...process.env as Record<string, string | undefined>, MIRROR_DISABLE_UPDATE_CHECK: '1' }
 
-    expect(options.dryRun).toBe(true)
-    expect(options.yes).toBe(true)
+    const version = await runMirrorCliWithEnv(env, '-v')
+    const worker = await runMirrorCliWithEnv(env, '--mirror-update-check-worker')
+
+    expect(version.exitCode).toBe(0)
+    expect(version.stdout.trim()).toBe(packageMetadata.version)
+    expect(version.stderr).toBe('')
+    expect(worker.exitCode).toBe(0)
+    expect(worker.stdout).toBe('')
+    expect(worker.stderr).toBe('')
+  })
+
+  test('runs Citty uninstall dry-run without deleting the executable', async () => {
+    const cwd = await createTempDir()
+    const executable = join(cwd, platform() === 'win32' ? 'mirror.exe' : 'mirror')
+    await writeText(executable, platform() === 'win32' ? 'MZ' : '\x7fELF')
+
+    const result = await runMirrorCliWithEnv(
+      { ...process.env as Record<string, string | undefined>, MIRROR_SELF_PATH: executable },
+      'uninstall',
+      '-dy',
+      '--format',
+      'json',
+    )
+
+    expect(result.exitCode).toBe(0)
+    expect(JSON.parse(result.stdout)).toMatchObject({ executablePath: executable, dryRun: true, scheduled: false })
+    expect(await existsSync(executable)).toBe(true)
   })
 
   test('discovers explicit, root, and nested configs with root precedence', async () => {
@@ -890,7 +881,7 @@ path = "custom-package.json"
     expect(packageJson['main']).toBeUndefined()
     expect(packageJson['types']).toBeUndefined()
     expect(packageJson['exports']).toBeUndefined()
-    expect(packageJson['dependencies']).toEqual({ semver: '^7.8.1' })
+    expect(packageJson['dependencies']).toEqual({ citty: '^0.2.2', semver: '^7.8.1' })
     expect(packageJson['bin']).toEqual({ mirror: 'scripts/mirror-bin.ts' })
     expect(packageJson['scripts']).toMatchObject({ postinstall: 'bun run scripts/install-package.ts', prepack: 'bun run binary' })
     expect(packageJson['files']).toContain('install.sh')
@@ -956,9 +947,9 @@ path = "custom-package.json"
     const result = await runMirrorCliFromCwd(cwd, await createTempDir())
 
     expect(result.exitCode).toBe(0)
-    expect(result.stdout).toMatch(/mirror \d+\.\d+\.\d+/)
-    expect(result.stdout).toContain('Usage')
-    expect(result.stdout).toContain('Version Commands')
+    expect(result.stdout).toMatch(/mirror v\d+\.\d+\.\d+/)
+    expect(result.stdout).toContain('USAGE')
+    expect(result.stdout).toContain('COMMANDS')
   })
 
   test('runs configured agent automation with no arguments', async () => {
@@ -970,7 +961,7 @@ path = "custom-package.json"
     const result = await runMirrorCliFromCwd(cwd, homeDirectory)
 
     expect(result.exitCode).toBe(0)
-    expect(result.stdout).toContain('Usage')
+    expect(result.stdout).toContain('USAGE')
     expect(result.stderr).toContain('guiho-s-mirror skill for agents not found global')
     expect(await readFile(join(cwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
     expect(await existsSync(resolveMirrorSkillPath('local', { cwd, homeDirectory }))).toBe(false)
@@ -981,7 +972,7 @@ path = "custom-package.json"
     const result = await runMirrorCli('--no-color', '--help')
 
     expect(result.exitCode).toBe(0)
-    expect(result.stdout).toContain('Usage')
+    expect(result.stdout).toContain('USAGE')
     expect(result.stdout).not.toContain('\u001B[')
   })
 
@@ -994,19 +985,19 @@ path = "custom-package.json"
     const unknownSubcommand = await runMirrorCli('version', 'unknown')
 
     expect(rootHelp.exitCode).toBe(0)
-    expect(rootHelp.stdout).toContain('Version Commands')
+    expect(rootHelp.stdout).toContain('COMMANDS')
     expect(version.exitCode).toBe(0)
-    expect(version.stdout).toContain('mirror version - Plan and apply semantic version changes.')
+    expect(version.stdout).toContain('Plan and apply semantic version changes. (mirror version)')
     expect(shortHelp.exitCode).toBe(0)
-    expect(shortHelp.stdout).toContain('mirror version - Plan and apply semantic version changes.')
+    expect(shortHelp.stdout).toContain('Plan and apply semantic version changes. (mirror version)')
     expect(planHelp.exitCode).toBe(0)
-    expect(planHelp.stdout).toContain('mirror version plan - Build a read-only release plan.')
+    expect(planHelp.stdout).toContain('Build a read-only release plan. (mirror version plan)')
     expect(missingTarget.exitCode).toBe(1)
     expect(missingTarget.stderr).toContain('error: Missing release target.')
-    expect(missingTarget.stderr).toContain('mirror version plan - Build a read-only release plan.')
+    expect(missingTarget.stderr).toContain('Build a read-only release plan. (mirror version plan)')
     expect(unknownSubcommand.exitCode).toBe(1)
     expect(unknownSubcommand.stderr).toContain('error: Unknown command: version unknown')
-    expect(unknownSubcommand.stderr).toContain('mirror version - Plan and apply semantic version changes.')
+    expect(unknownSubcommand.stderr).toContain('Plan and apply semantic version changes. (mirror version)')
   })
 
   test('runs CLI version current, next, plan, and apply', async () => {
@@ -1053,6 +1044,26 @@ path = "custom-package.json"
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toContain('output: package.json, jsr.json')
     expect(result.stdout).toContain('next: 1.0.1')
+  })
+
+  test('keeps Citty dry-run aliases non-mutating and rejects unknown scoped options', async () => {
+    const cwd = await createPackageAndJsrFixture()
+    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({
+      output: ['package.json'],
+      autoAgentsMd: false,
+      autoSkillInstall: false,
+    }))
+
+    const dryRun = await runMirrorCli('version', 'apply', 'patch', '--cwd', cwd, '-dy')
+    const invalid = await runMirrorCli('version', 'plan', 'patch', '--cwd', cwd, '--arch', 'x64')
+
+    expect(dryRun.exitCode).toBe(0)
+    expect(dryRun.stdout).toContain('applied: false')
+    expect(await readPackageVersion(await loadMirrorConfig({ cwd }))).toBe('1.0.0')
+    expect(invalid.exitCode).toBe(1)
+    expect(invalid.stderr).toContain('error: Unknown option --arch')
+    expect(invalid.stderr).toContain('Build a read-only release plan. (mirror version plan)')
+    expect(await readPackageVersion(await loadMirrorConfig({ cwd }))).toBe('1.0.0')
   })
 
   test('package-only and JSR-only flows work without Git installed', async () => {
@@ -1295,7 +1306,9 @@ before_apply = ${JSON.stringify(hookCommand)}
 })
 
 const createTempDir = async () => {
-  const path = await makeTempDirectory('guiho-mirror-')
+  const root = platform() === 'win32' ? `${process.env['SystemDrive'] ?? 'C:'}\\tmp` : '/tmp'
+  const path = join(root, `guiho-mirror-${crypto.randomUUID()}`)
+  await ensureDirectory(path)
   temporaryDirectories.push(path)
   return path
 }

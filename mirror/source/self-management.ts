@@ -89,6 +89,7 @@ async function checkForLatestVersion(options: SelfManagementOptions = {}) {
 }
 
 async function runBackgroundUpdateCheck(options: SelfManagementOptions = {}) {
+  if (process.env['MIRROR_DISABLE_UPDATE_CHECK'] === '1') return
   await checkForLatestVersion(options)
 }
 
@@ -116,6 +117,9 @@ async function upgradeSelf(options: UpgradeOptions = {}): Promise<MirrorUpgradeR
   const executablePath = resolveExecutablePath(options)
   await assertNativeInstall(executablePath, 'upgrade')
   const targetVersion = options.version ? normalizeVersion(options.version) : (await fetchLatestRelease(options.repo)).version
+  if (compareVersions(targetVersion, currentMirrorVersion) === 0) {
+    return { currentVersion: currentMirrorVersion, targetVersion, executablePath, dryRun: Boolean(options.dryRun), scheduled: false, upToDate: true }
+  }
   const platform = detectNativePlatform()
   const arch = detectNativeArch(options.arch)
   const variant = parseVariant(options.variant)
@@ -126,7 +130,7 @@ async function upgradeSelf(options: UpgradeOptions = {}): Promise<MirrorUpgradeR
     const url = buildDownloadUrl(asset, targetVersion, options.repo)
     const temporaryPath = joinPath(dirnamePath(executablePath), `.mirror-upgrade-${process.pid}-${asset}`)
 
-    if (options.dryRun) return { currentVersion: currentMirrorVersion, targetVersion, asset, url, executablePath, dryRun: true, scheduled: false }
+    if (options.dryRun) return { currentVersion: currentMirrorVersion, targetVersion, asset, url, executablePath, dryRun: true, scheduled: false, upToDate: false }
 
     const response = await fetch(url)
     if (!response.ok) {
@@ -151,12 +155,12 @@ async function upgradeSelf(options: UpgradeOptions = {}): Promise<MirrorUpgradeR
 
     if (platform === 'windows') {
       await scheduleWindowsReplacement(temporaryPath, executablePath)
-      return { currentVersion: currentMirrorVersion, targetVersion, asset, url, executablePath, dryRun: false, scheduled: true }
+      return { currentVersion: currentMirrorVersion, targetVersion, asset, url, executablePath, dryRun: false, scheduled: true, upToDate: false }
     }
 
     await runChecked(['chmod', '755', temporaryPath])
     await runChecked(['mv', temporaryPath, executablePath])
-    return { currentVersion: currentMirrorVersion, targetVersion, asset, url, executablePath, dryRun: false, scheduled: false }
+    return { currentVersion: currentMirrorVersion, targetVersion, asset, url, executablePath, dryRun: false, scheduled: false, upToDate: false }
   }
 
   throw new MirrorError(`No compatible Mirror binary found for ${platform}/${arch}. Last status: ${lastStatus || 'unknown'}`)

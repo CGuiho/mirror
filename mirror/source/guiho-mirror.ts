@@ -30,7 +30,6 @@ export type {
 } from './types.js'
 
 export { MirrorError, invariant } from './errors.js'
-export { parseMirrorCliOptions } from './flags.js'
 export { showMirrorCommandHelp, showMirrorCommandHelpDocs, showMirrorCommandHelpTree, showMirrorHelp, showMirrorHelpDocs, showMirrorHelpTree } from './help.js'
 export {
   checkForLatestVersion,

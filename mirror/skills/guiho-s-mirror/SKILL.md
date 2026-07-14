@@ -1,7 +1,21 @@
 ---
 name: guiho-s-mirror
-version: 3.4.0
+version: 3.5.0-alpha.0
 description: Use this skill whenever the user asks to version, bump, release, tag, initialize, configure, or troubleshoot a project with GUIHO Mirror (`@guiho/mirror`). This includes Bun, npm, JSR, package.json, jsr.json, Git tag, semantic versioning, changelog, release-plan, prerelease, and "what version comes next" workflows, even when the user only says "cut a patch" or "prepare a release" without naming Mirror.
+purpose: Guide safe semantic-version planning and release workflows through the Mirror CLI.
+created: 2026-06-27
+owner: mirror-mirror-skills-guiho-s-mirror
+flags:
+  - semantic-project-versioning
+tags:
+  - versioning
+  - release
+  - cli
+keywords:
+  - mirror
+  - semantic versioning
+  - citty
+  - release plan
 ---
 
 # GUIHO Mirror
@@ -25,6 +39,8 @@ Choose the installed native CLI first:
 When unsure, run a cheap availability check (`mirror --help`) and then reuse the working command consistently. Run `mirror --help`, `mirror <command> --help`, `mirror --help-tree`, or `mirror <command> --help-docs` for command-specific details when needed.
 
 Mirror ships as a Bun-compiled native self-sufficient CLI binary. The installed `mirror` command should not require Node.js or Bun at runtime. It can check for updates, upgrade itself with `mirror upgrade`, and remove its native binary with `mirror uninstall`. Bun is required for Mirror project development and binary compilation. Git is required only for Git-based workflows: `source = "git"`, `output = ["git"]`, commits, tags, or pushes.
+
+Mirror uses Citty for its declarative command tree, scoped flags, aliases, and ordinary usage. `-h` and `--help` show contextual command help, while `-v` and `--version` print the CLI version without loading project configuration. Unknown commands, unknown scoped flags, and missing targets exit nonzero and must never be treated as release targets. `--output` and `--auxiliary` accept repeated or comma-separated values; `-dy` remains the compatibility alias for `--dry-run`.
 
 ## Release Workflow
 

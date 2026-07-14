@@ -15,12 +15,13 @@ files:
   "install.sh": "File in mirror."
   "jsr.json": "JSON configuration or structured data file."
   "mirror.config.toml": "TOML configuration file."
-  "package.json": "Package metadata, scripts, dependencies, and publish configuration."
+  "package.json": "CLI-only package metadata, Bun scripts, semver engine dependency, Citty routing dependency, and publish configuration."
   "tsconfig.build.json": "TypeScript compiler configuration."
   "tsconfig.json": "TypeScript compiler configuration."
 documents:
   "DOCS.md": "Markdown companion document in mirror."
   "LICENSE.md": "Markdown companion document in mirror."
+  "README.md": "Published package README covering installation, Citty CLI behavior, command hierarchy, safety, and development."
   "xdocs-overview.md": "Generated companion overview that links back to this directory xdocs descriptor."
 tags:
   - "module"
