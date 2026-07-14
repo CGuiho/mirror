@@ -39,7 +39,7 @@ const globalFlags: readonly HelpFlag[] = [
   { name: '--tool agents|claude|all', description: 'Override the configured agent skill target.' },
   { name: '--no-color', description: 'Disable ANSI color output.' },
   { name: '--verbose', description: 'Show full error details.' },
-  { name: '--help', description: 'Show help.' },
+  { name: '--help, -h', description: 'Show help.' },
   { name: '--help-tree', description: 'Show the command tree from the current command.' },
   { name: '--help-docs', description: 'Print Markdown documentation for the current command.' },
   { name: '--version', description: 'Show version.' },
@@ -165,7 +165,7 @@ function showMirrorCommandHelp(commandPath: readonly string[], version: string):
   if (!record) return showMirrorHelp(version)
 
   return [
-    `mirror ${record.name} - ${record.summary}`,
+    `mirror ${commandPath.join(' ')} - ${record.summary}`,
     '',
     'USAGE',
     '',

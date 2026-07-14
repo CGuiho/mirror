@@ -163,6 +163,7 @@ Global flags are available on commands that load configuration.
 - `--no-color`: Disable ANSI color output.
 - `--verbose`: Print full error details and stack traces.
 - `--tool agents|claude|all`: Override the configured agent skill target for commands that perform agent setup.
+- `--help` or `-h`: Show root or contextual command help.
 - `--help-tree`: Show the command tree from the current command.
 - `--help-docs`: Print Markdown documentation for the current command.
 
@@ -253,6 +254,8 @@ Automatic skill installation is global-only by default. Use `mirror agents insta
 ### `mirror version`
 
 Reads, plans, and applies version changes.
+
+Running `mirror version` without a subcommand shows the version command help. `-h` is an alias for `--help` at every command scope. When a recognized command is incomplete, Mirror prints the usage error followed by help for that command and exits with a nonzero status.
 
 ```bash
 mirror version current

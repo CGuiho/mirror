@@ -985,6 +985,30 @@ path = "custom-package.json"
     expect(result.stdout).not.toContain('\u001B[')
   })
 
+  test('shows contextual help for command groups, short help, and usage errors', async () => {
+    const rootHelp = await runMirrorCli('-h')
+    const version = await runMirrorCli('version')
+    const shortHelp = await runMirrorCli('version', '-h')
+    const planHelp = await runMirrorCli('version', 'plan', '-h')
+    const missingTarget = await runMirrorCli('version', 'plan')
+    const unknownSubcommand = await runMirrorCli('version', 'unknown')
+
+    expect(rootHelp.exitCode).toBe(0)
+    expect(rootHelp.stdout).toContain('Version Commands')
+    expect(version.exitCode).toBe(0)
+    expect(version.stdout).toContain('mirror version - Plan and apply semantic version changes.')
+    expect(shortHelp.exitCode).toBe(0)
+    expect(shortHelp.stdout).toContain('mirror version - Plan and apply semantic version changes.')
+    expect(planHelp.exitCode).toBe(0)
+    expect(planHelp.stdout).toContain('mirror version plan - Build a read-only release plan.')
+    expect(missingTarget.exitCode).toBe(1)
+    expect(missingTarget.stderr).toContain('error: Missing release target.')
+    expect(missingTarget.stderr).toContain('mirror version plan - Build a read-only release plan.')
+    expect(unknownSubcommand.exitCode).toBe(1)
+    expect(unknownSubcommand.stderr).toContain('error: Unknown command: version unknown')
+    expect(unknownSubcommand.stderr).toContain('mirror version - Plan and apply semantic version changes.')
+  })
+
   test('runs CLI version current, next, plan, and apply', async () => {
     const cwd = await createPackageAndJsrFixture()
     await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'], autoSkillInstall: false }))

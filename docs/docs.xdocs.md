@@ -2,7 +2,8 @@
 subject: "mirror-docs"
 description: "Durable documentation directory for docs."
 parent: "mirror"
-children: []
+children:
+  - "mirror-docs-validation"
 files: {}
 documents:
   "2026-05-16-mirror-v3-open-source-readiness.md": "Markdown companion document in docs."

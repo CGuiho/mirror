@@ -12,6 +12,16 @@ export class MirrorError extends Error {
   }
 }
 
+export class MirrorUsageError extends MirrorError {
+  readonly helpPath: readonly string[]
+
+  constructor(message: string, helpPath: readonly string[]) {
+    super(message)
+    this.name = 'MirrorUsageError'
+    this.helpPath = helpPath
+  }
+}
+
 export const invariant = (condition: unknown, message: string): asserts condition => {
   if (!condition) throw new MirrorError(message)
 }

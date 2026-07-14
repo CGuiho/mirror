@@ -2,8 +2,9 @@
  * @copyright Copyright (c) 2026 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
  */
 
-import type { MirrorAdapterName, MirrorAgentToolSelection, MirrorCliOptions, MirrorFormat } from './types.js'
 import { MirrorError } from './errors.js'
+
+import type { MirrorAdapterName, MirrorAgentToolSelection, MirrorCliOptions, MirrorFormat } from './types.js'
 
 const booleanFlags = new Set(['dry-run', 'commit', 'push', 'allow-dirty', 'non-interactive', 'yes', 'no-color', 'verbose', 'help', 'version', 'help-tree', 'help-docs', 'mirror-update-check-worker'])
 const adapterNames = new Set(['package.json', 'jsr.json', 'git'])
@@ -11,16 +12,17 @@ const agentToolSelections = new Set(['agents', 'claude', 'all'])
 
 const shortFlagAliases: Record<string, string> = {
   '-dy': '--dry-run',
+  '-h': '--help',
   '-y': '--yes',
 }
 
 const normalizeKey = (key: string) => key.replace(/-([a-z])/g, (_match, letter: string) => letter.toUpperCase())
 
-const expandShortFlags = (rawArgs: string[]) => rawArgs.map((token) => shortFlagAliases[token] ?? token)
+export const normalizeMirrorCliArgs = (rawArgs: string[]) => rawArgs.map((token) => shortFlagAliases[token] ?? token)
 
 export const parseMirrorCliOptions = (rawArgs: string[]): MirrorCliOptions => {
   const parsed: Record<string, string | boolean | string[]> = {}
-  const args = expandShortFlags(rawArgs)
+  const args = normalizeMirrorCliArgs(rawArgs)
   const commandName = args.find((token) => token && !token.startsWith('-'))
 
   for (let index = 0; index < args.length; index += 1) {

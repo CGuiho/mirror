@@ -3,11 +3,11 @@
  */
 
 import { ensureMirrorAgentInstructionFiles, installMirrorSkills, runMirrorAgentAutomation } from './agents.js'
-import { MirrorError } from './errors.js'
+import { MirrorError, MirrorUsageError } from './errors.js'
 import { readCurrentVersion, resolveProjectName } from './adapters.js'
 import { configPathForDisplay, discoverMirrorConfig, loadMirrorConfig, relativeFromCwd, writeInitConfigFromAnswers } from './config.js'
 import { executeVersionPlan } from './executor.js'
-import { parseMirrorCliOptions } from './flags.js'
+import { normalizeMirrorCliArgs, parseMirrorCliOptions } from './flags.js'
 import { createReadlineInitPrompter, isInteractiveInit, resolveInitAnswers } from './init.js'
 import { buildVersionPlan, validateMirrorConfig } from './plan.js'
 import {
@@ -40,7 +40,7 @@ type CommandContext = {
 export const createMirrorCommand = () => ({ name: 'mirror', version: mirrorVersion })
 
 export const runMirrorCli = async (rawArgs = process.argv.slice(2)) => {
-  const effectiveArgs = rawArgs.length === 0 ? ['--help'] : rawArgs
+  const effectiveArgs = normalizeMirrorCliArgs(rawArgs.length === 0 ? ['--help'] : rawArgs)
   const verbose = effectiveArgs.includes('--verbose')
   const restoreColorOutput = effectiveArgs.includes('--no-color') ? stripColorFromProcessOutput() : () => {}
 
@@ -88,6 +88,11 @@ const runCommand = async (context: CommandContext) => {
   const [group, command, subcommand] = context.positional
 
   if (!group) {
+    await printHelp(context)
+    return
+  }
+
+  if (helpOnlyCommandGroups.has(group) && !command) {
     await printHelp(context)
     return
   }
@@ -179,7 +184,7 @@ const runCommand = async (context: CommandContext) => {
     return
   }
 
-  throw new MirrorError(`Unknown command: ${context.positional.join(' ')}`)
+  throw new MirrorUsageError(`Unknown command: ${context.positional.join(' ')}`, knownCommandGroups.has(group) ? [group] : [])
 }
 
 const runInit = async (context: CommandContext) => {
@@ -382,7 +387,7 @@ const compareVersions = (a: string, b: string) => {
 
 const requireTarget = (context: CommandContext) => {
   const target = context.positional[2]
-  if (!target) throw new MirrorError('Missing release target. Expected a release type or exact semantic version.')
+  if (!target) throw new MirrorUsageError('Missing release target. Expected a release type or exact semantic version.', context.positional.slice(0, 2))
   return target
 }
 
@@ -396,6 +401,13 @@ const prepareAgents = async (options: MirrorCliOptions) => {
 }
 
 const handleCliError = (error: unknown, verbose: boolean): never => {
+  if (error instanceof MirrorUsageError) {
+    console.error(`error: ${error.message}`)
+    process.stderr.write(`\n${showMirrorCommandHelp(error.helpPath, mirrorVersion)}`)
+    if (verbose) console.error(error.stack)
+    process.exit(error.exitCode)
+  }
+
   if (error instanceof MirrorError) {
     console.error(`error: ${error.message}`)
     if (verbose) console.error(error.stack)
@@ -432,3 +444,5 @@ const stripAnsiValue = (value: unknown) => (typeof value === 'string' ? stripAns
 
 const booleanFlags = new Set(['dry-run', 'commit', 'push', 'allow-dirty', 'non-interactive', 'yes', 'no-color', 'verbose', 'help', 'version', 'help-tree', 'help-docs', 'mirror-update-check-worker'])
 const shortBooleanFlags = new Set(['-dy', '-y'])
+const helpOnlyCommandGroups = new Set(['agents', 'config', 'version'])
+const knownCommandGroups = new Set(['agents', 'config', 'init', 'uninstall', 'upgrade', 'version'])
