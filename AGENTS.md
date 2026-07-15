@@ -1,3 +1,9 @@
+## Agent
+
+Always read this: /c/GUIHO/superiority/agents/guiho-a-0001-swe.AGENTS.md (C:\GUIHO\superiority\agents\guiho-a-0001-swe.AGENTS.md)
+Stop if you can not find it.
+
+
 ﻿# Repository Notes
 
 - The real package lives in `mirror/`; run package commands there unless editing root docs or `ci/`.
