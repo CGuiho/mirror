@@ -8,7 +8,6 @@ export type {
   MirrorConfig,
   MirrorExecutionResult,
   MirrorFormat,
-  MirrorAgentAutomationResult,
   MirrorAgentSettings,
   MirrorAgentsInstructionsResult,
   MirrorHookCommand,
@@ -40,7 +39,7 @@ export type {
 } from './types.js'
 
 export { MirrorError, invariant } from './errors.js'
-export { showMirrorCommandHelp, showMirrorCommandHelpDocs, showMirrorCommandHelpTree, showMirrorHelp, showMirrorHelpDocs, showMirrorHelpTree } from './help.js'
+export { showMirrorCommandHelpDocs, showMirrorCommandHelpTree } from './help.js'
 export {
   checkForLatestVersion,
   buildAssetCandidates,
@@ -75,7 +74,6 @@ export {
   mirrorSkillVersion,
   resolveMirrorAgentSettings,
   resolveMirrorSkillPath,
-  runMirrorAgentAutomation,
 } from './agents.js'
 export {
   createInitConfig,
