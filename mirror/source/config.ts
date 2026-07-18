@@ -1,5 +1,5 @@
 /**
- * @copyright Copyright (c) 2026 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
+ * @copyright Copyright (c) 2026 GUIHO Technologies as represented by CristÃ³vÃ£o GUIHO. All Rights Reserved.
  */
 
 import type {
@@ -8,19 +8,14 @@ import type {
   MirrorConfig,
   MirrorConfigDiscovery,
   MirrorInitAnswers,
-  MirrorAgentToolSelection,
   MirrorProjectNameSource,
   MirrorRawConfig,
 } from './types.js'
 import { MirrorError } from './errors.js'
-import { mirrorConfigSchemaReference } from './schema.js'
+import { mirrorConfigSchemaReference, MirrorRawConfigSchema, decodeWithSchema } from './schema.js'
 import { normalizeHooksConfig } from './hooks.js'
 import { basenamePath, isAbsolutePath, joinPath, relativePath, resolvePath } from './path.js'
 import { fileExists, readTextFile, writeTextFile } from './runtime.js'
-
-const adapters = new Set(['package.json', 'jsr.json', 'git'])
-const projectNameSources = new Set(['package.json', 'jsr.json'])
-const agentToolSelections = new Set(['agents', 'claude', 'all'])
 
 export const resolveMirrorPath = (cwd: string, path: string) => (isAbsolutePath(path) ? resolvePath(path) : resolvePath(cwd, path))
 
@@ -29,45 +24,52 @@ export const relativeFromCwd = (cwd: string, path: string) => {
   return relativePathValue || '.'
 }
 
+export const resolveMirrorHome = () => {
+  const home = Bun.env['HOME'] ?? Bun.env['USERPROFILE']
+  if (!home) throw new MirrorError('Unable to resolve the user home directory from HOME or USERPROFILE.', 5)
+  return resolvePath(home, '.guiho', 'mirror')
+}
+
 export const discoverMirrorConfig = async (cwd: string, explicitPath?: string): Promise<MirrorConfigDiscovery> => {
   if (explicitPath) {
     const configPath = resolveMirrorPath(cwd, explicitPath)
     return { path: configPath, raw: await readConfigFile(configPath) }
   }
 
-  const rootConfigPath = resolvePath(cwd, 'mirror.config.toml')
-  if (await fileExists(rootConfigPath)) return { path: rootConfigPath, raw: await readConfigFile(rootConfigPath) }
+  const projectPath = resolvePath(cwd, 'mirror.yaml')
+  if (await fileExists(projectPath)) return { path: projectPath, raw: await readConfigFile(projectPath) }
 
-  const nestedConfigPath = resolvePath(cwd, 'config', 'mirror.config.toml')
-  if (await fileExists(nestedConfigPath)) return { path: nestedConfigPath, raw: await readConfigFile(nestedConfigPath) }
+  const globalPath = resolvePath(resolveMirrorHome(), 'mirror.yaml')
+  if (await fileExists(globalPath)) return { path: globalPath, raw: await readConfigFile(globalPath) }
 
   return {}
 }
 
 export const readConfigFile = async (path: string): Promise<MirrorRawConfig> => {
-  if (!(await fileExists(path))) throw new MirrorError(`Configuration file not found: ${path}`)
+  if (!(await fileExists(path))) throw new MirrorError(`Configuration file not found: ${path}`, 3)
 
-  const content = await readTextFile(path)
   let parsed: unknown
   try {
-    parsed = Bun.TOML.parse(content)
+    parsed = Bun.YAML.parse(await readTextFile(path))
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    throw new MirrorError(`Invalid TOML in configuration file: ${path}\n${message}`)
+    throw new MirrorError(`Invalid YAML in configuration file: ${path}\n${message}`, 3)
   }
 
-  if (!isRecord(parsed)) throw new MirrorError(`Configuration file must contain a TOML object: ${path}`)
-
-  return parsed as MirrorRawConfig
+  return decodeWithSchema<typeof MirrorRawConfigSchema, MirrorRawConfig>(MirrorRawConfigSchema, parsed, `Mirror configuration in ${path}`, 3)
 }
 
 export const loadMirrorConfig = async (options: MirrorCliOptions = {}): Promise<MirrorConfig> => {
   const cwd = resolvePath(options.cwd ?? process.cwd())
   const discovered = await discoverMirrorConfig(cwd, options.config)
 
-  if (!discovered.raw) throw new MirrorError('Mirror configuration not found. Run `mirror init package`, `mirror init jsr`, or `mirror init git`.')
+  if (!discovered.raw) throw new MirrorError('Mirror configuration not found. Run `mirror init`.', 3)
 
-  return normalizeMirrorConfig(discovered.raw, cwd, discovered.path, options)
+  const config = normalizeMirrorConfig(discovered.raw, cwd, discovered.path, options)
+  if (config.configPath && options.reportConfig !== false && options.format !== 'json') {
+    process.stdout.write(`configuration file loaded: ${config.configPath}\n`)
+  }
+  return config
 }
 
 export const normalizeMirrorConfig = (
@@ -76,51 +78,27 @@ export const normalizeMirrorConfig = (
   configPath: string | undefined,
   options: MirrorCliOptions = {},
 ): MirrorConfig => {
-  if (raw.schema !== 1) throw new MirrorError('Unsupported or missing configuration schema. Expected `schema = 1`.')
-  if (raw.version?.scheme !== undefined && raw.version.scheme !== 'semver') throw new MirrorError('Only `version.scheme = "semver"` is supported.')
-
-  const source = options.source ?? assertAdapter(raw.version?.source, 'version.source')
-  const output = dedupeAdapters(options.output ?? assertOutput(raw.version?.output))
+  const source = options.source ?? raw.version!.source!
+  const output = [...new Set(options.output ?? raw.version!.output!)]
   const nameSource: MirrorProjectNameSource | undefined = raw.project?.name_source
-    ? assertProjectNameSource(raw.project.name_source, 'project.name_source')
-    : undefined
-  const projectName = optionalString(raw.project?.name, 'project.name')
-  const prereleaseId = options.preid ?? optionalString(raw.version?.prerelease_id, 'version.prerelease_id') ?? ''
-  const packagePath = options.packageFile ?? optionalString(raw.package?.path, 'package.path') ?? 'package.json'
-  const packageAuxiliaryPaths = assertStringArray(raw.package?.auxiliary_paths, 'package.auxiliary_paths')
-  const jsrPath = options.jsrFile ?? optionalString(raw.jsr?.path, 'jsr.path') ?? 'jsr.json'
-  const tagTemplate = optionalString(raw.git?.tag_template, 'git.tag_template') ?? 'v{version}'
-  const gitCommit = optionalBoolean(raw.git?.commit, 'git.commit') === true
-  const gitPush = optionalBoolean(raw.git?.push, 'git.push') === true
-  const gitAllowDirty = optionalBoolean(raw.git?.allow_dirty, 'git.allow_dirty') === true
-  const writeChangelog = optionalBoolean(raw.agents?.write_changelog, 'agents.write_changelog') !== false
-  const changelogPath = optionalString(raw.agents?.changelog_path, 'agents.changelog_path') ?? 'CHANGELOG.md'
-  const autoAgentsMd = optionalBoolean(raw.agents?.auto_agents_md, 'agents.auto_agents_md') !== false
-  const autoSkillInstall = optionalBoolean(raw.agents?.auto_skill_install, 'agents.auto_skill_install') !== false
-  const skillTool = options.tool ?? optionalAgentToolSelection(raw.agents?.skill_tool, 'agents.skill_tool') ?? 'agents'
-  const hooks = normalizeHooksConfig(raw.hooks)
+  const projectName = raw.project?.name
+  const prereleaseId = options.preid ?? raw.version!.prerelease_id ?? ''
+  const packagePath = options.packageFile ?? raw.package?.path ?? 'package.json'
+  const packageAuxiliaryPaths = raw.package?.auxiliary_paths ?? []
+  const jsrPath = options.jsrFile ?? raw.jsr?.path ?? 'jsr.json'
+  const tagTemplate = raw.git?.tag_template ?? 'v{version}'
+  const gitCommit = raw.git?.commit === true
+  const gitPush = raw.git?.push === true
+  const gitAllowDirty = raw.git?.allow_dirty === true
 
   return {
     schema: 1,
     cwd,
     configPath,
-    project: {
-      name: projectName,
-      nameSource,
-    },
-    version: {
-      scheme: 'semver',
-      source,
-      output,
-      prereleaseId,
-    },
-    package: {
-      path: packagePath,
-      auxiliaryPaths: packageAuxiliaryPaths,
-    },
-    jsr: {
-      path: jsrPath,
-    },
+    project: { name: projectName, nameSource },
+    version: { scheme: 'semver', source, output, prereleaseId },
+    package: { path: packagePath, auxiliaryPaths: packageAuxiliaryPaths },
+    jsr: { path: jsrPath },
     git: {
       tagTemplate,
       commit: options.commit === true || options.push === true || gitCommit || gitPush,
@@ -128,13 +106,10 @@ export const normalizeMirrorConfig = (
       allowDirty: options.allowDirty === true || gitAllowDirty,
     },
     agents: {
-      writeChangelog,
-      changelogPath,
-      autoAgentsMd,
-      autoSkillInstall,
-      skillTool,
+      writeChangelog: raw.agents?.write_changelog !== false,
+      changelogPath: raw.agents?.changelog_path ?? 'CHANGELOG.md',
     },
-    hooks,
+    hooks: normalizeHooksConfig(raw.hooks),
   }
 }
 
@@ -151,45 +126,40 @@ export const defaultInitAnswersForSource = (kind: MirrorAdapterName, cwd: string
   push: false,
 })
 
+const yamlScalar = (value: string) => JSON.stringify(value)
+
 export const generateInitConfig = (answers: MirrorInitAnswers, cwd: string) => {
-  const lines: string[] = []
+  const project = answers.source === 'git'
+    ? `  name: ${yamlScalar(answers.name ?? basenamePath(cwd))}`
+    : `  name_source: ${yamlScalar(answers.source)}`
+  const output = answers.output.map(yamlScalar).join(', ')
+  const auxiliary = answers.auxiliaryPaths.map(yamlScalar).join(', ')
 
-  lines.push(`#:schema ${mirrorConfigSchemaReference}`)
-  lines.push('')
-  lines.push('schema = 1')
-  lines.push('')
-  lines.push('[project]')
-  if (answers.source === 'package.json') lines.push('name_source = "package.json"')
-  else if (answers.source === 'jsr.json') lines.push('name_source = "jsr.json"')
-  else lines.push(`name = "${answers.name ?? basenamePath(cwd)}"`)
-  lines.push('')
-  lines.push('[version]')
-  lines.push('scheme = "semver"')
-  lines.push(`source = "${answers.source}"`)
-  lines.push(`output = [${answers.output.map((value) => `"${value}"`).join(', ')}]`)
-  lines.push(`prerelease_id = "${answers.prereleaseId}"`)
-  lines.push('')
-  lines.push('[package]')
-  lines.push(`path = "${answers.packagePath}"`)
-  lines.push(`auxiliary_paths = [${answers.auxiliaryPaths.map((value) => `"${value}"`).join(', ')}]`)
-  lines.push('')
-  lines.push('[jsr]')
-  lines.push(`path = "${answers.jsrPath}"`)
-  lines.push('')
-  lines.push('[git]')
-  lines.push(`tag_template = "${answers.tagTemplate}"`)
-  lines.push(`commit = ${String(answers.commit)}`)
-  lines.push(`push = ${String(answers.push)}`)
-  lines.push('allow_dirty = false')
-  lines.push('')
-  lines.push('[agents]')
-  lines.push('write_changelog = true')
-  lines.push('changelog_path = "CHANGELOG.md"')
-  lines.push('auto_agents_md = true')
-  lines.push('auto_skill_install = true')
-  lines.push('skill_tool = "agents"')
-
-  return `${lines.join('\n')}\n`
+  return [
+    `# yaml-language-server: $schema=${mirrorConfigSchemaReference}`,
+    'schema: 1',
+    'project:',
+    project,
+    'version:',
+    '  scheme: semver',
+    `  source: ${yamlScalar(answers.source)}`,
+    `  output: [${output}]`,
+    `  prerelease_id: ${yamlScalar(answers.prereleaseId)}`,
+    'package:',
+    `  path: ${yamlScalar(answers.packagePath)}`,
+    `  auxiliary_paths: [${auxiliary}]`,
+    'jsr:',
+    `  path: ${yamlScalar(answers.jsrPath)}`,
+    'git:',
+    `  tag_template: ${yamlScalar(answers.tagTemplate)}`,
+    `  commit: ${String(answers.commit)}`,
+    `  push: ${String(answers.push)}`,
+    '  allow_dirty: false',
+    'agents:',
+    '  write_changelog: true',
+    '  changelog_path: CHANGELOG.md',
+    '',
+  ].join('\n')
 }
 
 export const createInitConfig = (kind: MirrorAdapterName, cwd: string) => generateInitConfig(defaultInitAnswersForSource(kind, cwd), cwd)
@@ -198,134 +168,42 @@ export const writeInitConfig = async (kind: MirrorAdapterName, cwd: string, over
   writeInitConfigFromAnswers(defaultInitAnswersForSource(kind, cwd), cwd, overwrite)
 
 export const writeInitConfigFromAnswers = async (answers: MirrorInitAnswers, cwd: string, overwrite = false) => {
-  const path = joinPath(cwd, 'mirror.config.toml')
+  const path = joinPath(cwd, 'mirror.yaml')
   const generated = generateInitConfig(answers, cwd)
-
   if ((await fileExists(path)) && !overwrite) {
     await writeTextFile(path, reconcileInitConfig(await readTextFile(path), generated))
     return path
   }
-
   await writeTextFile(path, generated)
   return path
 }
 
 export const reconcileInitConfig = (existingContent: string, defaultsContent: string) => {
-  const existingRaw = parseConfigContent(existingContent, 'existing configuration')
-  const defaultsRaw = parseConfigContent(defaultsContent, 'default configuration')
-  const additions: string[] = []
-
-  for (const [sectionName, defaultSection] of Object.entries(defaultsRaw)) {
-    if (!isRecord(defaultSection)) continue
-
-    const existingSection = existingRaw[sectionName]
-
-    if (!isRecord(existingSection)) {
-      additions.push(renderTomlSection(sectionName, defaultSection))
-      continue
-    }
-
-    const missingValues = Object.fromEntries(
-      Object.entries(defaultSection).filter(([key]) => existingSection[key] === undefined),
-    )
-
-    if (Object.keys(missingValues).length > 0) existingContent = insertTomlValuesIntoSection(existingContent, sectionName, missingValues)
-  }
-
-  if (additions.length === 0) return existingContent
-
-  return `${existingContent.trimEnd()}\n\n${additions.join('\n\n')}\n`
-}
-
-export const configPathForDisplay = (config: MirrorConfig) => (config.configPath ? relativeFromCwd(config.cwd, config.configPath) : '(none)')
-
-const assertAdapter = (value: unknown, key: string): MirrorAdapterName => {
-  if (typeof value !== 'string' || !adapters.has(value)) throw new MirrorError(`Invalid or missing ${key}. Expected package.json, jsr.json, or git.`)
-  return value as MirrorAdapterName
-}
-
-const assertProjectNameSource = (value: unknown, key: string): MirrorProjectNameSource => {
-  if (typeof value !== 'string' || !projectNameSources.has(value)) throw new MirrorError(`Invalid ${key}. Expected package.json or jsr.json.`)
-  return value as MirrorProjectNameSource
-}
-
-const assertOutput = (value: unknown): MirrorAdapterName[] => {
-  if (!Array.isArray(value) || value.length === 0) throw new MirrorError('Invalid or missing version.output. Expected at least one output adapter.')
-  return value.map((item) => assertAdapter(item, 'version.output'))
-}
-
-const assertStringArray = (value: unknown, key: string) => {
-  if (value === undefined) return []
-  if (!Array.isArray(value)) throw new MirrorError(`Invalid ${key}. Expected an array of strings.`)
-  return value.map((item) => {
-    if (typeof item !== 'string' || item.length === 0) throw new MirrorError(`Invalid ${key}. Expected an array of strings.`)
-    return item
-  })
-}
-
-const dedupeAdapters = (value: MirrorAdapterName[]) => [...new Set(value)]
-
-const optionalString = (value: unknown, key: string) => {
-  if (value === undefined) return undefined
-  if (typeof value !== 'string') throw new MirrorError(`Invalid ${key}. Expected a string.`)
-  return value
-}
-
-const optionalBoolean = (value: unknown, key: string) => {
-  if (value === undefined) return undefined
-  if (typeof value !== 'boolean') throw new MirrorError(`Invalid ${key}. Expected true or false.`)
-  return value
-}
-
-const optionalAgentToolSelection = (value: unknown, key: string): MirrorAgentToolSelection | undefined => {
-  if (value === undefined) return undefined
-  if (typeof value !== 'string' || !agentToolSelections.has(value)) throw new MirrorError(`Invalid ${key}. Expected agents, claude, or all.`)
-  return value as MirrorAgentToolSelection
-}
-
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
-
-const parseConfigContent = (content: string, label: string): Record<string, unknown> => {
-  let parsed: unknown
+  let existing: unknown
+  let defaults: unknown
   try {
-    parsed = Bun.TOML.parse(content)
+    existing = Bun.YAML.parse(existingContent)
+    defaults = Bun.YAML.parse(defaultsContent)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    throw new MirrorError(`Invalid TOML in ${label}:\n${message}`)
+    throw new MirrorError(`Invalid YAML while reconciling configuration: ${message}`, 3)
   }
-
-  if (!isRecord(parsed)) throw new MirrorError(`Invalid ${label}. Expected a TOML object.`)
-  return parsed
+  const decodedExisting = decodeWithSchema<typeof MirrorRawConfigSchema, MirrorRawConfig>(MirrorRawConfigSchema, existing, 'existing Mirror configuration', 3)
+  const decodedDefaults = decodeWithSchema<typeof MirrorRawConfigSchema, MirrorRawConfig>(MirrorRawConfigSchema, defaults, 'default Mirror configuration', 3)
+  const merged = deepMerge(decodedDefaults as Record<string, unknown>, decodedExisting as Record<string, unknown>)
+  return `${Bun.YAML.stringify(merged, null, 2).trimEnd()}\n`
 }
 
-const renderTomlSection = (sectionName: string, values: Record<string, unknown>) => {
-  const lines = [`[${sectionName}]`]
+export const configPathForDisplay = (config: MirrorConfig) => config.configPath ?? '(none)'
 
-  for (const [key, value] of Object.entries(values)) {
-    lines.push(`${key} = ${renderTomlValue(value)}`)
+const deepMerge = (defaults: Record<string, unknown>, existing: Record<string, unknown>): Record<string, unknown> => {
+  const result: Record<string, unknown> = { ...defaults }
+  for (const [key, value] of Object.entries(existing)) {
+    if (isRecord(value) && isRecord(defaults[key])) result[key] = deepMerge(defaults[key], value)
+    else result[key] = value
   }
-
-  return lines.join('\n')
+  return result
 }
 
-const insertTomlValuesIntoSection = (content: string, sectionName: string, values: Record<string, unknown>) => {
-  const lines = content.split(/\r?\n/)
-  const sectionIndex = lines.findIndex((line) => line.trim() === `[${sectionName}]`)
-
-  if (sectionIndex === -1) return `${content.trimEnd()}\n\n${renderTomlSection(sectionName, values)}\n`
-
-  const nextSectionIndex = lines.findIndex((line, index) => index > sectionIndex && /^\[[^\]]+]\s*$/.test(line.trim()))
-  const insertIndex = nextSectionIndex === -1 ? lines.length : nextSectionIndex
-  const renderedValues = Object.entries(values).map(([key, value]) => `${key} = ${renderTomlValue(value)}`)
-
-  lines.splice(insertIndex, 0, ...renderedValues)
-
-  return lines.join('\n')
-}
-
-const renderTomlValue = (value: unknown): string => {
-  if (typeof value === 'string') return JSON.stringify(value)
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
-  if (Array.isArray(value)) return `[${value.map(renderTomlValue).join(', ')}]`
-  throw new MirrorError('Cannot render unsupported init configuration value.')
-}
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
