@@ -25,7 +25,7 @@ Stop if you can not find it.
 
 - The real package lives in `mirror/`; run package commands there unless editing root docs or `ci/`.
 - `@guiho/mirror` is a Bun-native CLI-only package. The CLI entrypoint is `mirror/source/guiho-mirror-bin.ts`; Bun compiles `mirror/bin/` for local validation and platform release assets.
-- Do not add Node.js runtime imports or public TypeScript API exports. Use Bun APIs for file IO, TOML parsing, process execution, and binary compilation. Keep `semver` for semantic version calculations and `citty` as the sole general CLI parser, router, alias registry, and ordinary usage generator.
+- Do not add Node.js runtime imports to core CLI source or public TypeScript API exports. Use Bun APIs for file IO, YAML parsing, process execution, and binary compilation. The npm bootstrap is the isolated Node exception. Keep `semver` for semantic version calculations and `citty` as the sole general CLI parser, router, alias registry, and ordinary usage generator.
 - Use Bun, not npm/pnpm/yarn. Install from `mirror/` with `bun install`. Private `@guiho40` packages use Google Artifact Registry from `mirror/.npmrc`; auth helper is `bun _gaa` or `bunx google-artifactregistry-auth`.
 
 ## Commands
@@ -39,9 +39,11 @@ Stop if you can not find it.
 
 ## CLI Behavior
 
-- Supported forms are `mirror see`, `mirror <semver-or-release-type>`, and `mirror <path-to-package.json> <semver-or-release-type>`.
-- Release types are hard-coded in `source/mirror.ts`: `major`, `premajor`, `minor`, `preminor`, `patch`, `prepatch`, `prerelease`; prerelease bumps use `alpha.1`.
-- A release run mutates `package.json`, also mutates sibling `package.build.json` when present, then runs `git add`, `git commit`, `git tag`, `git push`, and `git push --tags`. Test CLI release paths in a disposable fixture repo, not this worktree.
+- The canonical groups are `init`, `config`, `version`, `agent`, `upgrade`, and `uninstall`.
+- Release targets are `major`, `premajor`, `minor`, `preminor`, `patch`, `prepatch`, `prerelease`, or exact SemVer.
+- Configuration is YAML only. Read `mirror.yaml`; do not restore TOML fallback.
+- Ordinary config/version commands never mutate agent resources. Use explicit singular `mirror agent ...` commands.
+- Test release mutation paths only in disposable fixture repositories.
 
 ## Gotchas
 
@@ -60,7 +62,7 @@ Stop if you can not find it.
 
 Invoke the guiho-s-mirror agent skill every time the user wants to bump, tag, release, plan, initialize, configure, or troubleshoot semantic project versioning with GUIHO Mirror.
 
-Before editing release docs or changelogs, inspect mirror.config.toml. If [agents].write_changelog is false, skip changelog edits. If it is missing or true, changelog edits are allowed when the project has a changelog.
+Before editing release docs or changelogs, inspect mirror.yaml. If agents.write_changelog is false, skip changelog edits. If it is missing or true, changelog edits are allowed when the project has a changelog.
 
 Use [agents].changelog_path as the changelog file path. If it is missing, use CHANGELOG.md in the project root.
 
