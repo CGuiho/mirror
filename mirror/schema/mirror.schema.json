@@ -1,0 +1,185 @@
+{
+  "additionalProperties": false,
+  "title": "GUIHO Mirror YAML Configuration",
+  "description": "Authoritative mirror.yaml contract.",
+  "type": "object",
+  "required": [
+    "schema",
+    "version"
+  ],
+  "properties": {
+    "schema": {
+      "const": 1,
+      "type": "number"
+    },
+    "project": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "name_source": {
+          "anyOf": [
+            {
+              "const": "package.json",
+              "type": "string"
+            },
+            {
+              "const": "jsr.json",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    "version": {
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "source",
+        "output"
+      ],
+      "properties": {
+        "scheme": {
+          "const": "semver",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "const": "package.json",
+              "type": "string"
+            },
+            {
+              "const": "jsr.json",
+              "type": "string"
+            },
+            {
+              "const": "git",
+              "type": "string"
+            }
+          ]
+        },
+        "output": {
+          "minItems": 1,
+          "uniqueItems": true,
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "const": "package.json",
+                "type": "string"
+              },
+              {
+                "const": "jsr.json",
+                "type": "string"
+              },
+              {
+                "const": "git",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "prerelease_id": {
+          "type": "string"
+        }
+      }
+    },
+    "package": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "auxiliary_paths": {
+          "uniqueItems": true,
+          "type": "array",
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          }
+        }
+      }
+    },
+    "jsr": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "path": {
+          "minLength": 1,
+          "type": "string"
+        }
+      }
+    },
+    "git": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "tag_template": {
+          "anyOf": [
+            {
+              "const": "v{version}",
+              "type": "string"
+            },
+            {
+              "const": "{name}@{version}",
+              "type": "string"
+            },
+            {
+              "const": "{name}/v{version}",
+              "type": "string"
+            }
+          ]
+        },
+        "commit": {
+          "type": "boolean"
+        },
+        "push": {
+          "type": "boolean"
+        },
+        "allow_dirty": {
+          "type": "boolean"
+        }
+      }
+    },
+    "agents": {
+      "additionalProperties": false,
+      "type": "object",
+      "properties": {
+        "write_changelog": {
+          "type": "boolean"
+        },
+        "changelog_path": {
+          "minLength": 1,
+          "type": "string"
+        }
+      }
+    },
+    "hooks": {
+      "type": "object",
+      "patternProperties": {
+        "^(.*)$": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
