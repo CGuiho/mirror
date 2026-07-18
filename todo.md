@@ -1,4 +1,4 @@
-﻿Copyright (c) 2026 GUIHO Technologies as represented by CristÃ³vÃ£o GUIHO
+Copyright (c) 2026 GUIHO Technologies as represented by CristÃ³vÃ£o GUIHO
 All Rights Reserved.
 
 # GUIHO Mirror TODO List
@@ -28,3 +28,18 @@ Add an option for Python version propagation from a source project to a target p
 - Spec: [docs/todo/citty-cli-migration.md](docs/todo/citty-cli-migration.md)
 - Implementation: [docs/todo/citty-cli-migration-implementation.md](docs/todo/citty-cli-migration-implementation.md)
 - Validation: [docs/validation/citty-cli-migration.md](docs/validation/citty-cli-migration.md)
+
+## Mirror Upgrade Reliability
+
+- Status: testing
+- Created: `2026-07-15`
+- Updated: `2026-07-15`
+- Outcome: Make self-upgrade an observable, verified installation transaction; provide exact-version recovery after every bare upgrade; and list every published release newest first with channel and asset metadata.
+- Spec: [docs/todo/upgrade-reliability.md](docs/todo/upgrade-reliability.md)
+- Implementation: [docs/todo/upgrade-reliability-implementation.md](docs/todo/upgrade-reliability-implementation.md)
+- Related files:
+  - [docs/superpowers/specs/2026-07-15-upgrade-reliability-design.md](docs/superpowers/specs/2026-07-15-upgrade-reliability-design.md) - Approved architecture and behavior contract.
+  - [docs/plans/upgrade-reliability-implementation.md](docs/plans/upgrade-reliability-implementation.md) - Executable implementation plan.
+  - [docs/reviews/plans/upgrade-reliability-implementation-review.md](docs/reviews/plans/upgrade-reliability-implementation-review.md) - Plan-readiness review and execution verdict.
+  - [docs/validation/upgrade-reliability.md](docs/validation/upgrade-reliability.md) - Verification evidence and remaining release gates.
+- External: GitHub issue [#9](https://github.com/CGuiho/mirror/issues/9); GitHub issue [#10](https://github.com/CGuiho/mirror/issues/10)
