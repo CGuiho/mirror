@@ -21,8 +21,8 @@ keywords:
 
 ## Summary
 
-The complete MR-16 gate passed. Mirror is ready for the separately authorized
-Mirror-managed `3.5.0` version application and Git ref push.
+The complete MR-16 gate passed. Mirror `3.5.1` is the final separately
+authorized patch after correcting version-sensitive release assertions.
 
 ## Scope
 
@@ -35,9 +35,9 @@ Git hygiene.
 | Check | Result |
 | --- | --- |
 | `bun run typecheck` | Passed |
-| RFC CLI suite | Passed: 14 tests |
+| RFC CLI suite | Passed: 16 tests |
 | Installer and self-upgrade suites | Passed: 20 tests |
-| Full `bun test --timeout 15000` | Passed: 35 tests, 0 failures, 199 assertions |
+| Full `bun test --timeout 15000` | Passed: 37 tests, 0 failures, 208 assertions |
 | `bun run build` | Passed: local executable, 12 native binaries, 14 total release assets |
 | `bun run binary` | Passed separately with the same exact matrix |
 | Compiled native smoke | Passed: exact version, no-argument banner, prompt listing, and Unicode tree |
@@ -55,7 +55,12 @@ Git hygiene.
 - The native matrix declares 12 unique RFC filenames and two agent artifacts.
 - Downstream TOML consumers are recorded separately and were not edited.
 - `mirror version plan minor --format json` resolved `3.5.0-alpha.0` to
-  `3.5.0`, with package, JSR, commit, tag, and push actions.
+  `3.5.0`; the post-version assertion correction is finalized by the
+  Mirror-managed `3.5.1` patch.
+- Subprocess-level live smokes prove that latest and exact-current upgrade
+  dry-runs produce JSON envelopes, nested `upgrade --version` is not intercepted
+  by the root version flag, cached notices precede the no-argument banner, and
+  prompt name mode prints only `guiho-i-mirror`.
 
 ## XDocs Baseline Note
 
