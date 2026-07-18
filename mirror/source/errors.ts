@@ -16,7 +16,7 @@ export class MirrorUsageError extends MirrorError {
   readonly helpPath: readonly string[]
 
   constructor(message: string, helpPath: readonly string[]) {
-    super(message)
+    super(message, 2)
     this.name = 'MirrorUsageError'
     this.helpPath = helpPath
   }
