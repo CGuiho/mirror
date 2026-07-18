@@ -42,6 +42,12 @@ Mirror ships as a Bun-compiled native self-sufficient CLI binary. The installed 
 
 Mirror uses Citty for its declarative command tree, scoped flags, aliases, and ordinary usage. `-h` and `--help` show contextual command help, while `-v` and `--version` print the CLI version without loading project configuration. Unknown commands, unknown scoped flags, and missing targets exit nonzero and must never be treated as release targets. `--output` and `--auxiliary` accept repeated or comma-separated values; `-dy` remains the compatibility alias for `--dry-run`.
 
+## Native Upgrade and Recovery
+
+`mirror upgrade` resolves and prints the current version, target version, operating system, architecture, selected asset, canonical path, and exact download URL before the long download begins. It then streams `Downloading...`, `Validating...`, `Replacing...`, and `Verifying...`. Success means a fresh process launched from the canonical executable path already reports the exact target; Mirror rolls back on replacement or verification failure. Only deletion of a verified old backup may be deferred.
+
+After every bare upgrade outcome, preserve and report the exact-version installer command and separate process-stop command emitted by Mirror. Do not replace the pinned version with `latest`. Use `mirror upgrade list` to inspect every published stable and prerelease version newest first, including its channel, date, current/latest markers, and compatible asset. Use `--format json` when an agent needs the complete typed plan/events/result/recovery or catalog envelope.
+
 ## Release Workflow
 
 When the user asks to bump, release, tag, or version a project, follow this sequence exactly. The ordering matters because the release tag should land on a commit that includes the release preparation, and the version apply step should only happen after validation and planning.
