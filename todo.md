@@ -1,4 +1,4 @@
-Copyright (c) 2026 GUIHO Technologies as represented by CristÃ³vÃ£o GUIHO
+﻿Copyright (c) 2026 GUIHO Technologies as represented by CristÃ³vÃ£o GUIHO
 All Rights Reserved.
 
 # GUIHO Mirror TODO List
