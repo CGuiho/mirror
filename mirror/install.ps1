@@ -106,6 +106,44 @@ function Add-InstallDirToPath { param([string]$Directory)
   if (-not (Test-PathContains -PathValue $env:Path -Directory $Directory)) { $env:Path = "$Directory;$env:Path" }
 }
 
+function Install-MirrorAgentAssets {
+  param([object]$Release, [string]$TemporaryDirectory)
+  $skillAsset = @($Release.assets) | Where-Object { $_.name -eq 'guiho-s-mirror' -and $_.browser_download_url } | Select-Object -First 1
+  $promptAsset = @($Release.assets) | Where-Object { $_.name -eq 'guiho-i-mirror' -and $_.browser_download_url } | Select-Object -First 1
+  if (-not $skillAsset -or -not $promptAsset) { throw 'Mirror release is missing guiho-s-mirror or guiho-i-mirror.' }
+  $skillTemp = Join-Path $TemporaryDirectory 'guiho-s-mirror'
+  $promptTemp = Join-Path $TemporaryDirectory 'guiho-i-mirror'
+  Write-Host "Downloading skill asset: $($skillAsset.browser_download_url)"
+  Invoke-WebRequest -Uri $skillAsset.browser_download_url -OutFile $skillTemp -UseBasicParsing
+  Write-Host "Downloading instruction asset: $($promptAsset.browser_download_url)"
+  Invoke-WebRequest -Uri $promptAsset.browser_download_url -OutFile $promptTemp -UseBasicParsing
+  $agentSkill = Join-Path $HOME '.agents\skills\guiho-s-mirror'
+  $claudeSkill = Join-Path $HOME '.claude\skills\guiho-s-mirror'
+  foreach ($directory in @($agentSkill, $claudeSkill)) {
+    New-Item -ItemType Directory -Force -Path $directory | Out-Null
+    Copy-Item -LiteralPath $skillTemp -Destination (Join-Path $directory 'SKILL.md') -Force
+    Write-Host "Installed skill: $directory"
+  }
+  $agents = Join-Path (Get-Location) 'AGENTS.md'
+  $claude = Join-Path (Get-Location) 'CLAUDE.md'
+  if (-not (Test-Path -LiteralPath $agents) -and -not (Test-Path -LiteralPath $claude)) {
+    New-Item -ItemType File -Force -Path $agents | Out-Null
+  }
+  $start = '<!-- BEGIN MIRROR — DO NOT EDIT THIS SECTION -->'
+  $end = '<!-- END MIRROR -->'
+  $body = Get-Content -Raw -LiteralPath $promptTemp
+  foreach ($target in @($agents, $claude)) {
+    if (-not (Test-Path -LiteralPath $target)) { continue }
+    Write-Host "Discovered instruction file: $target"
+    $content = Get-Content -Raw -LiteralPath $target
+    if ($null -eq $content) { $content = '' }
+    $pattern = "(?s)\s*$([regex]::Escape($start)).*?$([regex]::Escape($end))\s*"
+    $clean = [regex]::Replace($content, $pattern, "`r`n").TrimEnd()
+    Set-Content -LiteralPath $target -Value "$clean`r`n`r`n$start`r`n$($body.TrimEnd())`r`n$end`r`n" -NoNewline
+    Write-Host "Reconciled instruction block: $target"
+  }
+}
+
 $release = Get-MirrorRelease -RequestedVersion $Version
 if (-not $release.tag_name) { throw 'Mirror release metadata did not include tag_name.' }
 $targetVersion = ConvertTo-MirrorVersion -Value ([string]$release.tag_name)
@@ -129,14 +167,14 @@ if (-not [Environment]::Is64BitOperatingSystem) { throw 'Unsupported platform: W
 $variantValue = if ($Variant) { $Variant } else { 'baseline' }
 $assetCandidates = if ($detectedArch -eq 'x64') {
   switch ($variantValue) {
-    'baseline' { @('guiho-mirror-windows-x64-baseline.exe', 'guiho-mirror-windows-x64.exe', 'guiho-mirror-windows-x64-modern.exe') }
-    'default' { @('guiho-mirror-windows-x64.exe', 'guiho-mirror-windows-x64-baseline.exe', 'guiho-mirror-windows-x64-modern.exe') }
-    'modern' { @('guiho-mirror-windows-x64-modern.exe', 'guiho-mirror-windows-x64.exe', 'guiho-mirror-windows-x64-baseline.exe') }
+    'baseline' { @('mirror-windows-x64-baseline.exe', 'mirror-windows-x64.exe', 'mirror-windows-x64-modern.exe') }
+    'default' { @('mirror-windows-x64.exe', 'mirror-windows-x64-baseline.exe', 'mirror-windows-x64-modern.exe') }
+    'modern' { @('mirror-windows-x64-modern.exe', 'mirror-windows-x64.exe', 'mirror-windows-x64-baseline.exe') }
     default { throw "Invalid variant: $variantValue. Must be baseline, default, or modern." }
   }
 } else {
   if ($Variant) { throw '-Variant is only valid for x64 installs.' }
-  @('guiho-mirror-windows-arm64.exe')
+  @('mirror-windows-arm64.exe')
 }
 
 $availableAssets = @()
@@ -159,16 +197,12 @@ try {
   foreach ($candidateAsset in $availableAssets) {
     $downloadUrl = [string]$candidateAsset.browser_download_url
     Assert-SecureUri -Uri $downloadUrl
-    Write-Host '------------------------------------------------------------'
-    Write-Host '  Installing Mirror'
-    Write-Host '------------------------------------------------------------'
-    Write-Host "  version : $targetVersion"
-    Write-Host '  os      : windows'
-    Write-Host "  arch    : $detectedArch"
-    Write-Host "  binary  : $($candidateAsset.name)"
-    Write-Host "  path    : $destination"
-    Write-Host "  url     : $downloadUrl"
-    Write-Host '------------------------------------------------------------'
+    Write-Host 'Initiating GUIHO CLI Upgrade / Installation Sequence...'
+    Write-Host "Target Version: v$targetVersion"
+    Write-Host "Architecture:   $detectedArch"
+    Write-Host "Variant:        $variantValue"
+    Write-Host "Source URL:     $downloadUrl"
+    Write-Host "Binary Destination: $destination"
     Write-Host 'Downloading...'
     try {
       Invoke-WebRequest -Uri $downloadUrl -OutFile $temporaryFile -UseBasicParsing
@@ -211,6 +245,7 @@ try {
     try { Remove-Item -LiteralPath $backupFile -Force } catch { Write-Warning "Installed Mirror is verified, but the old backup remains at $backupFile" }
   }
   if (-not $NoPathUpdate -and $env:MIRROR_NO_PATH_UPDATE -ne '1') { Add-InstallDirToPath -Directory $InstallDir }
+  Install-MirrorAgentAssets -Release $release -TemporaryDirectory $InstallDir
   Write-Host "Installed Mirror $targetVersion to $destination"
   Write-Host 'Run: mirror --version'
 } finally {
