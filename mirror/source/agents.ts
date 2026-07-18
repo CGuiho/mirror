@@ -5,7 +5,6 @@
 import type {
   MirrorAgentTool,
   MirrorAgentToolSelection,
-  MirrorAgentAutomationResult,
   MirrorAgentSettings,
   MirrorAgentsInstructionsResult,
   MirrorCliOptions,
@@ -22,8 +21,8 @@ import packageJson from '../package.json' with { type: 'json' }
 export const mirrorSkillName = 'guiho-s-mirror'
 export const legacyMirrorSkillNames = ['guiho-as-mirror'] as const
 export const mirrorSkillVersion = typeof packageJson.version === 'string' ? packageJson.version : '0.0.0'
-export const mirrorAgentsSectionStartMarker = '<!-- BEGIN GUIHO MIRROR - DO NOT EDIT THIS SECTION -->'
-export const mirrorAgentsSectionEndMarker = '<!-- END GUIHO MIRROR -->'
+export const mirrorAgentsSectionStartMarker = '<!-- BEGIN MIRROR — DO NOT EDIT THIS SECTION -->'
+export const mirrorAgentsSectionEndMarker = '<!-- END MIRROR -->'
 export const mirrorAgentsSectionHeading = '## Semantic Project Versioning -- GUIHO Mirror'
 export const mirrorAgentTools = ['agents', 'claude'] as const
 export const mirrorAgentToolSelections = [...mirrorAgentTools, 'all'] as const
@@ -31,30 +30,16 @@ export const mirrorAgentToolSelections = [...mirrorAgentTools, 'all'] as const
 export const defaultMirrorAgentSettings: MirrorAgentSettings = {
   writeChangelog: true,
   changelogPath: 'CHANGELOG.md',
-  autoAgentsMd: true,
-  autoSkillInstall: true,
-  skillTool: 'agents',
 }
 
 const mirrorAgentsSectionBody = `${mirrorAgentsSectionHeading}
 
 Invoke the guiho-s-mirror agent skill every time the user wants to bump, tag, release, plan, initialize, configure, or troubleshoot semantic project versioning with GUIHO Mirror.
 
-Before editing release docs or changelogs, inspect mirror.config.toml. If [agents].write_changelog is false, skip changelog edits. If it is missing or true, changelog edits are allowed when the project has a changelog.
+Before editing release docs or changelogs, inspect mirror.yaml. If agents.write_changelog is false, skip changelog edits. If it is missing or true, changelog edits are allowed when the project has a changelog.
 
 Use [agents].changelog_path as the changelog file path. If it is missing, use CHANGELOG.md in the project root.
 `
-
-const legacyMirrorAgentsSectionBodies = [
-  `${mirrorAgentsSectionHeading}
-
-Invoke the guiho-as-mirror agent skill every time the user wants to bump, tag, release, plan, initialize, configure, or troubleshoot semantic project versioning with GUIHO Mirror.
-
-Before editing release docs or changelogs, inspect mirror.config.toml. If [agents].write_changelog is false, skip changelog edits. If it is missing or true, changelog edits are allowed when the project has a changelog.
-
-Use [agents].changelog_path as the changelog file path. If it is missing, use CHANGELOG.md in the project root.
-`,
-]
 
 export const mirrorAgentsSection = `${mirrorAgentsSectionStartMarker}
 ${mirrorAgentsSectionBody.trimEnd()}
@@ -81,10 +66,6 @@ type MirrorAgentInstructionTarget = {
   tool: MirrorAgentTool
   path: string
   create: boolean
-}
-
-type MirrorAgentAutomationOptions = MirrorCliOptions & {
-  homeDirectory?: string
 }
 
 const mirrorSkillInstallNames = [...legacyMirrorSkillNames, mirrorSkillName] as const
@@ -167,6 +148,82 @@ export const installMirrorSkills = async (
   return results
 }
 
+export const uninstallMirrorSkills = async (
+  scope: MirrorSkillInstallScope,
+  options: MirrorSkillPathOptions = {},
+) => {
+  const removed: string[] = []
+  for (const tool of mirrorAgentTools) {
+    for (const name of mirrorSkillInstallNames) {
+      const path = resolveMirrorSkillPathForName(scope, name, { ...options, tool })
+      const directory = dirnamePath(path)
+      if (!(await fileExists(path))) continue
+      await removePath(directory)
+      removed.push(directory)
+    }
+  }
+  return removed
+}
+
+export const listMirrorSkills = async (filter?: string) => {
+  const description = readMirrorSkillFrontmatterValue(await readBundledMirrorSkill(), 'description') ?? ''
+  const resources = [{ id: mirrorSkillName, name: mirrorSkillName, description, version: mirrorSkillVersion }]
+  if (!filter) return resources
+  const needle = filter.toLocaleLowerCase()
+  return resources.filter((resource) => `${resource.id} ${resource.description}`.toLocaleLowerCase().includes(needle))
+}
+
+export const showMirrorSkill = async (id: string) => {
+  if (id !== mirrorSkillName) throw new MirrorError(`Unknown skill: ${id}`, 2)
+  const content = await readBundledMirrorSkill()
+  return {
+    id,
+    name: id,
+    description: readMirrorSkillFrontmatterValue(content, 'description') ?? '',
+    version: readMirrorSkillVersion(content) ?? mirrorSkillVersion,
+    path: Bun.fileURLToPath(new URL('../skills/guiho-s-mirror/SKILL.md', import.meta.url)),
+    content,
+  }
+}
+
+export const showMirrorInstructionTemplate = () => `${mirrorAgentsSection}\n`
+
+export const removeMirrorAgentInstructionFiles = async (cwd: string): Promise<MirrorAgentsInstructionsResult[]> => {
+  const results: MirrorAgentsInstructionsResult[] = []
+  for (const tool of mirrorAgentTools) {
+    const path = resolvePath(cwd, mirrorAgentInstructionFiles[tool])
+    if (!(await fileExists(path))) {
+      results.push({ tool, path, exists: false, changed: false })
+      continue
+    }
+    const content = await readTextFile(path)
+    const markerPattern = new RegExp(`\\s*${escapeRegExp(mirrorAgentsSectionStartMarker)}[\\s\\S]*?${escapeRegExp(mirrorAgentsSectionEndMarker)}\\s*`)
+    const next = content.replace(markerPattern, '\n').trimEnd()
+    if (next === content.trimEnd()) {
+      results.push({ tool, path, exists: true, changed: false })
+      continue
+    }
+    await writeTextFile(path, `${next}\n`)
+    results.push({ tool, path, exists: true, changed: true })
+  }
+  return results
+}
+
+export const mirrorPromptCatalog = [{
+  id: 'guiho-i-mirror',
+  name: 'guiho-i-mirror',
+  description: 'Plan and execute a safe Mirror-managed semantic version release.',
+}] as const
+
+export const showMirrorPrompt = async (id: string) => {
+  if (id !== 'guiho-i-mirror') throw new MirrorError(`Unknown prompt: ${id}`, 2)
+  try {
+    return await Bun.file(new URL('../prompts/guiho-i-mirror.md', import.meta.url)).text()
+  } catch {
+    return '# Mirror Release\n\nInspect mirror.yaml, validate the project, run `mirror version plan <target>`, then apply only after approval.\n'
+  }
+}
+
 export const ensureMirrorAgentsInstructions = async (cwd: string, create = false): Promise<MirrorAgentsInstructionsResult> => {
   return ensureMirrorAgentInstructions(cwd, 'agents', create)
 }
@@ -222,16 +279,8 @@ export const findAgentsFile = async (cwd: string): Promise<string | undefined> =
 }
 
 export const findMirrorAgentInstructionsFile = async (cwd: string, tool: MirrorAgentTool): Promise<string | undefined> => {
-  let current = resolvePath(cwd)
-
-  while (true) {
-    const path = resolvePath(current, mirrorAgentInstructionFiles[tool])
-    if (await fileExists(path)) return path
-
-    const parent = dirnamePath(current)
-    if (parent === current) return undefined
-    current = parent
-  }
+  const path = resolvePath(cwd, mirrorAgentInstructionFiles[tool])
+  return await fileExists(path) ? path : undefined
 }
 
 const ensureMirrorAgentInstructionsAtPath = async (
@@ -311,41 +360,7 @@ export const resolveMirrorAgentSettings = async (options: MirrorCliOptions = {})
   return {
     writeChangelog: optionalBoolean(discovered.raw.agents?.write_changelog, 'agents.write_changelog') !== false,
     changelogPath: optionalString(discovered.raw.agents?.changelog_path, 'agents.changelog_path') ?? 'CHANGELOG.md',
-    autoAgentsMd: optionalBoolean(discovered.raw.agents?.auto_agents_md, 'agents.auto_agents_md') !== false,
-    autoSkillInstall: optionalBoolean(discovered.raw.agents?.auto_skill_install, 'agents.auto_skill_install') !== false,
-    skillTool: options.tool ?? optionalMirrorAgentToolSelection(discovered.raw.agents?.skill_tool, 'agents.skill_tool') ?? 'agents',
   }
-}
-
-export const runMirrorAgentAutomation = async (
-  options: MirrorAgentAutomationOptions = {},
-  notify: (message: string) => void = () => {},
-): Promise<MirrorAgentAutomationResult> => {
-  const cwd = resolvePath(options.cwd ?? process.cwd())
-  const settings = await resolveMirrorAgentSettings(options)
-  const result: MirrorAgentAutomationResult = { settings }
-
-  if (settings.autoAgentsMd) {
-    const instructionFiles = await ensureMirrorAgentInstructionFiles(cwd, settings.skillTool, true)
-    result.instructionFiles = instructionFiles
-    result.agentsMd = instructionFiles.find((file) => file.tool === 'agents')
-    result.claudeMd = instructionFiles.find((file) => file.tool === 'claude')
-  }
-
-  if (settings.autoSkillInstall) {
-    const scope = 'global'
-    const globalSkills = await installMirrorSkills(scope, settings.skillTool, { cwd, homeDirectory: options.homeDirectory, overwrite: false })
-    const changedSkills = globalSkills.filter((skill) => skill.installed || skill.updated || skill.migrated)
-
-    for (const globalSkill of changedSkills) {
-      notify(`notice: ${mirrorSkillName} skill for ${globalSkill.tool} ${describeMirrorSkillInstallReason(globalSkill)} ${scope}; Mirror is installing it at ${globalSkill.path}`)
-    }
-
-    if (changedSkills.length > 0) result.globalSkills = changedSkills
-    result.globalSkill = changedSkills.find((skill) => skill.tool === 'agents')
-  }
-
-  return result
 }
 
 const readBundledMirrorSkill = async () => {
@@ -428,12 +443,6 @@ const withBundledMirrorSkillVersion = (content: string) => {
   return `---\n${nextFrontmatter}\n---${content.slice(match[0].length)}`
 }
 
-const describeMirrorSkillInstallReason = (result: MirrorSkillInstallResult) => {
-  if (result.installed) return 'not found'
-  if (result.migrated) return `legacy ${result.previousName ?? 'skill'} found`
-  return `outdated${result.previousVersion ? ` (${result.previousVersion} -> ${result.version})` : ''}`
-}
-
 const resolveMirrorAgentHome = (homeDirectory?: string) => {
   const value = homeDirectory ?? process.env['MIRROR_AGENT_HOME'] ?? process.env['HOME'] ?? process.env['USERPROFILE'] ?? process.cwd()
   return resolveMirrorPath(process.cwd(), value)
@@ -451,15 +460,6 @@ const optionalString = (value: unknown, key: string) => {
   return value
 }
 
-const optionalMirrorAgentToolSelection = (value: unknown, key: string): MirrorAgentToolSelection | undefined => {
-  if (value === undefined) return undefined
-  if (typeof value !== 'string' || !mirrorAgentToolSelections.includes(value as MirrorAgentToolSelection)) {
-    throw new MirrorError(`Invalid ${key}. Expected agents, claude, or all.`)
-  }
-
-  return value as MirrorAgentToolSelection
-}
-
 const hasCurrentMirrorAgentsSection = (content: string) => {
   const normalizedContent = normalizeMirrorAgentsSection(content)
 
@@ -473,10 +473,8 @@ const replaceExistingMirrorAgentsSection = (content: string) => {
   const markerMatch = markerPattern.exec(content)
   if (markerMatch) return content.replace(markerPattern, mirrorAgentsSection)
 
-  for (const legacySection of legacyMirrorAgentsSectionBodies) {
-    const legacyBody = legacySection.trimEnd()
-    if (content.includes(legacyBody)) return content.replace(legacyBody, mirrorAgentsSectionBody.trimEnd())
-  }
+  const legacyMarkerPattern = /<!-- BEGIN GUIHO MIRROR - DO NOT EDIT THIS SECTION -->[\s\S]*?<!-- END GUIHO MIRROR -->/
+  if (legacyMarkerPattern.test(content)) return content.replace(legacyMarkerPattern, mirrorAgentsSection)
 
   return content
 }
@@ -489,73 +487,21 @@ const embeddedMirrorSkillContent = [
   '---',
   'name: guiho-s-mirror',
   `version: ${mirrorSkillVersion}`,
-  'description: Use this skill whenever the user asks to version, bump, release, tag, initialize, configure, or troubleshoot a project with GUIHO Mirror. This includes Bun, npm, JSR, package.json, jsr.json, Git tag, semantic versioning, changelog, release-plan, prerelease, and what version comes next workflows.',
+  'description: Use whenever planning, applying, validating, or troubleshooting semantic project versioning with GUIHO Mirror.',
   '---',
   '',
   '# GUIHO Mirror',
   '',
-  'GUIHO Mirror is a deterministic CLI for semantic project versioning. Use it instead of ad hoc version edits, manual package-manager version commands, or manual release tags.',
+  'Use Mirror instead of manual version edits or manual release tags.',
   '',
-  '## Command Selection',
+  '## Required Workflow',
   '',
-  '1. Use `bun @guiho/mirror` when the package is installed locally and Bun is available.',
-  '2. Use `mirror` when a global binary is available.',
-  '3. Use `bunx @guiho/mirror` when running without installation.',
+  '1. Read `mirror.yaml` and repository instructions.',
+  '2. Run project validation.',
+  '3. Run `mirror version plan <target>`.',
+  '4. Apply only after reviewing the planned file, Git, tag, and push effects.',
   '',
-  'Run `mirror --help` or `mirror <command> --help` for command-specific details when needed.',
-  '',
-  '## Release Workflow',
-  '',
-  'When the user asks to bump, release, tag, or version a project, follow this sequence:',
-  '',
-  '1. Confirm the target and project root. Supported targets are `major`, `premajor`, `minor`, `preminor`, `patch`, `prepatch`, `prerelease`, or an exact semver like `2.0.0`.',
-  '2. Run `<mirror> config show` and read `[git].allow_dirty`, `[agents].write_changelog`, and `[agents].changelog_path`.',
-  '3. If `allow_dirty = false` or absent, check `git status --short` and stop if the worktree is dirty.',
-  '4. Run the project type checker, commonly `bun run typecheck`.',
-  '5. Run the project test suite, commonly `bun test`.',
-  '6. Run `<mirror> version plan <target>` and use the planned next version as the source of truth.',
-  '7. Update release documentation only when it is part of the project release process.',
-  '8. If `[agents].write_changelog = false`, skip changelog edits. Otherwise update `[agents].changelog_path`, defaulting to `CHANGELOG.md` in the project root, and summarize only real changes.',
-  '9. Commit release-preparation changes before applying the version bump.',
-  '10. Run `<mirror> version apply <target> --yes`. Include `--commit` when file outputs and Git tag output are combined unless config already enables commits or push.',
-  '',
-  '## Safety Rules',
-  '',
-  '- Never skip `version plan`.',
-  '- Never hand-edit `package.json` or `jsr.json` version fields as a Mirror substitute.',
-  '- Never create Git tags manually for a Mirror-managed release unless recovering intentionally.',
-  '- Do not apply a version bump after failed typecheck or tests.',
-  '- Do not push release refs unless explicitly requested or configured.',
-  '- When plan output is surprising, stop and explain the mismatch.',
-  '',
-  '## Initialization Workflow',
-  '',
-  'Use `mirror init package.json`, `mirror init jsr.json`, or `mirror init git`, then validate with `mirror config check`, inspect with `mirror config show`, and test with `mirror version current` plus `mirror version plan patch`.',
-  '',
-  '## Configuration Reference',
-  '',
-  'Mirror searches for configuration via `--config <path>`, `./mirror.config.toml`, or `./config/mirror.config.toml`.',
-  '',
-  'Common configuration keys: `[version].source`, `[version].output`, `[version].prerelease_id`, `[git].tag_template`, `[git].commit`, `[git].push`, `[git].allow_dirty`, `[agents].write_changelog`, `[agents].changelog_path`, `[agents].auto_agents_md`, `[agents].auto_skill_install`, and `[agents].skill_tool`.',
-  '',
-  'Agent automation options default to true. Set `write_changelog = false` to tell agents to skip changelog edits, `changelog_path = "docs/CHANGELOG.md"` to specify the changelog file, `auto_agents_md = false` to stop Mirror from inserting its instruction section, `auto_skill_install = false` to stop Mirror from installing `guiho-s-mirror` globally when missing, and `skill_tool = "claude"` or `skill_tool = "all"` to target Claude Code skill directories. Use `--tool claude` or `--tool all` as a one-off override.',
-  '',
-  '## CLI Reference',
-  '',
-  '- `mirror config show`',
-  '- `mirror config check`',
-  '- `mirror config schema`',
-  '- `mirror agents install local`',
-  '- `mirror agents install global`',
-  '- `mirror agents install global --tool all`',
-  '- `mirror agents instructions`',
-  '- `mirror version current`',
-  '- `mirror version next <target>`',
-  '- `mirror version plan <target>`',
-  '- `mirror version apply <target> --yes`',
-  '',
-  '## Response Style',
-  '',
-  'When reporting a Mirror release result, include the target, current version, planned next version, typecheck/test status, docs or changelog files changed, final apply command, and whether commits, tags, or pushes were created.',
+  'Mirror resolves YAML from `--config`, `./mirror.yaml`, then `~/.guiho/mirror/mirror.yaml`.',
+  'Use explicit `mirror agent` commands for skill, instruction, and prompt operations.',
   '',
 ].join('\n')
