@@ -14,22 +14,22 @@ compile() {
 }
 
 # ── Linux ────────────────────────────────────────────────────────────────────
-compile bun-linux-arm64           bin/guiho-mirror-linux-arm64
-compile bun-linux-x64             bin/guiho-mirror-linux-x64
-compile bun-linux-x64-baseline    bin/guiho-mirror-linux-x64-baseline
-compile bun-linux-x64-modern      bin/guiho-mirror-linux-x64-modern
+compile bun-linux-arm64           bin/mirror-linux-arm64
+compile bun-linux-x64             bin/mirror-linux-x64
+compile bun-linux-x64-baseline    bin/mirror-linux-x64-baseline
+compile bun-linux-x64-modern      bin/mirror-linux-x64-modern
 
 # ── Windows ──────────────────────────────────────────────────────────────────
-compile bun-windows-arm64         bin/guiho-mirror-windows-arm64
-compile bun-windows-x64           bin/guiho-mirror-windows-x64
-compile bun-windows-x64-baseline  bin/guiho-mirror-windows-x64-baseline
-compile bun-windows-x64-modern    bin/guiho-mirror-windows-x64-modern
+compile bun-windows-arm64         bin/mirror-windows-arm64.exe
+compile bun-windows-x64           bin/mirror-windows-x64.exe
+compile bun-windows-x64-baseline  bin/mirror-windows-x64-baseline.exe
+compile bun-windows-x64-modern    bin/mirror-windows-x64-modern.exe
 
 # ── macOS ────────────────────────────────────────────────────────────────────
-compile bun-darwin-arm64          bin/guiho-mirror-macos-arm64
-compile bun-darwin-x64            bin/guiho-mirror-macos-x64
-compile bun-darwin-x64-baseline   bin/guiho-mirror-macos-x64-baseline
-compile bun-darwin-x64-modern     bin/guiho-mirror-macos-x64-modern
+compile bun-darwin-arm64          bin/mirror-darwin-arm64
+compile bun-darwin-x64            bin/mirror-darwin-x64
+compile bun-darwin-x64-baseline   bin/mirror-darwin-x64-baseline
+compile bun-darwin-x64-modern     bin/mirror-darwin-x64-modern
 
 # ── Wait for all and report ──────────────────────────────────────────────────
 for i in "${!PIDS[@]}"; do
