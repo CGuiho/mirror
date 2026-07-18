@@ -32,6 +32,8 @@ curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/mirror/install.s
 irm https://raw.githubusercontent.com/CGuiho/mirror/main/mirror/install.ps1 | iex
 ```
 
+The canonical installers accept exact stable and prerelease versions, print the selected version/asset/URL before download, verify the temporary and installed binaries, replace transactionally, and roll back on failure.
+
 ## Quick Start
 
 ```bash
@@ -85,6 +87,8 @@ mirror
 ```
 
 `mirror upgrade` without a nested command performs the default native upgrade.
+
+The command prints current/target/OS/architecture/asset/path/URL before downloading, then streams download, validation, replacement, and verification phases. It replaces and verifies the canonical executable immediately, rolls back on failure, and always prints an exact-version reinstall command plus a separate process-stop command. `mirror upgrade list` returns the complete SemVer-sorted stable and prerelease catalog with channel, date, current/latest markers, and compatible assets.
 
 ## Safety
 
