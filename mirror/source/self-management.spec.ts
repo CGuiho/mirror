@@ -38,11 +38,11 @@ describe('Mirror self-management', () => {
 
   test('uses the same deterministic native asset candidate order', () => {
     expect(buildAssetCandidates('windows', 'x64', 'baseline')).toEqual([
-      'guiho-mirror-windows-x64-baseline.exe',
-      'guiho-mirror-windows-x64.exe',
-      'guiho-mirror-windows-x64-modern.exe',
+      'mirror-windows-x64-baseline.exe',
+      'mirror-windows-x64.exe',
+      'mirror-windows-x64-modern.exe',
     ])
-    expect(buildAssetCandidates('linux', 'arm64', 'baseline')).toEqual(['guiho-mirror-linux-arm64'])
+    expect(buildAssetCandidates('linux', 'arm64', 'baseline')).toEqual(['mirror-linux-arm64'])
   })
 
   test('rejects exact-version metadata whose canonical Mirror tag does not match the request', async () => {
@@ -84,6 +84,7 @@ describe('Mirror self-management', () => {
       platform: 'windows',
       arch: 'x64',
       fetch: fetcher,
+      preReleases: true,
     })
 
     expect(catalog.complete).toBe(true)
@@ -183,7 +184,8 @@ describe('Mirror self-management', () => {
     expect(result.outcome).toBe('upgraded')
     expect(result.events.map((event) => `${event.phase}:${event.status}`)).toContain('verify:succeeded')
     expect((await runCommand([executable, '--version'])).stdout.trim()).toBe(targetVersion)
-    expect((await readUpdateCache({ cacheDir: root }))?.currentVersion).toBe(targetVersion)
+    expect((await readUpdateCache({ cacheDir: root }))?.latestVersion).toBe(targetVersion)
+    expect((await readUpdateCache({ cacheDir: root }))?.newVersionAvailable).toBe(false)
   }, 30_000)
 
   test('rolls back when the canonical executable does not report the target', async () => {
@@ -240,6 +242,9 @@ describe('Mirror self-management', () => {
           return Response.json({
             tag_name: `@guiho/mirror@${targetVersion}`,
             html_url: `${serverUrl}/release`,
+            published_at: '2026-07-18T00:00:00Z',
+            draft: false,
+            prerelease: false,
             assets: [{ name: asset, browser_download_url: `${serverUrl}/asset` }],
           })
         }
@@ -271,8 +276,8 @@ describe('Mirror self-management', () => {
         readUntil(reader, decoder, () => output, (value) => { output = value }, 'Downloading...'),
         new Promise((_, reject) => setTimeout(() => reject(new Error('Timed out waiting for pre-download output')), 10_000)),
       ])
-      expect(output).toContain(`  target  : ${targetVersion}`)
-      expect(output).toContain(`  url     : ${serverUrl}/asset`)
+      expect(output).toContain(`Target Version: v${targetVersion}`)
+      expect(output).toContain(`Source URL:     ${serverUrl}/asset`)
       expect(output).not.toContain('Replacing...')
       releaseDownload()
       output = await readRemaining(reader, decoder, output)
@@ -327,6 +332,9 @@ if (process.argv.includes('--version')) {
           return Response.json({
             tag_name: `@guiho/mirror@${targetVersion}`,
             html_url: `${serverUrl}/release`,
+            published_at: '2026-07-18T00:00:00Z',
+            draft: false,
+            prerelease: false,
             assets: [{ name: asset, browser_download_url: `${serverUrl}/asset` }],
           })
         }
