@@ -1,0 +1,23 @@
+schema: 1
+project:
+  name_source: package.json
+version:
+  scheme: semver
+  source: package.json
+  output:
+    - package.json
+    - jsr.json
+    - git
+  prerelease_id: ""
+package:
+  path: package.json
+jsr:
+  path: jsr.json
+git:
+  tag_template: "{name}@{version}"
+  commit: true
+  push: true
+  allow_dirty: true
+agents:
+  write_changelog: true
+  changelog_path: ../CHANGELOG.md
