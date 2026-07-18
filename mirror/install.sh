@@ -76,7 +76,7 @@ resolve_target_version() {
 }
 
 detect_os() {
-  case "$(uname -s)" in Linux) printf 'linux\n' ;; Darwin) printf 'macos\n' ;; *) fail "unsupported OS: $(uname -s)" ;; esac
+  case "$(uname -s)" in Linux) printf 'linux\n' ;; Darwin) printf 'darwin\n' ;; *) fail "unsupported OS: $(uname -s)" ;; esac
 }
 
 detect_arch() {
@@ -91,13 +91,13 @@ build_candidates() {
   local variant="${variant_override:-baseline}"
   if [[ "$arch" == "arm64" ]]; then
     [[ -z "$variant_override" ]] || fail '--variant is only valid for x64 installs'
-    candidates=("guiho-mirror-${os}-arm64")
+    candidates=("mirror-${os}-arm64")
     return
   fi
   case "$variant" in
-    baseline) candidates=("guiho-mirror-${os}-x64-baseline" "guiho-mirror-${os}-x64" "guiho-mirror-${os}-x64-modern") ;;
-    default) candidates=("guiho-mirror-${os}-x64" "guiho-mirror-${os}-x64-baseline" "guiho-mirror-${os}-x64-modern") ;;
-    modern) candidates=("guiho-mirror-${os}-x64-modern" "guiho-mirror-${os}-x64" "guiho-mirror-${os}-x64-baseline") ;;
+    baseline) candidates=("mirror-${os}-x64-baseline" "mirror-${os}-x64" "mirror-${os}-x64-modern") ;;
+    default) candidates=("mirror-${os}-x64" "mirror-${os}-x64-baseline" "mirror-${os}-x64-modern") ;;
+    modern) candidates=("mirror-${os}-x64-modern" "mirror-${os}-x64" "mirror-${os}-x64-baseline") ;;
     *) fail "invalid --variant '$variant'. Must be baseline, default, or modern." ;;
   esac
 }
@@ -113,7 +113,7 @@ verify_native_binary() {
   local magic4
   magic4="$(LC_ALL=C head -c 4 "$1" 2>/dev/null || true)"
   case "$os:$magic4" in
-    linux:$'\177ELF'|macos:$'\xcf\xfa\xed\xfe'|macos:$'\xce\xfa\xed\xfe'|macos:$'\xfe\xed\xfa\xcf'|macos:$'\xfe\xed\xfa\xce'|macos:$'\xca\xfe\xba\xbe'|macos:$'\xbe\xba\xfe\xca') return 0 ;;
+    linux:$'\177ELF'|darwin:$'\xcf\xfa\xed\xfe'|darwin:$'\xce\xfa\xed\xfe'|darwin:$'\xfe\xed\xfa\xcf'|darwin:$'\xfe\xed\xfa\xce'|darwin:$'\xca\xfe\xba\xbe'|darwin:$'\xbe\xba\xfe\xca') return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -152,7 +152,7 @@ read_binary_version() {
 download_candidate() {
   local asset="$1" url="$2" http_code exit_code
   set +e
-  http_code="$(curl --location --silent --show-error "${curl_security_args[@]}" --output "$tmp" --write-out '%{http_code}' "$url")"
+  http_code="$(curl --location --progress-bar --show-error "${curl_security_args[@]}" --output "$tmp" --write-out '%{http_code}' "$url")"
   exit_code=$?
   set -e
   if [[ $exit_code -ne 0 ]]; then fail "download failed for $url (curl exit $exit_code)"; fi
@@ -205,6 +205,47 @@ ensure_path() {
   fi
 }
 
+install_agent_assets() {
+  local agent_root="${HOME}/.agents/skills/guiho-s-mirror"
+  local claude_root="${HOME}/.claude/skills/guiho-s-mirror"
+  local skill_tmp="$install_dir/.guiho-s-mirror-$$"
+  local prompt_tmp="$install_dir/.guiho-i-mirror-$$"
+  local skill_url prompt_url
+  skill_url="$(build_url 'guiho-s-mirror')"
+  prompt_url="$(build_url 'guiho-i-mirror')"
+  printf 'Downloading skill asset: %s\n' "$skill_url"
+  curl --fail --location --progress-bar "${curl_security_args[@]}" --output "$skill_tmp" "$skill_url"
+  printf 'Downloading instruction asset: %s\n' "$prompt_url"
+  curl --fail --location --progress-bar "${curl_security_args[@]}" --output "$prompt_tmp" "$prompt_url"
+  mkdir -p "$agent_root" "$claude_root"
+  cp -- "$skill_tmp" "$agent_root/SKILL.md"
+  cp -- "$skill_tmp" "$claude_root/SKILL.md"
+  printf 'Installed skill: %s\nInstalled skill: %s\n' "$agent_root" "$claude_root"
+
+  local targets=()
+  [[ ! -f AGENTS.md && ! -f CLAUDE.md ]] && : > AGENTS.md
+  [[ -f AGENTS.md ]] && targets+=("AGENTS.md")
+  [[ -f CLAUDE.md ]] && targets+=("CLAUDE.md")
+  local target start='<!-- BEGIN MIRROR — DO NOT EDIT THIS SECTION -->' end='<!-- END MIRROR -->'
+  for target in "${targets[@]}"; do
+    printf 'Discovered instruction file: %s\n' "$target"
+    awk -v start="$start" -v end="$end" '
+      $0 == start { skip=1; next }
+      $0 == end { skip=0; next }
+      !skip { print }
+    ' "$target" > "${target}.mirror.tmp"
+    {
+      cat "${target}.mirror.tmp"
+      printf '\n%s\n' "$start"
+      cat "$prompt_tmp"
+      printf '\n%s\n' "$end"
+    } > "$target"
+    rm -f -- "${target}.mirror.tmp"
+    printf 'Reconciled instruction block: %s\n' "$target"
+  done
+  rm -f -- "$skill_tmp" "$prompt_tmp"
+}
+
 main() {
   parse_args "$@"
   for command in curl grep head sed uname; do require_command "$command"; done
@@ -219,8 +260,9 @@ main() {
   local asset url selected=0
   for asset in "${candidates[@]}"; do
     url="$(build_url "$asset")"
-    printf '%s\n' '------------------------------------------------------------' '  Installing Mirror' '------------------------------------------------------------'
-    printf '  version : %s\n  os      : %s\n  arch    : %s\n  binary  : %s\n  path    : %s/mirror\n  url     : %s\n' "$target_version" "$os" "$arch" "$asset" "$install_dir" "$url"
+    printf '%s\n' 'Initiating GUIHO CLI Upgrade / Installation Sequence...'
+    printf 'Target Version: v%s\nArchitecture:   %s\nVariant:        %s\nSource URL:     %s\n' "$target_version" "$arch" "${variant_override:-baseline}" "$url"
+    printf 'Binary Destination: %s/mirror\n' "$install_dir"
     printf '%s\n' '------------------------------------------------------------' 'Downloading...'
     if download_candidate "$asset" "$url"; then selected=1; break; fi
     printf '  %s is not published; trying the next compatible asset.\n' "$asset"
@@ -229,6 +271,7 @@ main() {
   printf 'Validating...\n'
   install_candidate
   [[ "${MIRROR_NO_PATH_UPDATE:-0}" == '1' ]] || ensure_path
+  install_agent_assets
   printf 'Run: mirror --version\n'
 }
 
