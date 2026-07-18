@@ -7,6 +7,7 @@ owner: mirror-docs-validation
 flags:
   - validated
   - final
+  - external-release-pending
 tags:
   - validation
   - cli
@@ -21,8 +22,10 @@ keywords:
 
 ## Summary
 
-The complete MR-16 gate passed. Mirror `3.5.1` is the final separately
-authorized patch after correcting version-sensitive release assertions.
+The complete local MR-16 gate passed. Mirror `3.5.1` is the separately
+authorized patch after correcting version-sensitive release assertions. The
+source and release workflow are ready, but public release availability is
+still waiting on the protected GitHub `production` environment.
 
 ## Scope
 
@@ -47,6 +50,22 @@ Git hygiene.
 | `xdocs tree` | Passed |
 | `git diff --check` | Passed |
 
+## Public Release Gate
+
+Public release availability was checked independently after the local gate:
+
+| Check | Result |
+| --- | --- |
+| Local `main`, `origin/main`, and `@guiho/mirror@3.5.1` tag | Passed: all resolve to `343af5f4cc2071c3e1c747d2519a46e1ceb9f355` |
+| GitHub publish workflow for `@guiho/mirror@3.5.1` | Waiting: run [29662386344](https://github.com/CGuiho/mirror/actions/runs/29662386344) is held by the protected `production` environment |
+| Latest public GitHub Release | `@guiho/mirror@3.4.2`, with the legacy twelve binary assets |
+| Live `mirror upgrade --dry-run --format json` | Correctly routes to upgrade resolution, then reports `UPGRADE_ASSET_UNAVAILABLE` because public `3.4.2` has no RFC-named compatible asset |
+| Live `mirror upgrade --version 3.5.1 --dry-run --format json` | Correctly preserves the nested exact-version value, then reports `UPGRADE_RESOLUTION_FAILED` with GitHub `404 Not Found` because no public `3.5.1` release exists |
+
+These are external publication results, not source-test failures. They prevent
+calling `3.5.1` publicly installable or upgradeable until the environment gate
+is approved and the exact fourteen assets are present.
+
 ## Manual Checks
 
 - The exact final Citty catalog is present.
@@ -64,14 +83,19 @@ Git hygiene.
 
 ## XDocs Baseline Note
 
-Strict metadata validation passed for every changed source, script, schema,
-prompt, skill, TODO, review, and validation scope. The broader `mirror/`
-metadata scan still reports the pre-existing legal file `mirror/LICENSE.md`
-because it intentionally has no YAML frontmatter; the legal text was not
-modified for this CLI migration.
+Strict metadata validation passed for the changed `docs/todo`,
+`docs/reviews/implementation`, and `docs/validation` scopes. The repository-wide
+`xdocs doctor --format json` result remains valid with zero errors and eight
+warnings: the root agent, changelog, TODO, two older design documents, and legal
+file do not have companion frontmatter, while two generated overview documents
+use non-date `created` values. These warnings predate this correction and do not
+break descriptor or tree integrity; they are reported here rather than
+misrepresented as a warning-free whole-repository check.
 
 ## Readiness
 
-Validated. The user separately authorized versioning and Git ref pushes.
-Package publication and manual GitHub release creation remain outside this
-implementation task.
+Validated for source compliance and release-workflow readiness. The
+implementation task is completed because its approved scope excludes
+publication and live installation. Public `3.5.1` distribution is not ready:
+the production workflow is waiting, and package publication and public GitHub
+Release creation remain outside this implementation task.
