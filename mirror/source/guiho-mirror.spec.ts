@@ -8,6 +8,8 @@ import { discoverMirrorConfig } from './config.js'
 import { resolveNextVersion } from './version.js'
 import { joinPath } from './path.js'
 import { fileExists, makeTempDirectory, readTextFile, removePath, runCommand, writeTextFile } from './runtime.js'
+import { buildAssetCandidates, detectNativeArch, detectNativePlatform } from './self-management.js'
+import packageJson from '../package.json' with { type: 'json' }
 
 const temporaryDirectories: string[] = []
 
@@ -20,18 +22,76 @@ describe('Mirror RFC 0034 CLI', () => {
   test('prints the exact no-argument banner', async () => {
     const result = await runCli([])
     expect(result.exitCode).toBe(0)
-    expect(result.stdout).toBe('Hello Windows - mirror v3.5.0-alpha.0\n')
+    expect(result.stdout).toBe(`Hello Windows - mirror v${packageJson.version}\n`)
     expect(result.stderr).toBe('')
   })
 
   test('prints version and help without configuration', async () => {
     const version = await runCli(['-v'])
     expect(version.exitCode).toBe(0)
-    expect(version.stdout).toBe('3.5.0-alpha.0\n')
+    expect(version.stdout).toBe(`${packageJson.version}\n`)
     const help = await runCli(['version', 'plan', '--help'])
     expect(help.exitCode).toBe(0)
     expect(help.stdout).toContain('mirror version plan')
     expect(help.stdout).not.toContain('configuration file loaded:')
+  })
+
+  test('prints a cached update notice before the no-argument banner', async () => {
+    const home = await createTemp()
+    await writeTextFile(joinPath(home, '.guiho', 'mirror', 'cache.json'), `${JSON.stringify({
+      newVersionAvailable: true,
+      latestVersion: '999.0.0',
+      upgradeCommand: 'mirror upgrade',
+      lastCheck: new Date().toISOString(),
+    })}\n`)
+    const result = await runCli([], { home })
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout).toBe(
+      `New version available. Run this command to upgrade: mirror upgrade\nHello Windows - mirror v${packageJson.version}\n`,
+    )
+  })
+
+  test('routes parent and nested upgrade version flags into dry-run JSON plans', async () => {
+    const platform = detectNativePlatform()
+    const arch = detectNativeArch()
+    const asset = buildAssetCandidates(platform, arch, 'baseline')[0]!
+    const nextVersion = resolveNextVersion(packageJson.version, 'patch')
+    const server = Bun.serve({
+      port: 0,
+      fetch(request) {
+        const exact = new URL(request.url).pathname.includes('/releases/tags/')
+        const version = exact ? packageJson.version : nextVersion
+        return Response.json({
+          tag_name: `@guiho/mirror@${version}`,
+          html_url: `https://example.invalid/releases/${version}`,
+          prerelease: false,
+          draft: false,
+          published_at: '2026-07-18T00:00:00Z',
+          assets: [{
+            name: asset,
+            browser_download_url: `https://example.invalid/assets/${asset}`,
+          }],
+        })
+      },
+    })
+    try {
+      const env = {
+        MIRROR_GITHUB_API_URL: server.url.origin,
+        MIRROR_SELF_PATH: joinPath(await createTemp(), 'mirror.exe'),
+      }
+      const latest = await runCli(['upgrade', '--dry-run', '--format', 'json'], { env })
+      expect(latest.exitCode).toBe(0)
+      expect(JSON.parse(latest.stdout).outcome).toBe('dry-run')
+      expect(JSON.parse(latest.stdout).plan.targetVersion).toBe(nextVersion)
+
+      const exact = await runCli(['upgrade', '--version', packageJson.version, '--dry-run', '--format', 'json'], { env })
+      expect(exact.exitCode).toBe(0)
+      expect(JSON.parse(exact.stdout).outcome).toBe('up-to-date')
+      expect(JSON.parse(exact.stdout).plan.targetVersion).toBe(packageJson.version)
+      expect(exact.stdout.trim()).not.toBe(packageJson.version)
+    } finally {
+      server.stop(true)
+    }
   })
 
   test('renders tree and Markdown help from the Citty command definitions', async () => {
@@ -224,14 +284,18 @@ const configYaml = (options: { source?: 'package.json' | 'jsr.json' | 'git', out
   '',
 ].join('\n')
 
-const runCli = async (args: string[]) => {
-  const home = await createTemp()
+const runCli = async (
+  args: string[],
+  options: { home?: string, env?: Record<string, string> } = {},
+) => {
+  const home = options.home ?? await createTemp()
   return runCommand(['bun', joinPath(import.meta.dir, 'guiho-mirror-bin.ts'), ...args], {
     env: {
       HOME: home,
       USERPROFILE: home,
       MIRROR_DISABLE_UPDATE_CHECK: '1',
       NO_COLOR: '1',
+      ...options.env,
     },
     timeoutMs: 15_000,
   })
