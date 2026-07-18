@@ -4,8 +4,18 @@
 
 import { defineCommand, renderUsage, runCommand as runCittyCommand } from 'citty'
 import { readCurrentVersion, resolveProjectName } from './adapters.js'
-import { ensureMirrorAgentInstructionFiles, installMirrorSkills, runMirrorAgentAutomation } from './agents.js'
-import { configPathForDisplay, discoverMirrorConfig, loadMirrorConfig, relativeFromCwd, writeInitConfigFromAnswers } from './config.js'
+import {
+  ensureMirrorAgentInstructionFiles,
+  installMirrorSkills,
+  listMirrorSkills,
+  mirrorPromptCatalog,
+  removeMirrorAgentInstructionFiles,
+  showMirrorInstructionTemplate,
+  showMirrorPrompt,
+  showMirrorSkill,
+  uninstallMirrorSkills,
+} from './agents.js'
+import { configPathForDisplay, loadMirrorConfig, writeInitConfigFromAnswers } from './config.js'
 import { MirrorError, MirrorUsageError } from './errors.js'
 import { executeVersionPlan } from './executor.js'
 import { showMirrorCommandHelpDocs, showMirrorCommandHelpTree } from './help.js'
@@ -39,7 +49,7 @@ import { resolveNextVersion } from './version.js'
 import packageJson from '../package.json' with { type: 'json' }
 
 import type { CommandContext, CommandDef } from 'citty'
-import type { MirrorAdapterName, MirrorAgentToolSelection, MirrorCliOptions, MirrorFormat, MirrorHookResult, MirrorInitFlags, MirrorUpgradeRecovery, MirrorUpgradeResult } from './types.js'
+import type { MirrorAdapterName, MirrorCliOptions, MirrorFormat, MirrorHookResult, MirrorInitFlags, MirrorUpgradeRecovery, MirrorUpgradeResult } from './types.js'
 
 export {
   createMirrorCommand,
@@ -67,13 +77,13 @@ const mirrorVersion = typeof packageJson.version === 'string' ? packageJson.vers
 
 const commonArgs = {
   cwd: { type: 'string', description: 'Run as if Mirror started in this directory.', valueHint: 'path' },
-  config: { type: 'string', description: 'Use this mirror.config.toml file.', valueHint: 'path' },
+  config: { type: 'string', description: 'Use this mirror.yaml file.', valueHint: 'path' },
   format: { type: 'string', description: 'Select text or JSON output.', valueHint: 'text|json' },
-  tool: { type: 'string', description: 'Select agents, claude, or all.', valueHint: 'agents|claude|all' },
   color: { type: 'boolean', description: 'Enable ANSI color output.', negativeDescription: 'Disable ANSI color output.' },
   verbose: { type: 'boolean', description: 'Show full error details.' },
   help: { type: 'boolean', alias: 'h', description: 'Show command help.' },
   'help-tree': { type: 'boolean', description: 'Show the command tree from the current command.' },
+  'help-tree-depth': { type: 'string', description: 'Limit command-tree recursion to a positive integer.', valueHint: 'depth' },
   'help-docs': { type: 'boolean', description: 'Print Markdown documentation for the current command.' },
 } as const
 
@@ -96,21 +106,20 @@ const adapterArgs = {
 const releaseArgs = {
   ...commonArgs,
   ...adapterArgs,
-  'dry-run': { type: 'boolean', alias: 'dy', description: 'Build the plan without applying it.' },
+  'dry-run': { type: 'boolean', description: 'Build the plan without applying it.' },
   commit: { type: 'boolean', description: 'Create a release commit when file outputs changed.' },
   push: { type: 'boolean', description: 'Push release refs.' },
   'allow-dirty': { type: 'boolean', description: 'Allow a dirty Git worktree.' },
-  yes: { type: 'boolean', alias: 'y', description: 'Apply without interactive confirmation.' },
+  yes: { type: 'boolean', description: 'Apply without interactive confirmation.' },
 } as const
 
 const initArgs = {
-  adapter: { type: 'positional', required: false, description: 'Initial version source.', valueHint: 'package.json|jsr.json|git' },
   ...commonArgs,
   ...adapterArgs,
   commit: { type: 'boolean', description: 'Enable release commits.' },
   push: { type: 'boolean', description: 'Enable release pushes.' },
   'non-interactive': { type: 'boolean', description: 'Skip interactive prompts.' },
-  yes: { type: 'boolean', alias: 'y', description: 'Allow reconciliation without confirmation.' },
+  yes: { type: 'boolean', description: 'Allow reconciliation without confirmation.' },
 } as const
 
 const targetArgs = {
@@ -123,23 +132,25 @@ const upgradeArgs = {
   version: { type: 'string', description: 'Install a specific version instead of latest.', valueHint: 'version' },
   arch: { type: 'string', description: 'Override the native architecture.', valueHint: 'x64|arm64' },
   variant: { type: 'string', description: 'Override the x64 binary variant.', valueHint: 'baseline|default|modern' },
-  'dry-run': { type: 'boolean', alias: 'dy', description: 'Preview the selected binary without replacing it.' },
+  'dry-run': { type: 'boolean', description: 'Preview the selected binary without replacing it.' },
 } as const
 
 const upgradeListArgs = {
   ...commonArgs,
   arch: { type: 'string', description: 'Override compatibility architecture.', valueHint: 'x64|arm64' },
   variant: { type: 'string', description: 'Override the x64 compatibility variant.', valueHint: 'baseline|default|modern' },
+  page: { type: 'string', description: 'Fetch one positive release page.', valueHint: 'page' },
+  'per-page': { type: 'string', description: 'Number of releases per page.', valueHint: 'count' },
+  'pre-releases': { type: 'boolean', description: 'Include prerelease versions.' },
 } as const
 
 const uninstallArgs = {
   ...commonArgs,
-  'dry-run': { type: 'boolean', alias: 'dy', description: 'Show the executable path without deleting it.' },
+  'dry-run': { type: 'boolean', description: 'Show the executable path without deleting it.' },
 } as const
 
 const allKnownArgumentKeys = new Set([
   '_',
-  'adapter',
   'allow-dirty',
   'allowDirty',
   'arch',
@@ -150,12 +161,14 @@ const allKnownArgumentKeys = new Set([
   'cwd',
   'dry-run',
   'dryRun',
-  'dy',
+  'filter',
   'format',
   'h',
   'help',
   'help-docs',
   'help-tree',
+  'help-tree-depth',
+  'helpTreeDepth',
   'helpDocs',
   'helpTree',
   'jsr-file',
@@ -174,12 +187,17 @@ const allKnownArgumentKeys = new Set([
   'tag-template',
   'tagTemplate',
   'target',
-  'tool',
+  'local',
+  'names',
+  'page',
+  'per-page',
+  'perPage',
+  'pre-releases',
+  'preReleases',
   'v',
   'variant',
   'verbose',
   'version',
-  'y',
   'yes',
 ])
 
@@ -188,7 +206,7 @@ function createMirrorCommand(): CommandDef<any> {
 }
 
 async function runMirrorCli(rawArgs = process.argv.slice(2)): Promise<void> {
-  const normalizedArgs = normalizeCompatibilityArgs(rawArgs)
+  const normalizedArgs = rawArgs
   const { command, state } = createMirrorCommandTree(normalizedArgs)
   const restoreColorOutput = normalizedArgs.includes('--no-color') ? stripColorFromConsoleOutput() : () => {}
 
@@ -220,7 +238,6 @@ function createMirrorCommandTree(rawArgs: string[]): { command: CommandDef<any>,
     setup: withLeafCommand(state, ['config', 'show'], 0, commonArgs),
     run: async ({ args }) => {
       const options = resolveCliOptions(state, args)
-      await prepareAgents(options)
       const config = await loadMirrorConfig(options)
       if (options.format !== 'json') write(mirrorBanner(configPathForDisplay(config)), state)
       write(reportConfig(config, options.format), state)
@@ -233,7 +250,6 @@ function createMirrorCommandTree(rawArgs: string[]): { command: CommandDef<any>,
     setup: withLeafCommand(state, ['config', 'check'], 0, commonArgs),
     run: async ({ args }) => {
       const options = resolveCliOptions(state, args)
-      await prepareAgents(options)
       await validateMirrorConfig(options)
       write(reportValue('ok', options.format), state)
     },
@@ -263,48 +279,180 @@ function createMirrorCommandTree(rawArgs: string[]): { command: CommandDef<any>,
     setup: withGroupCommand(state, ['config']),
   })
 
-  const agentsInstallCommand = defineCommand({
-    meta: { name: 'mirror agents install', description: 'Install the bundled Mirror skill locally or globally.' },
-    args: {
-      scope: { type: 'positional', description: 'Install locally or globally.', valueHint: 'local|global' },
-      ...commonArgs,
-    },
-    setup: withLeafCommand(state, ['agents', 'install'], 1, { scope: { type: 'positional' }, ...commonArgs }),
-    run: async ({ args }) => {
-      const scope = stringArg(args, 'scope')
-      if (scope !== 'local' && scope !== 'global') throw usageError(state, 'Agent install scope must be local or global.')
-      const options = resolveCliOptions(state, args)
-      const results = await installMirrorSkills(scope, options.tool ?? 'agents', { cwd: resolvePath(options.cwd ?? process.cwd()) })
-      write(reportSkillInstall(results.length === 1 ? results[0]! : results, options.format), state)
-    },
-  })
-
-  const agentsInstructionsCommand = defineCommand({
-    meta: { name: 'mirror agents instructions', description: 'Create or refresh Mirror agent guidance.' },
-    args: commonArgs,
-    setup: withLeafCommand(state, ['agents', 'instructions'], 0, commonArgs),
+  const agentScopeArgs = {
+    ...commonArgs,
+    local: { type: 'boolean', description: 'Use project-local agent directories instead of global directories.' },
+  } as const
+  const agentSkillInstallCommand = defineCommand({
+    meta: { name: 'mirror agent skill install', description: 'Install the bundled Mirror skill into both agent tools.' },
+    args: agentScopeArgs,
+    setup: withLeafCommand(state, ['agent', 'skill', 'install'], 0, agentScopeArgs),
     run: async ({ args }) => {
       const options = resolveCliOptions(state, args)
-      const results = await ensureMirrorAgentInstructionFiles(
-        resolvePath(options.cwd ?? process.cwd()),
-        options.tool ?? 'agents',
-        true,
-        options.tool === undefined,
-      )
-      write(reportAgentsInstructions(results.length === 1 ? results[0]! : results, options.format), state)
+      const scope = options.local ? 'local' : 'global'
+      const results = await installMirrorSkills(scope, 'all', { cwd: resolvePath(options.cwd ?? process.cwd()), overwrite: false })
+      write(reportSkillInstall(results, options.format), state)
     },
   })
-
-  const agentsCommand = defineCommand({
-    meta: { name: 'mirror agents', description: 'Install Mirror-aware AI-agent guidance.' },
+  const agentSkillUpdateCommand = defineCommand({
+    meta: { name: 'mirror agent skill update', description: 'Refresh the bundled Mirror skill in both agent tools.' },
+    args: agentScopeArgs,
+    setup: withLeafCommand(state, ['agent', 'skill', 'update'], 0, agentScopeArgs),
+    run: async ({ args }) => {
+      const options = resolveCliOptions(state, args)
+      const scope = options.local ? 'local' : 'global'
+      write(reportSkillInstall(await installMirrorSkills(scope, 'all', {
+        cwd: resolvePath(options.cwd ?? process.cwd()),
+        overwrite: true,
+      }), options.format), state)
+    },
+  })
+  const agentSkillUninstallCommand = defineCommand({
+    meta: { name: 'mirror agent skill uninstall', description: 'Remove Mirror skills from both agent tools.' },
+    args: agentScopeArgs,
+    setup: withLeafCommand(state, ['agent', 'skill', 'uninstall'], 0, agentScopeArgs),
+    run: async ({ args }) => {
+      const options = resolveCliOptions(state, args)
+      const removed = await uninstallMirrorSkills(options.local ? 'local' : 'global', { cwd: resolvePath(options.cwd ?? process.cwd()) })
+      write(reportValue({ removed }, options.format), state)
+    },
+  })
+  const agentSkillListArgs = {
+    ...commonArgs,
+    filter: { type: 'string', description: 'Filter skills by keyword.', valueHint: 'keyword' },
+  } as const
+  const agentSkillListCommand = defineCommand({
+    meta: { name: 'mirror agent skill list', description: 'List embedded Mirror skills.' },
+    args: agentSkillListArgs,
+    setup: withLeafCommand(state, ['agent', 'skill', 'list'], 0, agentSkillListArgs),
+    run: async ({ args }) => {
+      const options = resolveCliOptions(state, args)
+      const resources = await listMirrorSkills(options.filter)
+      write(options.format === 'json'
+        ? reportValue(resources, 'json')
+        : `${resources.map((resource) => `${resource.id}\t${resource.description}`).join('\n')}\n`, state)
+    },
+  })
+  const resourceShowArgs = {
+    id: { type: 'positional', description: 'Embedded resource identifier.', required: true, valueHint: 'id' },
+    ...commonArgs,
+  } as const
+  const agentSkillShowCommand = defineCommand({
+    meta: { name: 'mirror agent skill show', description: 'Show embedded skill metadata.' },
+    args: resourceShowArgs,
+    setup: withLeafCommand(state, ['agent', 'skill', 'show'], 1, resourceShowArgs),
+    run: async ({ args }) => {
+      const options = resolveCliOptions(state, args)
+      const resource = await showMirrorSkill(requireStringArg(args, 'id', state, 'Missing skill id.'))
+      const metadata = {
+        id: resource.id,
+        name: resource.name,
+        description: resource.description,
+        version: resource.version,
+        path: resource.path,
+      }
+      write(options.format === 'json'
+        ? reportValue(metadata, 'json')
+        : `id: ${metadata.id}\nname: ${metadata.name}\ndescription: ${metadata.description}\nversion: ${metadata.version}\npath: ${metadata.path}\n`, state)
+    },
+  })
+  const agentSkillCommand = defineCommand({
+    meta: { name: 'mirror agent skill', description: 'Manage the embedded Mirror skill.' },
     args: commonArgs,
     default: '_help',
     subCommands: {
-      _help: createGroupHelpCommand(state, 'mirror agents'),
-      install: agentsInstallCommand,
-      instructions: agentsInstructionsCommand,
+      _help: createGroupHelpCommand(state, 'mirror agent skill'),
+      install: agentSkillInstallCommand,
+      uninstall: agentSkillUninstallCommand,
+      update: agentSkillUpdateCommand,
+      list: agentSkillListCommand,
+      show: agentSkillShowCommand,
     },
-    setup: withGroupCommand(state, ['agents']),
+    setup: withGroupCommand(state, ['agent', 'skill']),
+  })
+  const instructionMutation = async (args: CliArgs, remove: boolean) => {
+    const options = resolveCliOptions(state, args)
+    const cwd = resolvePath(options.cwd ?? process.cwd())
+    const results = remove
+      ? await removeMirrorAgentInstructionFiles(cwd)
+      : await ensureMirrorAgentInstructionFiles(cwd, 'agents', true, true)
+    write(reportAgentsInstructions(results, options.format), state)
+  }
+  const agentInstructionApplyCommand = defineCommand({
+    meta: { name: 'mirror agent instruction apply', description: 'Apply the managed Mirror instruction block.' },
+    args: commonArgs,
+    setup: withLeafCommand(state, ['agent', 'instruction', 'apply'], 0, commonArgs),
+    run: async ({ args }) => instructionMutation(args, false),
+  })
+  const agentInstructionRemoveCommand = defineCommand({
+    meta: { name: 'mirror agent instruction remove', description: 'Remove the managed Mirror instruction block.' },
+    args: commonArgs,
+    setup: withLeafCommand(state, ['agent', 'instruction', 'remove'], 0, commonArgs),
+    run: async ({ args }) => instructionMutation(args, true),
+  })
+  const agentInstructionUpdateCommand = defineCommand({
+    meta: { name: 'mirror agent instruction update', description: 'Reconcile the managed Mirror instruction block.' },
+    args: commonArgs,
+    setup: withLeafCommand(state, ['agent', 'instruction', 'update'], 0, commonArgs),
+    run: async ({ args }) => instructionMutation(args, false),
+  })
+  const agentInstructionShowCommand = defineCommand({
+    meta: { name: 'mirror agent instruction show', description: 'Print the raw Mirror instruction template.' },
+    args: commonArgs,
+    setup: withLeafCommand(state, ['agent', 'instruction', 'show'], 0, commonArgs),
+    run: () => write(showMirrorInstructionTemplate(), state),
+  })
+  const agentInstructionCommand = defineCommand({
+    meta: { name: 'mirror agent instruction', description: 'Manage Mirror instruction blocks.' },
+    args: commonArgs,
+    default: '_help',
+    subCommands: {
+      _help: createGroupHelpCommand(state, 'mirror agent instruction'),
+      apply: agentInstructionApplyCommand,
+      remove: agentInstructionRemoveCommand,
+      update: agentInstructionUpdateCommand,
+      show: agentInstructionShowCommand,
+    },
+    setup: withGroupCommand(state, ['agent', 'instruction']),
+  })
+  const promptListArgs = {
+    ...commonArgs,
+    names: { type: 'boolean', description: 'Print prompt names only.' },
+  } as const
+  const agentPromptListCommand = defineCommand({
+    meta: { name: 'mirror agent prompt list', description: 'List embedded Mirror prompts.' },
+    args: promptListArgs,
+    setup: withLeafCommand(state, ['agent', 'prompt', 'list'], 0, promptListArgs),
+    run: ({ args }) => {
+      const options = resolveCliOptions(state, args)
+      const value = options.names ? mirrorPromptCatalog.map((prompt) => prompt.name).join('\n') : mirrorPromptCatalog
+      write(options.names ? `${value}\n` : reportValue(value, options.format), state)
+    },
+  })
+  const agentPromptShowCommand = defineCommand({
+    meta: { name: 'mirror agent prompt show', description: 'Print a raw embedded Mirror prompt.' },
+    args: resourceShowArgs,
+    setup: withLeafCommand(state, ['agent', 'prompt', 'show'], 1, resourceShowArgs),
+    run: async ({ args }) => write(await showMirrorPrompt(requireStringArg(args, 'id', state, 'Missing prompt id.')), state),
+  })
+  const agentPromptCommand = defineCommand({
+    meta: { name: 'mirror agent prompt', description: 'Inspect embedded Mirror prompts.' },
+    args: commonArgs,
+    default: '_help',
+    subCommands: { _help: createGroupHelpCommand(state, 'mirror agent prompt'), list: agentPromptListCommand, show: agentPromptShowCommand },
+    setup: withGroupCommand(state, ['agent', 'prompt']),
+  })
+  const agentCommand = defineCommand({
+    meta: { name: 'mirror agent', description: 'Manage Mirror agent resources.' },
+    args: commonArgs,
+    default: '_help',
+    subCommands: {
+      _help: createGroupHelpCommand(state, 'mirror agent'),
+      skill: agentSkillCommand,
+      instruction: agentInstructionCommand,
+      prompt: agentPromptCommand,
+    },
+    setup: withGroupCommand(state, ['agent']),
   })
 
   const versionCurrentCommand = defineCommand({
@@ -313,7 +461,6 @@ function createMirrorCommandTree(rawArgs: string[]): { command: CommandDef<any>,
     setup: withLeafCommand(state, ['version', 'current'], 0, { ...commonArgs, ...adapterArgs }),
     run: async ({ args }) => {
       const options = resolveCliOptions(state, args)
-      await prepareAgents(options)
       const config = await loadMirrorConfig(options)
       const projectName = await resolveProjectName(config)
       write(reportValue(await readCurrentVersion(config, projectName), options.format), state)
@@ -327,7 +474,6 @@ function createMirrorCommandTree(rawArgs: string[]): { command: CommandDef<any>,
     run: async ({ args }) => {
       const target = requireStringArg(args, 'target', state, 'Missing release target. Expected a release type or exact semantic version.')
       const options = resolveCliOptions(state, args)
-      await prepareAgents(options)
       const config = await loadMirrorConfig(options)
       const projectName = await resolveProjectName(config)
       const currentVersion = await readCurrentVersion(config, projectName)
@@ -342,7 +488,6 @@ function createMirrorCommandTree(rawArgs: string[]): { command: CommandDef<any>,
     run: async ({ args }) => {
       const target = requireStringArg(args, 'target', state, 'Missing release target. Expected a release type or exact semantic version.')
       const options = resolveCliOptions(state, args)
-      await prepareAgents(options)
       const plan = await buildVersionPlan(target, options)
       if (options.format !== 'json') write(mirrorBanner(plan.configPath ? plan.configPath : ''), state)
       write(reportPlan(plan, options.format), state)
@@ -414,20 +559,17 @@ function createMirrorCommandTree(rawArgs: string[]): { command: CommandDef<any>,
   })
 
   const initCommand = defineCommand({
-    meta: { name: 'mirror init', description: 'Create or reconcile mirror.config.toml.' },
+    meta: { name: 'mirror init', description: 'Create or reconcile mirror.yaml.' },
     args: initArgs,
-    setup: withLeafCommand(state, ['init'], 1, initArgs),
-    run: async ({ args }) => runInit(resolveCliOptions(state, args), adapterArg(stringArg(args, 'adapter')), state),
+    setup: withLeafCommand(state, ['init'], 0, initArgs),
+    run: async ({ args }) => runInit(resolveCliOptions(state, args), undefined, state),
   })
 
   const homeCommand = defineCommand({
     meta: { name: 'mirror', description: 'Show the Mirror home page.', hidden: true },
     args: rootArgs,
     run: async () => {
-      const options = resolveCliOptions(state, state.rootArgs)
-      await prepareAgents(options)
-      await printCittyHelp(state.usageCommand, options, state)
-      void scheduleBackgroundUpdateCheck()
+      write(`Hello Windows - mirror v${mirrorVersion}\n`, state)
     },
   })
 
@@ -443,7 +585,7 @@ function createMirrorCommandTree(rawArgs: string[]): { command: CommandDef<any>,
       _home: homeCommand,
       init: initCommand,
       config: configCommand,
-      agents: agentsCommand,
+      agent: agentCommand,
       version: versionCommand,
       upgrade: upgradeCommand,
       uninstall: uninstallCommand,
@@ -470,17 +612,20 @@ function createMirrorCommandTree(rawArgs: string[]): { command: CommandDef<any>,
 
       const options = resolveCliOptions(state, context.args)
       if (booleanArg(context.args, 'helpTree')) {
-        write(`${showMirrorCommandHelpTree(state.usagePath)}\n`, state)
+        write(`${showMirrorCommandHelpTree(state.usageCommand, options.helpTreeDepth)}\n`, state)
         throw new CliHandled()
       }
       if (booleanArg(context.args, 'helpDocs')) {
-        write(showMirrorCommandHelpDocs(state.usagePath), state)
+        write(showMirrorCommandHelpDocs(state.usageCommand), state)
         throw new CliHandled()
       }
       if (booleanArg(context.args, 'help') || booleanArg(context.args, 'h')) {
-        await printCittyHelp(state.usageCommand, options, state)
+        await printCittyHelp(state.usageCommand, state)
         throw new CliHandled()
       }
+
+      await printCachedUpdateNotice(state)
+      void scheduleBackgroundUpdateCheck()
     },
   })
 
@@ -490,9 +635,21 @@ function createMirrorCommandTree(rawArgs: string[]): { command: CommandDef<any>,
     ['config show', configShowCommand],
     ['config check', configCheckCommand],
     ['config schema', configSchemaCommand],
-    ['agents', agentsCommand],
-    ['agents install', agentsInstallCommand],
-    ['agents instructions', agentsInstructionsCommand],
+    ['agent', agentCommand],
+    ['agent skill', agentSkillCommand],
+    ['agent skill install', agentSkillInstallCommand],
+    ['agent skill uninstall', agentSkillUninstallCommand],
+    ['agent skill update', agentSkillUpdateCommand],
+    ['agent skill list', agentSkillListCommand],
+    ['agent skill show', agentSkillShowCommand],
+    ['agent instruction', agentInstructionCommand],
+    ['agent instruction apply', agentInstructionApplyCommand],
+    ['agent instruction remove', agentInstructionRemoveCommand],
+    ['agent instruction update', agentInstructionUpdateCommand],
+    ['agent instruction show', agentInstructionShowCommand],
+    ['agent prompt', agentPromptCommand],
+    ['agent prompt list', agentPromptListCommand],
+    ['agent prompt show', agentPromptShowCommand],
     ['version', versionCommand],
     ['version current', versionCurrentCommand],
     ['version next', versionNextCommand],
@@ -514,7 +671,7 @@ function createGroupHelpCommand(state: CliState, name: string): CommandDef<any> 
     meta: { name, description: 'Show command help.', hidden: true },
     args: commonArgs,
     run: async () => {
-      await printCittyHelp(state.usageCommand, resolveCliOptions(state, state.rootArgs), state)
+      await printCittyHelp(state.usageCommand, state)
     },
   })
 }
@@ -570,7 +727,6 @@ async function runInit(options: MirrorCliOptions, positionalSource: MirrorAdapte
 }
 
 async function runApply(target: string, options: MirrorCliOptions, state: CliState): Promise<void> {
-  await prepareAgents(options)
   const config = await loadMirrorConfig(options)
   const hooks = config.hooks
   const hookResults: MirrorHookResult[] = []
@@ -619,14 +775,20 @@ async function runUpgradeCheck(options: MirrorCliOptions, state: CliState): Prom
     write(`${JSON.stringify(result, null, 2)}\n`, state)
     return
   }
-  write(`current: ${result.currentVersion}\n`, state)
+  write(`current: ${mirrorVersion}\n`, state)
   write(`latest: ${result.latestVersion}\n`, state)
-  write(`update_available: ${String(result.updateAvailable)}\n`, state)
-  if (result.updateAvailable) write('Run: mirror upgrade\n', state)
+  write(`update_available: ${String(result.newVersionAvailable)}\n`, state)
+  if (result.newVersionAvailable) write(`Run: ${result.upgradeCommand ?? 'mirror upgrade'}\n`, state)
 }
 
 async function runUpgradeList(options: MirrorCliOptions, state: CliState): Promise<void> {
-  const catalog = await listAvailableVersions({ arch: options.arch, variant: options.variant })
+  const catalog = await listAvailableVersions({
+    arch: options.arch,
+    variant: options.variant,
+    page: options.page,
+    perPage: options.perPage,
+    preReleases: options.preReleases,
+  })
   if (options.format === 'json') {
     write(`${JSON.stringify(catalog, null, 2)}\n`, state)
     return
@@ -653,9 +815,7 @@ async function runUpgrade(options: MirrorCliOptions, state: CliState): Promise<v
   const request = { version: options.upgradeVersion, arch: options.arch, variant: options.variant, dryRun: options.dryRun }
   const text = options.format !== 'json'
   if (text) {
-    write('------------------------------------------------------------\n', state)
-    write('  Upgrading the CLI\n', state)
-    write('------------------------------------------------------------\n', state)
+    write('Initiating GUIHO CLI Upgrade / Installation Sequence...\n', state)
     write('Resolving target...\n', state)
   }
 
@@ -664,12 +824,11 @@ async function runUpgrade(options: MirrorCliOptions, state: CliState): Promise<v
     const plan = await resolveUpgradePlan(request)
     if (text) {
       write(`  current : ${plan.currentVersion}\n`, state)
-      write(`  target  : ${plan.targetVersion}\n`, state)
-      write(`  os      : ${plan.platform}\n`, state)
-      write(`  arch    : ${plan.arch}\n`, state)
-      write(`  binary  : ${plan.asset}\n`, state)
-      write(`  path    : ${plan.executablePath}\n`, state)
-      write(`  url     : ${plan.downloadUrl}\n`, state)
+      write(`Target Version: v${plan.targetVersion}\n`, state)
+      write(`Architecture:   ${plan.arch}\n`, state)
+      write(`Variant:        ${plan.variant}\n`, state)
+      write(`Source URL:     ${plan.downloadUrl}\n`, state)
+      write(`Executable:     ${plan.executablePath}\n`, state)
       write('------------------------------------------------------------\n', state)
     }
     result = await executeUpgrade(plan, {
@@ -683,6 +842,12 @@ async function runUpgrade(options: MirrorCliOptions, state: CliState): Promise<v
     })
   } catch (error) {
     result = createUpgradeResolutionFailure(error)
+  }
+
+  if (result.outcome === 'upgraded') {
+    await installMirrorSkills('global', 'all', { overwrite: true })
+    const cwd = resolvePath(options.cwd ?? process.cwd())
+    await ensureMirrorAgentInstructionFiles(cwd, 'agents', false, true)
   }
 
   if (!text) {
@@ -791,7 +956,6 @@ async function runUninstall(options: MirrorCliOptions, state: CliState): Promise
 
 function resolveCliOptions(state: CliState, args: CliArgs): MirrorCliOptions {
   const formatValue = mergedStringArg(state, args, 'format')
-  const toolValue = mergedStringArg(state, args, 'tool')
   const upgradeVersion = stringArg(args, 'version')
   const outputValues = repeatableArg(state.rawArgs, 'output')
   const auxiliaryValues = repeatableArg(state.rawArgs, 'auxiliary')
@@ -800,6 +964,7 @@ function resolveCliOptions(state: CliState, args: CliArgs): MirrorCliOptions {
     cwd: mergedStringArg(state, args, 'cwd'),
     config: mergedStringArg(state, args, 'config'),
     format: formatValue ? assertFormat(formatValue, state) : undefined,
+    helpTreeDepth: optionalPositiveInteger(mergedStringArg(state, args, 'helpTreeDepth'), '--help-tree-depth', state),
     noColor: mergedBooleanArg(state, args, 'color') === false,
     source: optionalAdapter(mergedStringArg(state, args, 'source'), '--source', state),
     output: outputValues.length > 0 ? outputValues.map((value) => assertAdapter(value, '--output', state)) : undefined,
@@ -816,31 +981,27 @@ function resolveCliOptions(state: CliState, args: CliArgs): MirrorCliOptions {
     nonInteractive: Boolean(mergedBooleanArg(state, args, 'nonInteractive')),
     yes: Boolean(mergedBooleanArg(state, args, 'yes')),
     verbose: Boolean(mergedBooleanArg(state, args, 'verbose')),
-    tool: toolValue ? assertAgentToolSelection(toolValue, '--tool', state) : undefined,
+    local: Boolean(mergedBooleanArg(state, args, 'local')),
+    filter: mergedStringArg(state, args, 'filter'),
+    names: Boolean(mergedBooleanArg(state, args, 'names')),
+    page: optionalPositiveInteger(mergedStringArg(state, args, 'page'), '--page', state),
+    perPage: optionalPositiveInteger(mergedStringArg(state, args, 'perPage'), '--per-page', state),
+    preReleases: Boolean(mergedBooleanArg(state, args, 'preReleases')),
     upgradeVersion,
     arch: mergedStringArg(state, args, 'arch'),
     variant: mergedStringArg(state, args, 'variant'),
   }
 }
 
-async function printCittyHelp(command: CommandDef<any>, options: MirrorCliOptions, state: CliState): Promise<void> {
-  const cwd = resolvePath(options.cwd ?? process.cwd())
-  const discovery = await discoverMirrorConfig(cwd, options.config)
-  const configDisplay = discovery.path ? relativeFromCwd(cwd, discovery.path) : ''
-  write(mirrorBanner(configDisplay), state)
-  await printCachedUpdateNotice(state)
+async function printCittyHelp(command: CommandDef<any>, state: CliState): Promise<void> {
   write(`${await renderUsage(command)}\n`, state)
 }
 
 async function printCachedUpdateNotice(state: CliState): Promise<void> {
   const cache = await readUpdateCache()
-  if (!cache?.updateAvailable) return
+  if (!cache?.newVersionAvailable) return
   if (compareVersions(cache.latestVersion, mirrorVersion) <= 0) return
-  writeError(`notice: Mirror ${cache.latestVersion} is available. Run \`mirror upgrade\` to update.\n`, state)
-}
-
-async function prepareAgents(options: MirrorCliOptions): Promise<void> {
-  await runMirrorAgentAutomation(options, (message) => console.error(message))
+  write(`New version available. Run this command to upgrade: ${cache.upgradeCommand ?? 'mirror upgrade'}\n`, state)
 }
 
 async function handleCliError(error: unknown, state: CliState): Promise<void> {
@@ -911,7 +1072,7 @@ function assertAllowedFlags(
 }
 
 function validateStringFlagValues(rawArgs: string[], state: CliState): void {
-  const valueFlags = new Set(['--arch', '--auxiliary', '--config', '--cwd', '--format', '--jsr-file', '--name', '--output', '--package-file', '--preid', '--source', '--tag-template', '--tool', '--variant'])
+  const valueFlags = new Set(['--arch', '--auxiliary', '--config', '--cwd', '--filter', '--format', '--help-tree-depth', '--jsr-file', '--name', '--output', '--package-file', '--page', '--per-page', '--preid', '--source', '--tag-template', '--variant'])
   for (const [index, token] of rawArgs.entries()) {
     if (!valueFlags.has(token)) continue
     const value = rawArgs[index + 1]
@@ -929,10 +1090,6 @@ function repeatableArg(rawArgs: string[], name: 'output' | 'auxiliary'): string[
     if (token.startsWith(`${longFlag}=`)) return splitList(token.slice(longFlag.length + 1))
     return []
   })
-}
-
-function normalizeCompatibilityArgs(rawArgs: string[]): string[] {
-  return rawArgs.map((token) => token === '-dy' ? '--dry-run' : token)
 }
 
 function mergedStringArg(state: CliState, args: CliArgs, name: string): string | undefined {
@@ -977,14 +1134,10 @@ function assertFormat(value: string, state: CliState): MirrorFormat {
   return value
 }
 
-function assertAgentToolSelection(value: string, flagName: string, state: CliState): MirrorAgentToolSelection {
-  if (value !== 'agents' && value !== 'claude' && value !== 'all') throw usageError(state, `Invalid ${flagName} value: ${value}`)
-  return value
-}
-
-function adapterArg(value: string | undefined): MirrorAdapterName | undefined {
-  if (value === 'package.json' || value === 'jsr.json' || value === 'git') return value
-  return undefined
+function optionalPositiveInteger(value: string | undefined, flagName: string, state: CliState): number | undefined {
+  if (value === undefined) return undefined
+  if (!/^[1-9]\d*$/.test(value)) throw usageError(state, `Invalid ${flagName} value: ${value}. Expected a positive integer.`)
+  return Number.parseInt(value, 10)
 }
 
 function usageError(state: CliState, message: string): MirrorUsageError {
