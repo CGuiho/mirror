@@ -24,6 +24,12 @@ import type {
 import { MirrorError } from './errors.js'
 import { basenamePath, dirnamePath, joinPath, resolvePath } from './path.js'
 import { ensureDirectory, fileExists, removePath, runCommand, writeTextFile } from './runtime.js'
+import {
+  GitHubReleaseCatalogSchema,
+  GitHubReleaseSchema,
+  MirrorUpdateCacheSchema,
+  decodeWithSchema,
+} from './schema.js'
 
 export {
   buildAssetCandidates,
@@ -73,6 +79,9 @@ type SelfManagementOptions = {
   platform?: MirrorNativePlatform
   arch?: string
   variant?: string
+  page?: number
+  perPage?: number
+  preReleases?: boolean
   fetch?: typeof fetch
 }
 
@@ -102,15 +111,11 @@ class MirrorUpgradeError extends MirrorError {
 
 async function readUpdateCache(options: SelfManagementOptions = {}): Promise<MirrorUpdateCache | null> {
   try {
-    const parsed = await Bun.file(resolveCachePath(options)).json() as Partial<MirrorUpdateCache>
-    if (!parsed.checkedAt || !parsed.currentVersion || !parsed.latestVersion || typeof parsed.updateAvailable !== 'boolean') return null
-    return {
-      checkedAt: parsed.checkedAt,
-      currentVersion: parsed.currentVersion,
-      latestVersion: parsed.latestVersion,
-      updateAvailable: parsed.updateAvailable,
-      releaseUrl: parsed.releaseUrl ?? '',
-    }
+    return decodeWithSchema<typeof MirrorUpdateCacheSchema, MirrorUpdateCache>(
+      MirrorUpdateCacheSchema,
+      await Bun.file(resolveCachePath(options)).json(),
+      'Mirror update cache',
+    )
   } catch {
     return null
   }
@@ -131,7 +136,7 @@ async function writeUpdateCache(cache: MirrorUpdateCache, options: SelfManagemen
 
 function resolveCachePath(options: SelfManagementOptions = {}) {
   const root = options.cacheDir ?? process.env['MIRROR_CACHE_DIR'] ?? defaultCacheDirectory()
-  return joinPath(root, 'update.json')
+  return joinPath(root, 'cache.json')
 }
 
 async function checkForLatestVersion(options: SelfManagementOptions = {}) {
@@ -139,11 +144,10 @@ async function checkForLatestVersion(options: SelfManagementOptions = {}) {
   const latestVersion = normalizeMirrorVersion(requireReleaseTag(release))
   const currentVersion = resolveCurrentVersion(options)
   const cache: MirrorUpdateCache = {
-    checkedAt: new Date().toISOString(),
-    currentVersion,
+    newVersionAvailable: gt(latestVersion, currentVersion),
     latestVersion,
-    updateAvailable: gt(latestVersion, currentVersion),
-    releaseUrl: release.html_url ?? releaseUrl(options, requireReleaseTag(release)),
+    ...(gt(latestVersion, currentVersion) ? { upgradeCommand: 'mirror upgrade' } : {}),
+    lastCheck: new Date().toISOString(),
   }
   await writeUpdateCache(cache, options)
   return cache
@@ -157,7 +161,7 @@ async function runBackgroundUpdateCheck(options: SelfManagementOptions = {}) {
 async function scheduleBackgroundUpdateCheck(options: SelfManagementOptions = {}) {
   if (process.env['MIRROR_DISABLE_UPDATE_CHECK'] === '1') return false
   const cache = await readUpdateCache(options)
-  if (cache && Date.now() - Date.parse(cache.checkedAt) < cacheTtlMilliseconds) return false
+  if (cache && Date.now() - Date.parse(cache.lastCheck) < cacheTtlMilliseconds) return false
   if (await isSourceCheckout()) return false
 
   try {
@@ -340,11 +344,9 @@ async function executeUpgrade(plan: MirrorUpgradePlan, options: UpgradeExecution
   let cacheUpdated = false
   try {
     await writeUpdateCache({
-      checkedAt: new Date().toISOString(),
-      currentVersion: plan.targetVersion,
+      newVersionAvailable: false,
       latestVersion: plan.targetVersion,
-      updateAvailable: false,
-      releaseUrl: plan.releaseUrl,
+      lastCheck: new Date().toISOString(),
     }, { cacheDir: options.cacheDir })
     cacheUpdated = true
     emit('cache', 'succeeded', 'Verified update metadata committed.')
@@ -405,16 +407,23 @@ async function listAvailableVersions(options: SelfManagementOptions = {}): Promi
   const releases: GitHubRelease[] = []
   const warnings: string[] = []
   const fetcher = options.fetch ?? fetch
-  let url: string | null = `${apiBaseUrl(options)}/repos/${resolveRepo(options)}/releases?per_page=100&page=1`
+  const page = options.page ?? 1
+  const perPage = options.perPage ?? 30
+  let url: string | null = `${apiBaseUrl(options)}/repos/${resolveRepo(options)}/releases?per_page=${perPage}&page=${page}`
   let pagesFetched = 0
 
   while (url) {
-    const response = await fetcher(url, { headers: { 'User-Agent': 'mirror-cli' } })
+    const response: Response = await fetcher(url, { headers: { 'User-Agent': 'mirror-cli' } })
     if (!response.ok) throw new MirrorError(`Failed to fetch complete Mirror release catalog on page ${pagesFetched + 1}: ${response.status} ${response.statusText}`)
-    const page = await response.json() as GitHubRelease[]
-    releases.push(...page)
+    const pagePayload = decodeWithSchema<typeof GitHubReleaseCatalogSchema, GitHubRelease[]>(
+      GitHubReleaseCatalogSchema,
+      await response.json(),
+      'GitHub release catalog',
+      4,
+    )
+    releases.push(...pagePayload)
     pagesFetched += 1
-    url = nextPageUrl(response.headers.get('link'))
+    url = options.page === undefined ? nextPageUrl(response.headers.get('link')) : null
   }
 
   const normalized: Array<{ release: GitHubRelease, version: string, tag: string }> = []
@@ -454,7 +463,7 @@ async function listAvailableVersions(options: SelfManagementOptions = {}): Promi
       compatible: Boolean(compatibleAsset),
       ...(compatibleAsset ? { compatibleAsset } : {}),
     }
-  })
+  }).filter((release) => options.preReleases === true || !release.prerelease)
 
   return {
     schemaVersion: 1,
@@ -478,7 +487,7 @@ function resolveExecutablePath(options: SelfManagementOptions = {}) {
 
 function detectNativePlatform(): MirrorNativePlatform {
   if (process.platform === 'linux') return 'linux'
-  if (process.platform === 'darwin') return 'macos'
+  if (process.platform === 'darwin') return 'darwin'
   if (process.platform === 'win32') return 'windows'
   throw new MirrorError(`Unsupported OS: ${process.platform}`)
 }
@@ -491,10 +500,10 @@ function detectNativeArch(value: string = process.arch): MirrorNativeArch {
 
 function buildAssetCandidates(platform: MirrorNativePlatform, arch: MirrorNativeArch, variant: MirrorNativeVariant) {
   const extension = platform === 'windows' ? '.exe' : ''
-  if (arch === 'arm64') return [`guiho-mirror-${platform}-arm64${extension}`]
-  if (variant === 'modern') return [`guiho-mirror-${platform}-x64-modern${extension}`, `guiho-mirror-${platform}-x64${extension}`, `guiho-mirror-${platform}-x64-baseline${extension}`]
-  if (variant === 'default') return [`guiho-mirror-${platform}-x64${extension}`, `guiho-mirror-${platform}-x64-baseline${extension}`, `guiho-mirror-${platform}-x64-modern${extension}`]
-  return [`guiho-mirror-${platform}-x64-baseline${extension}`, `guiho-mirror-${platform}-x64${extension}`, `guiho-mirror-${platform}-x64-modern${extension}`]
+  if (arch === 'arm64') return [`mirror-${platform}-arm64${extension}`]
+  if (variant === 'modern') return [`mirror-${platform}-x64-modern${extension}`, `mirror-${platform}-x64${extension}`, `mirror-${platform}-x64-baseline${extension}`]
+  if (variant === 'default') return [`mirror-${platform}-x64${extension}`, `mirror-${platform}-x64-baseline${extension}`, `mirror-${platform}-x64-modern${extension}`]
+  return [`mirror-${platform}-x64-baseline${extension}`, `mirror-${platform}-x64${extension}`, `mirror-${platform}-x64-modern${extension}`]
 }
 
 function parseVariant(value: string | undefined): MirrorNativeVariant {
@@ -569,7 +578,12 @@ async function fetchLatestRelease(options: SelfManagementOptions) {
     headers: { 'User-Agent': 'mirror-cli' },
   })
   if (!response.ok) throw new MirrorUpgradeError('UPGRADE_RESOLUTION_FAILED', `Failed to fetch latest Mirror release: ${response.status} ${response.statusText}`)
-  return response.json() as Promise<GitHubRelease>
+  return decodeWithSchema<typeof GitHubReleaseSchema, GitHubRelease>(
+    GitHubReleaseSchema,
+    await response.json(),
+    'GitHub latest release',
+    4,
+  )
 }
 
 async function fetchReleaseByVersion(version: string, options: SelfManagementOptions) {
@@ -578,7 +592,12 @@ async function fetchReleaseByVersion(version: string, options: SelfManagementOpt
     headers: { 'User-Agent': 'mirror-cli' },
   })
   if (!response.ok) throw new MirrorUpgradeError('UPGRADE_RESOLUTION_FAILED', `Failed to fetch Mirror ${version}: ${response.status} ${response.statusText}`)
-  return response.json() as Promise<GitHubRelease>
+  return decodeWithSchema<typeof GitHubReleaseSchema, GitHubRelease>(
+    GitHubReleaseSchema,
+    await response.json(),
+    `GitHub release ${version}`,
+    4,
+  )
 }
 
 function requireReleaseTag(release: GitHubRelease) {
@@ -742,6 +761,7 @@ function errorMessage(error: unknown) {
 }
 
 function defaultCacheDirectory() {
-  if (process.platform === 'win32') return joinPath(process.env['LOCALAPPDATA'] ?? process.env['USERPROFILE'] ?? '.', 'mirror')
-  return joinPath(process.env['XDG_CACHE_HOME'] ?? joinPath(process.env['HOME'] ?? '.', '.cache'), 'mirror')
+  const home = process.env['HOME'] ?? process.env['USERPROFILE']
+  if (!home) throw new MirrorError('Unable to resolve the user home directory from HOME or USERPROFILE.', 5)
+  return joinPath(home, '.guiho', 'mirror')
 }
