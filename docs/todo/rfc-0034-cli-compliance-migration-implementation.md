@@ -23,7 +23,30 @@ keywords:
 Completed. Source, tests, distribution, canonical docs, downstream inventory,
 review, and the full MR-16 gate are complete. The authorized Mirror-managed
 `3.5.1` patch application contains the post-version test correction and is the
-final Git handoff, not an open implementation unit.
+final Git implementation handoff, not an open implementation unit. Public
+release publication remains a separate external gate.
+
+## Public Release Gate
+
+The implementation task is completed because its approved scope ends at
+release readiness and explicitly excludes publication and live installation.
+The public distribution state is not complete:
+
+- GitHub Actions run
+  [29662386344](https://github.com/CGuiho/mirror/actions/runs/29662386344)
+  for `@guiho/mirror@3.5.1` is waiting on the protected `production`
+  environment.
+- The latest public GitHub Release remains `@guiho/mirror@3.4.2`.
+- A live `mirror upgrade --dry-run --format json` resolves that public release
+  and reports `UPGRADE_ASSET_UNAVAILABLE` because it predates the RFC asset
+  names.
+- A live `mirror upgrade --version 3.5.1 --dry-run --format json` reaches the
+  exact-version route correctly and reports `UPGRADE_RESOLUTION_FAILED` with
+  GitHub `404 Not Found` because the `3.5.1` GitHub Release does not yet exist.
+
+Do not describe `3.5.1` as publicly installable or upgradeable until the
+production-environment gate completes and the release exposes the exact
+fourteen assets.
 
 ## Implemented Units
 
