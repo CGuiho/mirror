@@ -3,6 +3,7 @@
  */
 
 import type { ReleaseType } from 'semver'
+import type { MirrorRawConfigDocument } from './schema.js'
 
 export type MirrorAdapterName = 'package.json' | 'jsr.json' | 'git'
 export type MirrorProjectNameSource = 'package.json' | 'jsr.json'
@@ -12,7 +13,7 @@ export type MirrorJsonObject = Record<string, unknown>
 export type MirrorSkillInstallScope = 'local' | 'global'
 export type MirrorAgentTool = 'agents' | 'claude'
 export type MirrorAgentToolSelection = MirrorAgentTool | 'all'
-export type MirrorNativePlatform = 'linux' | 'macos' | 'windows'
+export type MirrorNativePlatform = 'linux' | 'darwin' | 'windows'
 export type MirrorNativeArch = 'x64' | 'arm64'
 export type MirrorNativeVariant = 'baseline' | 'default' | 'modern'
 export type MirrorUpgradePhase = 'plan' | 'download' | 'validate' | 'replace' | 'verify' | 'cache' | 'cleanup'
@@ -54,38 +55,7 @@ export type MirrorHookResult = {
   stderr?: string
 }
 
-export type MirrorRawConfig = Partial<{
-  schema: number
-  project: Partial<{
-    name: string
-    name_source: MirrorProjectNameSource
-  }>
-  version: Partial<{
-    scheme: 'semver'
-    source: MirrorAdapterName
-    output: MirrorAdapterName[]
-    prerelease_id: string
-  }>
-  package: Partial<{
-    path: string
-    auxiliary_paths: string[]
-  }>
-  jsr: Partial<{ path: string }>
-  git: Partial<{
-    tag_template: string
-    commit: boolean
-    push: boolean
-    allow_dirty: boolean
-  }>
-  agents: Partial<{
-    write_changelog: boolean
-    changelog_path: string
-    auto_agents_md: boolean
-    auto_skill_install: boolean
-    skill_tool: MirrorAgentToolSelection
-  }>
-  hooks: Record<string, MirrorHookCommand>
-}>
+export type MirrorRawConfig = MirrorRawConfigDocument
 
 export type MirrorConfig = {
   schema: 1
@@ -119,9 +89,6 @@ export type MirrorConfig = {
 export type MirrorAgentSettings = {
   writeChangelog: boolean
   changelogPath: string
-  autoAgentsMd: boolean
-  autoSkillInstall: boolean
-  skillTool: MirrorAgentToolSelection
 }
 
 export type MirrorCliOptions = {
@@ -131,6 +98,7 @@ export type MirrorCliOptions = {
   noColor?: boolean
   version?: boolean
   helpTree?: boolean
+  helpTreeDepth?: number
   helpDocs?: boolean
   mirrorUpdateCheckWorker?: boolean
   source?: MirrorAdapterName
@@ -148,18 +116,23 @@ export type MirrorCliOptions = {
   nonInteractive?: boolean
   yes?: boolean
   verbose?: boolean
-  tool?: MirrorAgentToolSelection
+  local?: boolean
+  filter?: string
+  names?: boolean
+  page?: number
+  perPage?: number
+  preReleases?: boolean
+  reportConfig?: boolean
   upgradeVersion?: string
   arch?: string
   variant?: string
 }
 
 export type MirrorUpdateCache = {
-  checkedAt: string
-  currentVersion: string
+  newVersionAvailable: boolean
   latestVersion: string
-  updateAvailable: boolean
-  releaseUrl: string
+  upgradeCommand?: string
+  lastCheck: string
 }
 
 export type MirrorUpgradeRecovery = {
@@ -314,17 +287,6 @@ export type MirrorAgentsInstructionsResult = {
   path: string
   exists: boolean
   changed: boolean
-}
-
-export type MirrorAgentAutomationResult = {
-  settings: MirrorAgentSettings
-  agentsMd?: MirrorAgentsInstructionsResult
-  claudeMd?: MirrorAgentsInstructionsResult
-  instructionFiles?: MirrorAgentsInstructionsResult[]
-  localSkill?: MirrorSkillInstallResult
-  localSkills?: MirrorSkillInstallResult[]
-  globalSkill?: MirrorSkillInstallResult
-  globalSkills?: MirrorSkillInstallResult[]
 }
 
 export type MirrorProject = {
