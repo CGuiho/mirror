@@ -3,24 +3,25 @@
  * @copyright Copyright (c) 2026 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
  */
 
-import { runCommand } from './runtime.js'
+import { runCommand, runCommandChecked } from './runtime.js'
 
 const targets = [
-  ['bun-linux-arm64', 'bin/guiho-mirror-linux-arm64'],
-  ['bun-linux-x64', 'bin/guiho-mirror-linux-x64'],
-  ['bun-linux-x64-baseline', 'bin/guiho-mirror-linux-x64-baseline'],
-  ['bun-linux-x64-modern', 'bin/guiho-mirror-linux-x64-modern'],
-  ['bun-windows-arm64', 'bin/guiho-mirror-windows-arm64.exe'],
-  ['bun-windows-x64', 'bin/guiho-mirror-windows-x64.exe'],
-  ['bun-windows-x64-baseline', 'bin/guiho-mirror-windows-x64-baseline.exe'],
-  ['bun-windows-x64-modern', 'bin/guiho-mirror-windows-x64-modern.exe'],
-  ['bun-darwin-arm64', 'bin/guiho-mirror-macos-arm64'],
-  ['bun-darwin-x64', 'bin/guiho-mirror-macos-x64'],
-  ['bun-darwin-x64-baseline', 'bin/guiho-mirror-macos-x64-baseline'],
-  ['bun-darwin-x64-modern', 'bin/guiho-mirror-macos-x64-modern'],
+  ['bun-linux-arm64', 'bin/mirror-linux-arm64'],
+  ['bun-linux-x64', 'bin/mirror-linux-x64'],
+  ['bun-linux-x64-baseline', 'bin/mirror-linux-x64-baseline'],
+  ['bun-linux-x64-modern', 'bin/mirror-linux-x64-modern'],
+  ['bun-darwin-arm64', 'bin/mirror-darwin-arm64'],
+  ['bun-darwin-x64', 'bin/mirror-darwin-x64'],
+  ['bun-darwin-x64-baseline', 'bin/mirror-darwin-x64-baseline'],
+  ['bun-darwin-x64-modern', 'bin/mirror-darwin-x64-modern'],
+  ['bun-windows-arm64', 'bin/mirror-windows-arm64.exe'],
+  ['bun-windows-x64', 'bin/mirror-windows-x64.exe'],
+  ['bun-windows-x64-baseline', 'bin/mirror-windows-x64-baseline.exe'],
+  ['bun-windows-x64-modern', 'bin/mirror-windows-x64-modern.exe'],
 ] as const
 
 const expectedAssetCount = 12
+const agentAssets = ['guiho-s-mirror', 'guiho-i-mirror'] as const
 
 if (targets.length !== expectedAssetCount) {
   throw new Error(`Expected ${expectedAssetCount} release binary targets, found ${targets.length}`)
@@ -31,9 +32,11 @@ if (new Set(targets.map(([, outfile]) => outfile)).size !== targets.length) {
 }
 
 const main = async () => {
-  await removeOutput('bin/mirror')
-  await removeOutput('bin/mirror.exe')
-  await runCommand(['bun', 'build', 'source/guiho-mirror-bin.ts', '--compile', '--production', '--minify-whitespace', '--minify-syntax', '--outfile', 'bin/mirror'])
+  await Bun.$`rm -rf bin`.quiet()
+  await runCommandChecked(
+    ['bun', 'build', 'source/guiho-mirror-bin.ts', '--compile', '--production', '--minify-whitespace', '--minify-syntax', '--outfile', 'bin/mirror'],
+    { label: 'local native binary build' },
+  )
 
   const results = []
 
@@ -78,6 +81,7 @@ const main = async () => {
   }
 
   console.log(`verified ${targets.length} native binary assets`)
+  console.log(`verified ${targets.length + agentAssets.length} total release assets`)
 }
 
 await main()
