@@ -46,10 +46,10 @@ Add an option for Python version propagation from a source project to a target p
 
 ## RFC 0034 CLI Compliance Migration
 
-- Status: testing
+- Status: completed
 - Created: `2026-07-18T18:48:11+02:00`
-- Updated: `2026-07-18T23:41:00+02:00`
-- Outcome: Mirror fully implements the approved breaking GUIHO RFC 0034 CLI contract across TypeBox validation, YAML configuration, startup, help, agents, upgrades, installers, npm distribution, release assets, tests, and documentation.
+- Updated: `2026-07-19T00:08:22+02:00`
+- Outcome: Mirror fully implements the approved breaking GUIHO RFC 0034 CLI contract and is release-workflow ready; public `3.5.1` availability remains gated by the GitHub `production` environment outside this implementation task.
 - Spec: [docs/todo/rfc-0034-cli-compliance-migration.md](docs/todo/rfc-0034-cli-compliance-migration.md)
 - Related files:
   - [docs/plans/rfc-0034-cli-compliance-migration.md](docs/plans/rfc-0034-cli-compliance-migration.md) - Approved step-by-step migration plan.
