@@ -31,7 +31,7 @@ Add an option for Python version propagation from a source project to a target p
 
 ## Mirror Upgrade Reliability
 
-- Status: testing
+- Status: completed
 - Created: `2026-07-15`
 - Updated: `2026-07-15`
 - Outcome: Make self-upgrade an observable, verified installation transaction; provide exact-version recovery after every bare upgrade; and list every published release newest first with channel and asset metadata.
@@ -46,11 +46,15 @@ Add an option for Python version propagation from a source project to a target p
 
 ## RFC 0034 CLI Compliance Migration
 
-- Status: todo
+- Status: testing
 - Created: `2026-07-18T18:48:11+02:00`
-- Updated: `2026-07-18T18:48:11+02:00`
+- Updated: `2026-07-18T23:41:00+02:00`
 - Outcome: Mirror fully implements the approved breaking GUIHO RFC 0034 CLI contract across TypeBox validation, YAML configuration, startup, help, agents, upgrades, installers, npm distribution, release assets, tests, and documentation.
 - Spec: [docs/todo/rfc-0034-cli-compliance-migration.md](docs/todo/rfc-0034-cli-compliance-migration.md)
 - Related files:
   - [docs/plans/rfc-0034-cli-compliance-migration.md](docs/plans/rfc-0034-cli-compliance-migration.md) - Approved step-by-step migration plan.
   - [docs/reviews/plans/rfc-0034-cli-compliance-migration-review.md](docs/reviews/plans/rfc-0034-cli-compliance-migration-review.md) - Ready-for-execution plan review.
+  - [docs/todo/rfc-0034-cli-compliance-migration-implementation.md](docs/todo/rfc-0034-cli-compliance-migration-implementation.md) - Implementation record for MR-01 through MR-16.
+  - [docs/reviews/implementation/rfc-0034-cli-compliance-migration-review.md](docs/reviews/implementation/rfc-0034-cli-compliance-migration-review.md) - Delivery-readiness implementation review.
+  - [docs/validation/rfc-0034-cli-compliance-migration.md](docs/validation/rfc-0034-cli-compliance-migration.md) - Full verification evidence.
+  - [docs/validation/rfc-0034-downstream-handoff.md](docs/validation/rfc-0034-downstream-handoff.md) - Consumer migration inventory.
