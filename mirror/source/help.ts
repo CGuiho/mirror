@@ -95,7 +95,7 @@ const mirrorHelpRecords: readonly HelpRecord[] = [
     name: 'upgrade',
     summary: 'Upgrade the installed Mirror native binary.',
     usage: ['mirror upgrade [--version <version>] [--variant <baseline|default|modern>]', 'mirror upgrade check', 'mirror upgrade list'],
-    description: 'Downloads the latest compatible GitHub Release binary and replaces the current installed Mirror binary. x64 installs prefer baseline by default.',
+    description: 'Prints the resolved plan before download, transactionally replaces the canonical executable, verifies its exact version, rolls back on failure, and always prints pinned recovery commands. x64 installs prefer baseline by default.',
     flags: [
       { name: '--version <version>', description: 'Install a specific version instead of latest.' },
       { name: '--arch <x64|arm64>', description: 'Override detected architecture.' },
@@ -105,7 +105,7 @@ const mirrorHelpRecords: readonly HelpRecord[] = [
     ],
     subcommands: [
       subcommand('check', 'Check whether a new Mirror release is available.', ['mirror upgrade check']),
-      subcommand('list', 'List available Mirror release versions.', ['mirror upgrade list']),
+      subcommand('list', 'List every published stable and prerelease version newest first with dates, markers, and compatible assets.', ['mirror upgrade list', 'mirror upgrade list --format json']),
     ],
     examples: [
       { command: 'mirror upgrade', description: 'Upgrade to latest compatible release.' },
