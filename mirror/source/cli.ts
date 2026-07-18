@@ -24,12 +24,22 @@ import {
   reportSkillInstall,
   reportValue,
 } from './reporter.js'
-import { checkForLatestVersion, listAvailableVersions, readUpdateCache, runBackgroundUpdateCheck, scheduleBackgroundUpdateCheck, uninstallSelf, upgradeSelf } from './self-management.js'
+import {
+  checkForLatestVersion,
+  createUpgradeResolutionFailure,
+  executeUpgrade,
+  listAvailableVersions,
+  readUpdateCache,
+  resolveUpgradePlan,
+  runBackgroundUpdateCheck,
+  scheduleBackgroundUpdateCheck,
+  uninstallSelf,
+} from './self-management.js'
 import { resolveNextVersion } from './version.js'
 import packageJson from '../package.json' with { type: 'json' }
 
 import type { CommandContext, CommandDef } from 'citty'
-import type { MirrorAdapterName, MirrorAgentToolSelection, MirrorCliOptions, MirrorFormat, MirrorHookResult, MirrorInitFlags } from './types.js'
+import type { MirrorAdapterName, MirrorAgentToolSelection, MirrorCliOptions, MirrorFormat, MirrorHookResult, MirrorInitFlags, MirrorUpgradeRecovery, MirrorUpgradeResult } from './types.js'
 
 export {
   createMirrorCommand,
@@ -114,6 +124,12 @@ const upgradeArgs = {
   arch: { type: 'string', description: 'Override the native architecture.', valueHint: 'x64|arm64' },
   variant: { type: 'string', description: 'Override the x64 binary variant.', valueHint: 'baseline|default|modern' },
   'dry-run': { type: 'boolean', alias: 'dy', description: 'Preview the selected binary without replacing it.' },
+} as const
+
+const upgradeListArgs = {
+  ...commonArgs,
+  arch: { type: 'string', description: 'Override compatibility architecture.', valueHint: 'x64|arm64' },
+  variant: { type: 'string', description: 'Override the x64 compatibility variant.', valueHint: 'baseline|default|modern' },
 } as const
 
 const uninstallArgs = {
@@ -373,8 +389,8 @@ function createMirrorCommandTree(rawArgs: string[]): { command: CommandDef<any>,
 
   const upgradeListCommand = defineCommand({
     meta: { name: 'mirror upgrade list', description: 'List available Mirror release versions.' },
-    args: commonArgs,
-    setup: withLeafCommand(state, ['upgrade', 'list'], 0, commonArgs),
+    args: upgradeListArgs,
+    setup: withLeafCommand(state, ['upgrade', 'list'], 0, upgradeListArgs),
     run: async ({ args }) => runUpgradeList(resolveCliOptions(state, args), state),
   })
 
@@ -393,262 +409,140 @@ function createMirrorCommandTree(rawArgs: string[]): { command: CommandDef<any>,
   const uninstallCommand = defineCommand({
     meta: { name: 'mirror uninstall', description: 'Remove the installed Mirror native binary.' },
     args: uninstallArgs,
-    setup: withLeafCommand(state, ['uninstall'], 0, uninstallArgs),
-    run: async ({ args }) => runUninstall(resolveCliOptions(state, args), state),
-  })
-
-  const initCommand = defineCommand({
-    meta: { name: 'mirror init', description: 'Create or reconcile mirror.config.toml.' },
-    args: initArgs,
-    setup: withLeafCommand(state, ['init'], 1, initArgs),
-    run: async ({ args }) => runInit(resolveCliOptions(state, args), adapterArg(stringArg(args, 'adapter')), state),
-  })
-
-  const homeCommand = defineCommand({
-    meta: { name: 'mirror', description: 'Show the Mirror home page.', hidden: true },
-    args: rootArgs,
-    run: async () => {
-      const options = resolveCliOptions(state, state.rootArgs)
-      await prepareAgents(options)
-      await printCittyHelp(state.usageCommand, options, state)
-      void scheduleBackgroundUpdateCheck()
-    },
-  })
-
-  const command = defineCommand({
-    meta: {
-      name: 'mirror',
-      version: mirrorVersion,
-      description: 'Deterministic semantic versioning for GUIHO projects.',
-    },
-    args: rootArgs,
-    default: '_home',
-    subCommands: {
-      _home: homeCommand,
-      init: initCommand,
-      config: configCommand,
-      agents: agentsCommand,
-      version: versionCommand,
-      upgrade: upgradeCommand,
-      uninstall: uninstallCommand,
-    },
-    setup: async (context) => {
-      state.rootArgs = context.args
-      state.usageCommand = command
-      state.usagePath = resolveUsagePath(context.args._, state.usageCommands)
-      state.usageCommand = state.usageCommands.get(state.usagePath.join(' ')) ?? command
-      state.noColor = booleanArg(context.args, 'color') === false || rawArgs.includes('--no-color')
-      state.verbose = Boolean(booleanArg(context.args, 'verbose'))
-      assertKnownArguments(context.args, state)
-      validateStringFlagValues(rawArgs, state)
-
-      if (rawArgs.includes('--mirror-update-check-worker')) {
-        await runBackgroundUpdateCheck()
-        throw new CliHandled()
-      }
-
-      if (rawArgs.length === 1 && (booleanArg(context.args, 'version') || booleanArg(context.args, 'v'))) {
-        write(`${mirrorVersion}\n`, state)
-        throw new CliHandled()
-      }
-
-      const options = resolveCliOptions(state, context.args)
-      if (booleanArg(context.args, 'helpTree')) {
-        write(`${showMirrorCommandHelpTree(state.usagePath)}\n`, state)
-        throw new CliHandled()
-      }
-      if (booleanArg(context.args, 'helpDocs')) {
-        write(showMirrorCommandHelpDocs(state.usagePath), state)
-        throw new CliHandled()
-      }
-      if (booleanArg(context.args, 'help') || booleanArg(context.args, 'h')) {
-        await printCittyHelp(state.usageCommand, options, state)
-        throw new CliHandled()
-      }
-    },
-  })
-
-  const commands: Array<[string, CommandDef<any>]> = [
-    ['init', initCommand],
-    ['config', configCommand],
-    ['config show', configShowCommand],
-    ['config check', configCheckCommand],
-    ['config schema', configSchemaCommand],
-    ['agents', agentsCommand],
-    ['agents install', agentsInstallCommand],
-    ['agents instructions', agentsInstructionsCommand],
-    ['version', versionCommand],
-    ['version current', versionCurrentCommand],
-    ['version next', versionNextCommand],
-    ['version plan', versionPlanCommand],
-    ['version apply', versionApplyCommand],
-    ['upgrade', upgradeCommand],
-    ['upgrade check', upgradeCheckCommand],
-    ['upgrade list', upgradeListCommand],
-    ['uninstall', uninstallCommand],
-  ]
-  for (const [path, definition] of commands) state.usageCommands.set(path, definition)
-  state.usageCommand = command
-
-  return { command, state }
-}
-
-function createGroupHelpCommand(state: CliState, name: string): CommandDef<any> {
-  return defineCommand({
-    meta: { name, description: 'Show command help.', hidden: true },
-    args: commonArgs,
-    run: async () => {
-      await printCittyHelp(state.usageCommand, resolveCliOptions(state, state.rootArgs), state)
-    },
-  })
-}
-
-function withGroupCommand(state: CliState, path: string[]): (context: CommandContext<any>) => void {
-  return (context) => {
-    state.inheritedArgs = context.args
-    if (state.usagePath.length <= path.length) {
-      state.usageCommand = context.cmd
-      state.usagePath = path
-    }
+    setup: withLeafCommand(state, ['uninst…2481 tokens truncated…e.latestStable ? 'latest-stable' : ''].filter(Boolean).join(','))
+  const markerWidth = Math.max('MARKERS'.length, ...markerValues.map((value) => value.length))
+  const tagWidth = Math.max('TAG'.length, ...catalog.releases.map((release) => release.tag.length))
+  write(`${'VERSION'.padEnd(versionWidth)}  ${'CHANNEL'.padEnd(channelWidth)}  PUBLISHED   ${'MARKERS'.padEnd(markerWidth)}  ASSET  ${'TAG'.padEnd(tagWidth)}  RELEASE\n`, state)
+  for (const [index, release] of catalog.releases.entries()) {
+    const asset = options.verbose ? release.compatibleAsset ?? 'no' : release.compatible ? 'yes' : 'no'
+    write(`${release.version.padEnd(versionWidth)}  ${release.channel.padEnd(channelWidth)}  ${(release.publishedAt.slice(0, 10) || '-').padEnd(10)}  ${markerValues[index]?.padEnd(markerWidth)}  ${asset.padEnd(5)}  ${release.tag.padEnd(tagWidth)}  ${release.releaseUrl}\n`, state)
   }
-}
-
-function withLeafCommand(
-  state: CliState,
-  path: string[],
-  positionalCount: number,
-  argsDefinition: Record<string, { readonly type?: string, readonly alias?: string | readonly string[] }>,
-): (context: CommandContext<any>) => void {
-  return (context) => {
-    state.usageCommand = context.cmd
-    state.usagePath = path
-    assertAllowedFlags(context.rawArgs, argsDefinition, state)
-    assertPositionalCount(context.args, positionalCount, state)
-  }
-}
-
-async function runInit(options: MirrorCliOptions, positionalSource: MirrorAdapterName | undefined, state: CliState): Promise<void> {
-  const cwd = resolvePath(options.cwd ?? process.cwd())
-  const flags: MirrorInitFlags = {
-    source: options.source ?? positionalSource,
-    output: options.output,
-    packagePath: options.packageFile,
-    auxiliaryPaths: options.auxiliary,
-    jsrPath: options.jsrFile,
-    tagTemplate: options.tagTemplate,
-    name: options.name,
-    prereleaseId: options.preid,
-    commit: options.commit ? true : undefined,
-    push: options.push ? true : undefined,
-  }
-  const interactive = isInteractiveInit(options)
-  const prompter = interactive ? createReadlineInitPrompter() : undefined
-
-  try {
-    const answers = await resolveInitAnswers(flags, cwd, prompter)
-    const path = await writeInitConfigFromAnswers(answers, cwd, Boolean(options.yes))
-    write(reportValue(`created ${path}`, options.format), state)
-  } finally {
-    await prompter?.close()
-  }
-}
-
-async function runApply(target: string, options: MirrorCliOptions, state: CliState): Promise<void> {
-  await prepareAgents(options)
-  const config = await loadMirrorConfig(options)
-  const hooks = config.hooks
-  const hookResults: MirrorHookResult[] = []
-  const baseEnv = hookEnvFromConfig(config, target)
-
-  try {
-    await runHooks('before:everything', hooks['before:everything'], baseEnv, config.cwd)
-  } catch (error) {
-    hookResults.push({
-      name: 'before:everything',
-      commands: hooks['before:everything'] ?? [],
-      status: 'failure',
-      durationMs: 0,
-      exitCode: error instanceof MirrorError ? error.exitCode : 1,
-      stderr: error instanceof Error ? error.message : String(error),
-    })
-    throw error
-  }
-
-  try {
-    await runHooks('before:plan', hooks['before:plan'], baseEnv, config.cwd)
-    const plan = await buildVersionPlan(target, options)
-    const planEnv = hookEnvForPlan(plan, target)
-    await runHooks('after:plan', hooks['after:plan'], planEnv, config.cwd)
-
-    if (options.format !== 'json') write(mirrorBanner(plan.configPath ? plan.configPath : ''), state)
-    if (options.format !== 'json') write(reportPlan(plan, options.format), state)
-    await runHooks('before:apply', hooks['before:apply'], planEnv, config.cwd)
-
-    try {
-      const result = await executeVersionPlan(plan, options, hooks, target)
-      result.hookResults = hookResults
-      write(options.format === 'json' ? reportExecution(result, options.format) : reportExecutionSummary(result, options.format), state)
-    } finally {
-      const resultEnv = hookEnvForResult(plan, target, true, Boolean(options.dryRun))
-      await runHooksQuiet('after:apply', hooks['after:apply'], resultEnv, config.cwd, hookResults)
-    }
-  } finally {
-    await runHooksQuiet('after:everything', hooks['after:everything'], baseEnv, config.cwd, hookResults)
-  }
-}
-
-async function runUpgradeCheck(options: MirrorCliOptions, state: CliState): Promise<void> {
-  const result = await checkForLatestVersion()
-  if (options.format === 'json') {
-    write(`${JSON.stringify(result, null, 2)}\n`, state)
-    return
-  }
-  write(`current: ${result.currentVersion}\n`, state)
-  write(`latest: ${result.latestVersion}\n`, state)
-  write(`update_available: ${String(result.updateAvailable)}\n`, state)
-  if (result.updateAvailable) write('Run: mirror upgrade\n', state)
-}
-
-async function runUpgradeList(options: MirrorCliOptions, state: CliState): Promise<void> {
-  const versions = await listAvailableVersions()
-  if (options.format === 'json') {
-    write(`${JSON.stringify({ versions }, null, 2)}\n`, state)
-    return
-  }
-  write('Available Mirror versions\n\n', state)
-  for (const [index, version] of versions.entries()) write(index === 0 ? `  latest  ${version}\n` : `          ${version}\n`, state)
+  for (const warning of catalog.warnings) writeError(`warning: ${warning}\n`, state)
 }
 
 async function runUpgrade(options: MirrorCliOptions, state: CliState): Promise<void> {
-  const result = await upgradeSelf({
-    version: options.upgradeVersion,
-    arch: options.arch,
-    variant: options.variant,
-    dryRun: options.dryRun,
-  })
-  if (options.format === 'json') {
-    write(`${JSON.stringify(result, null, 2)}\n`, state)
-    return
-  }
-  write('------------------------------------------------------------\n', state)
-  write('  mirror upgrade\n', state)
-  write('------------------------------------------------------------\n', state)
-  write(`  current : ${result.currentVersion}\n`, state)
-  write(`  target  : ${result.targetVersion}\n`, state)
-  if (result.upToDate) {
+  const request = { version: options.upgradeVersion, arch: options.arch, variant: options.variant, dryRun: options.dryRun }
+  const text = options.format !== 'json'
+  if (text) {
     write('------------------------------------------------------------\n', state)
-    write('Already up to date.\n', state)
+    write('  Upgrading the CLI\n', state)
+    write('------------------------------------------------------------\n', state)
+    write('Resolving target...\n', state)
+  }
+
+  let result: MirrorUpgradeResult
+  try {
+    const plan = await resolveUpgradePlan(request)
+    if (text) {
+      write(`  current : ${plan.currentVersion}\n`, state)
+      write(`  target  : ${plan.targetVersion}\n`, state)
+      write(`  os      : ${plan.platform}\n`, state)
+      write(`  arch    : ${plan.arch}\n`, state)
+      write(`  binary  : ${plan.asset}\n`, state)
+      write(`  path    : ${plan.executablePath}\n`, state)
+      write(`  url     : ${plan.downloadUrl}\n`, state)
+      write('------------------------------------------------------------\n', state)
+    }
+    result = await executeUpgrade(plan, {
+      onEvent: text ? (event) => {
+        if (event.status !== 'started') return
+        if (event.phase === 'download') write('Downloading...\n', state)
+        if (event.phase === 'validate') write('Validating...\n', state)
+        if (event.phase === 'replace') write('Replacing...\n', state)
+        if (event.phase === 'verify') write('Verifying...\n', state)
+      } : undefined,
+    })
+  } catch (error) {
+    result = createUpgradeResolutionFailure(error)
+  }
+
+  if (!text) {
+    write(`${JSON.stringify(publicUpgradeEnvelope(result), null, 2)}\n`, state)
+    if (result.outcome === 'failed' || result.outcome === 'rolled-back') process.exitCode = 1
     return
   }
-  write(`  binary  : ${result.asset}\n`, state)
-  write(`  path    : ${result.executablePath}\n`, state)
-  write('------------------------------------------------------------\n', state)
-  if (result.dryRun) {
-    write(`  url     : ${result.url}\n`, state)
-    write('  dry_run : true\n', state)
+
+  reportUpgradeOutcome(result, state)
+  reportUpgradeRecovery(result.recovery, state)
+  if (result.outcome === 'failed' || result.outcome === 'rolled-back') process.exitCode = 1
+}
+
+function reportUpgradeOutcome(result: MirrorUpgradeResult, state: CliState): void {
+  if (result.outcome === 'upgraded' && result.plan) write(`Upgrade complete: ${result.plan.currentVersion} -> ${result.installedVersion}\n`, state)
+  if (result.outcome === 'up-to-date') write(`Already up to date: ${result.installedVersion}\n`, state)
+  if (result.outcome === 'dry-run') write('Dry run complete; no files were changed.\n', state)
+  if (result.outcome === 'rolled-back') writeError(`Upgrade failed and was rolled back: ${result.failure?.message ?? 'unknown failure'}\n`, state)
+  if (result.outcome === 'failed') writeError(`Upgrade failed: ${result.failure?.message ?? 'unknown failure'}\n`, state)
+  if (result.failure?.rollbackAttempted) {
+    writeError(`Rollback attempted: yes\nRollback succeeded: ${result.failure.rollbackSucceeded ? 'yes' : 'no'}\n`, state)
+    if (result.failure.preservedPaths.length > 0) {
+      writeError('Preserved recovery artifacts:\n', state)
+      for (const path of result.failure.preservedPaths) writeError(`  ${path}\n`, state)
+    }
+  }
+  for (const warning of result.warnings) writeError(`warning [${warning.code}]: ${warning.message}\n`, state)
+  if (result.cleanupPending) write('Cleanup pending: the verified upgrade is active; only old-backup deletion remains.\n', state)
+}
+
+function reportUpgradeRecovery(recovery: MirrorUpgradeRecovery, state: CliState): void {
+  if (recovery.targetSource === 'fallback-current') {
+    write(`\nRepair reinstall for installed Mirror ${recovery.targetVersion} (upgrade target was not resolved):\n`, state)
+    write(`  ${recovery.installCommand}\n`, state)
+    write('\nIf a running Mirror process blocks installation, stop it first:\n', state)
+    write(`  ${recovery.stopProcessCommand}\n`, state)
+    write('Then rerun the same pinned repair command above.\n', state)
     return
   }
-  write(result.scheduled ? 'Upgrade downloaded. Replacement is scheduled after this mirror process exits.\n' : 'Upgrade complete.\n', state)
+  write(`\nIf the upgrade did not work, install Mirror ${recovery.targetVersion} directly:\n`, state)
+  write(`  ${recovery.installCommand}\n`, state)
+  write('\nIf a running Mirror process blocks installation, stop it first:\n', state)
+  write(`  ${recovery.stopProcessCommand}\n`, state)
+  write('Then rerun the same pinned install command above.\n', state)
+}
+
+function publicUpgradeEnvelope(result: MirrorUpgradeResult) {
+  const failedEvent = [...result.events].reverse().find((event) => event.status === 'failed')
+  return {
+    schemaVersion: result.schemaVersion,
+    command: result.command,
+    outcome: result.outcome,
+    plan: result.plan
+      ? {
+        currentVersion: result.plan.currentVersion,
+        targetVersion: result.plan.targetVersion,
+        targetTag: result.plan.targetTag,
+        platform: result.plan.platform,
+        arch: result.plan.arch,
+        variant: result.plan.variant,
+        asset: result.plan.asset,
+        downloadUrl: result.plan.downloadUrl,
+        executablePath: result.plan.executablePath,
+        dryRun: result.plan.dryRun,
+        upToDate: result.plan.upToDate,
+      }
+      : null,
+    events: result.events,
+    result: result.plan
+      ? {
+        installedVersion: result.installedVersion,
+        rolledBack: result.outcome === 'rolled-back',
+        cacheUpdated: result.cacheUpdated,
+        cleanupPending: result.cleanupPending,
+        warnings: result.warnings,
+      }
+      : null,
+    recovery: result.recovery,
+    error: result.failure
+      ? {
+        phase: failedEvent?.phase ?? 'plan',
+        code: result.failure.code,
+        message: result.failure.message,
+        rollbackAttempted: result.failure.rollbackAttempted,
+        rollbackSucceeded: result.failure.rollbackSucceeded,
+        preservedPaths: result.failure.preservedPaths,
+      }
+      : null,
+  }
 }
 
 async function runUninstall(options: MirrorCliOptions, state: CliState): Promise<void> {
