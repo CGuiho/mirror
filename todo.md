@@ -43,3 +43,14 @@ Add an option for Python version propagation from a source project to a target p
   - [docs/reviews/plans/upgrade-reliability-implementation-review.md](docs/reviews/plans/upgrade-reliability-implementation-review.md) - Plan-readiness review and execution verdict.
   - [docs/validation/upgrade-reliability.md](docs/validation/upgrade-reliability.md) - Verification evidence and remaining release gates.
 - External: GitHub issue [#9](https://github.com/CGuiho/mirror/issues/9); GitHub issue [#10](https://github.com/CGuiho/mirror/issues/10)
+
+## RFC 0034 CLI Compliance Migration
+
+- Status: todo
+- Created: `2026-07-18T18:48:11+02:00`
+- Updated: `2026-07-18T18:48:11+02:00`
+- Outcome: Mirror fully implements the approved breaking GUIHO RFC 0034 CLI contract across TypeBox validation, YAML configuration, startup, help, agents, upgrades, installers, npm distribution, release assets, tests, and documentation.
+- Spec: [docs/todo/rfc-0034-cli-compliance-migration.md](docs/todo/rfc-0034-cli-compliance-migration.md)
+- Related files:
+  - [docs/plans/rfc-0034-cli-compliance-migration.md](docs/plans/rfc-0034-cli-compliance-migration.md) - Approved step-by-step migration plan.
+  - [docs/reviews/plans/rfc-0034-cli-compliance-migration-review.md](docs/reviews/plans/rfc-0034-cli-compliance-migration-review.md) - Ready-for-execution plan review.
