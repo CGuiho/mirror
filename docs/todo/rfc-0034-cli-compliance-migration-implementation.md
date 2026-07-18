@@ -22,8 +22,8 @@ keywords:
 
 Completed. Source, tests, distribution, canonical docs, downstream inventory,
 review, and the full MR-16 gate are complete. The authorized Mirror-managed
-`3.5.0` version application is the Git handoff, not an open implementation
-unit.
+`3.5.1` patch application contains the post-version test correction and is the
+final Git handoff, not an open implementation unit.
 
 ## Implemented Units
 
