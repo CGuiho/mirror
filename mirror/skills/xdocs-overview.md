@@ -2,7 +2,7 @@
 name: "Mirror/Skills Overview"
 purpose: "Provide a companion overview for mirror-mirror-skills."
 description: "Links to skills.xdocs.md and summarizes the documented directory."
-created: "2026-07-10T18:07:41.706Z"
+created: "2026-07-10"
 flags:
   - generated
 tags:
