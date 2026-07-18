@@ -3,6 +3,23 @@
 Always read this: /c/GUIHO/superiority/agents/guiho-a-0001-swe.AGENTS.md (C:\GUIHO\superiority\agents\guiho-a-0001-swe.AGENTS.md)
 Stop if you can not find it.
 
+## Required CLI Engineering
+
+- Use `guiho-a-0001-swe` as the coordinating GUIHO Software Engineer/SWE agent
+  for Mirror CLI architecture, planning, execution, review, validation, and
+  release work.
+- Load and follow the `guiho-s-0034-cli-engineer` agent skill whenever creating,
+  upgrading, refactoring, reviewing, testing, packaging, installing, or
+  releasing the Mirror CLI.
+- `guiho-s-0034-cli-engineer` is a skill, not an agent. It supplements the SWE
+  agent and does not replace its lifecycle controller.
+- During RFC 0034 implementation, also use the Bun, TypeScript, TypeBox, xdocs,
+  Mirror, documentation, TODO, plan execution, implementation review, cloud,
+  and validation skills named in the approved plan.
+- The approved RFC 0034 migration may make breaking changes. Mirror is pre-1.0;
+  do not keep TOML configuration, old aliases, plural agent commands, automatic
+  agent mutations, or legacy release names when they conflict with the plan.
+
 
 ﻿# Repository Notes
 
