@@ -39,8 +39,9 @@ its Bun-dependent npm launcher.
 Mirror uses Bun, strict TypeScript ESM, raw Citty, and TypeBox; reads only
 `mirror.yaml` through the RFC precedence rules; implements exact startup,
 Developer Context help, agent, upgrade, installer, output, npm bootstrap, and
-storage behavior; and publishes exactly the twelve `mirror-*` native binaries
-plus `guiho-s-mirror` and `guiho-i-mirror`.
+storage behavior; and builds and stages exactly the twelve `mirror-*` native
+binaries plus `guiho-s-mirror` and `guiho-i-mirror` for the GitHub release
+workflow.
 
 ## Scope
 
@@ -64,6 +65,9 @@ plus `guiho-s-mirror` and `guiho-i-mirror`.
 - Preserving a legacy TOML reader or dual configuration.
 - Publishing or live installation. Versioning, tagging, and Git ref pushes
   received separate authorization after this plan was approved.
+- Approving the GitHub `production` environment or creating the public GitHub
+  Release. Until that external gate completes, public upgrade and installer
+  resolution for the new version is expected to remain unavailable.
 - Changing Mirror's semantic-version calculation beyond what RFC validation
   and output discipline require.
 
