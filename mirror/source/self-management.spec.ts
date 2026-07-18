@@ -295,10 +295,10 @@ describe('Mirror self-management', () => {
     const targetVersion = '3.4.2'
     const executable = joinPath(root, 'mirror.exe')
     const target = joinPath(root, 'target.exe')
-    const moduleUrl = new URL('./self-management.ts', import.meta.url).href
+    const modulePath = joinPath(import.meta.dir, 'self-management.ts').replaceAll('\\', '/')
     await compileVersionFixture(root, 'target.ts', target, `console.log('${targetVersion}')`)
     await compileVersionFixture(root, 'running-upgrader.ts', executable, `
-import { executeUpgrade, resolveUpgradePlan } from ${JSON.stringify(moduleUrl)}
+import { executeUpgrade, resolveUpgradePlan } from ${JSON.stringify(modulePath)}
 if (process.argv.includes('--version')) {
   console.log('${currentVersion}')
 } else {
