@@ -3,1614 +3,236 @@
  */
 
 import { afterEach, describe, expect, test } from 'bun:test'
-import {
-  applyVersionPlan,
-  buildVersionPlan,
-  ensureMirrorAgentsInstructions,
-  generateInitConfig,
-  hookEnvForAction,
-  hookEnvForPlan,
-  hookEnvFromConfig,
-  installMirrorSkill,
-  loadMirrorConfig,
-  mirrorSkillName,
-  mirrorSkillVersion,
-  mirrorAgentsSectionEndMarker,
-  mirrorAgentsSectionHeading,
-  mirrorAgentsSectionStartMarker,
-  normalizeHooksConfig,
-  readJsrName,
-  readJsrVersion,
-  readPackageName,
-  readPackageVersion,
-  readPackageVersionFile,
-  renderGitTag,
-  renderMirrorConfigJsonSchema,
-  resolveInitAnswers,
-  resolveMirrorSkillPath,
-  resolveNextVersion,
-  showMirrorCommandHelpDocs,
-  showMirrorCommandHelpTree,
-  showMirrorHelpDocs,
-  showMirrorHelpTree,
-  detectNativeArch,
-  readUpdateCache,
-  resolveCachePath,
-  upgradeSelf,
-  runHooks,
-  runMirrorAgentAutomation,
-  validateMirrorConfig,
-  versionFromTag,
-  writeJsrVersion,
-  writePackageVersion,
-} from './guiho-mirror.js'
-import { ensureMirrorAgentInstructionFiles, installMirrorSkills } from './agents.js'
-import type { MirrorAdapterName, MirrorInitPrompter, MirrorVersionPlan } from './guiho-mirror.js'
-import { dirnamePath, joinPath } from './path.js'
-import { ensureDirectory, readTextFile, removePath, writeTextFile } from './runtime.js'
 
-const existsSync = (path: string) => Bun.file(path).exists()
-const mkdir = (path: string, _options?: { recursive?: boolean }) => ensureDirectory(path)
-const rm = (path: string, _options?: { recursive?: boolean, force?: boolean }) => removePath(path)
-const readFile = (path: string, _encoding?: 'utf8') => readTextFile(path)
-const writeFile = (path: string, content: string, _encoding?: 'utf8') => writeTextFile(path, content)
-const platform = () => process.platform
-const dirname = dirnamePath
-const join = joinPath
+import { discoverMirrorConfig } from './config.js'
+import { resolveNextVersion } from './version.js'
+import { joinPath } from './path.js'
+import { fileExists, makeTempDirectory, readTextFile, removePath, runCommand, writeTextFile } from './runtime.js'
 
 const temporaryDirectories: string[] = []
 
 afterEach(async () => {
-  await Promise.all(temporaryDirectories.splice(0).map((path) => rm(path, { recursive: true, force: true })))
+  process.exitCode = 0
+  await Promise.all(temporaryDirectories.splice(0).map((path) => removePath(path).catch(() => undefined)))
 })
 
-describe('Mirror v3', () => {
-  test('renders command tree and Markdown docs', () => {
-    expect(showMirrorHelpTree()).toContain('mirror upgrade')
-    expect(showMirrorCommandHelpTree(['upgrade'])).toContain('mirror upgrade check')
-    expect(showMirrorHelpDocs()).toContain('# mirror CLI')
-    expect(showMirrorCommandHelpDocs(['uninstall'])).toContain('mirror uninstall')
+describe('Mirror RFC 0034 CLI', () => {
+  test('prints the exact no-argument banner', async () => {
+    const result = await runCli([])
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout).toBe('Hello Windows - mirror v3.5.0-alpha.0\n')
+    expect(result.stderr).toBe('')
   })
 
-  test('self-management helpers resolve cache and dry-run upgrade assets', async () => {
-    const dir = await createTempDir()
-    const executable = join(dir, platform() === 'win32' ? 'mirror.exe' : 'mirror')
-    const previousSelfPath = process.env['MIRROR_SELF_PATH']
-    try {
-      await writeText(executable, platform() === 'win32' ? 'MZ' : '\x7fELF')
-      process.env['MIRROR_SELF_PATH'] = executable
-
-      expect(detectNativeArch('x64')).toBe('x64')
-      expect(resolveCachePath({ cacheDir: dir })).toBe(join(dir, 'update.json'))
-      expect(await readUpdateCache({ cacheDir: dir })).toBeNull()
-
-      const packageMetadata = await Bun.file(join(import.meta.dir, '..', 'package.json')).json() as { version: string }
-      const asset = platform() === 'win32' ? 'guiho-mirror-windows-x64-baseline.exe' : platform() === 'darwin' ? 'guiho-mirror-macos-x64-baseline' : 'guiho-mirror-linux-x64-baseline'
-      const releaseServer = Bun.serve({
-        port: 0,
-        fetch: () => Response.json({
-          tag_name: `@guiho/mirror@${packageMetadata.version}`,
-          html_url: 'https://example.test/release',
-          assets: [{ name: asset, browser_download_url: 'https://example.test/mirror' }],
-        }),
-      })
-      const apiBaseUrl = releaseServer.url.toString().replace(/\/$/, '')
-      const current = await upgradeSelf({ version: packageMetadata.version, arch: 'x64', cacheDir: dir, apiBaseUrl })
-      expect(current.outcome).toBe('up-to-date')
-      expect(current.plan?.asset).toBe(asset)
-      expect(await readUpdateCache({ cacheDir: dir })).toBeNull()
-
-      const cli = await runMirrorCliWithEnv({ ...process.env as Record<string, string | undefined>, MIRROR_SELF_PATH: executable, MIRROR_GITHUB_API_URL: apiBaseUrl }, 'upgrade', '--version', packageMetadata.version)
-      expect(cli.exitCode).toBe(0)
-      expect(cli.stdout).toContain('Already up to date:')
-      expect(cli.stdout).not.toContain('Upgrade downloaded.')
-      expect(cli.stdout).toContain(`install Mirror ${packageMetadata.version} directly`)
-
-      const cliJson = await runMirrorCliWithEnv(
-        { ...process.env as Record<string, string | undefined>, MIRROR_SELF_PATH: executable, MIRROR_GITHUB_API_URL: apiBaseUrl },
-        'upgrade',
-        '--version',
-        packageMetadata.version,
-        '--format',
-        'json',
-      )
-      const envelope = JSON.parse(cliJson.stdout) as Record<string, unknown>
-      expect(envelope).toMatchObject({
-        schemaVersion: 1,
-        command: 'mirror upgrade',
-        outcome: 'up-to-date',
-        error: null,
-      })
-      expect(envelope).toHaveProperty('result')
-      expect(envelope).toHaveProperty('recovery.targetSource', 'resolved')
-      expect(envelope).not.toHaveProperty('plan.temporaryPath')
-      expect(envelope).not.toHaveProperty('plan.backupPath')
-      expect(envelope).not.toHaveProperty('plan.failedArtifactPath')
-
-      const failureServer = Bun.serve({ port: 0, fetch: () => new Response('offline', { status: 503, statusText: 'Service Unavailable' }) })
-      const failureApiBaseUrl = failureServer.url.toString().replace(/\/$/, '')
-      const fallbackText = await runMirrorCliWithEnv(
-        { ...process.env as Record<string, string | undefined>, MIRROR_SELF_PATH: executable, MIRROR_GITHUB_API_URL: failureApiBaseUrl },
-        'upgrade',
-      )
-      expect(fallbackText.exitCode).not.toBe(0)
-      expect(fallbackText.stdout).toContain(`Repair reinstall for installed Mirror ${packageMetadata.version} (upgrade target was not resolved):`)
-      const fallbackJson = await runMirrorCliWithEnv(
-        { ...process.env as Record<string, string | undefined>, MIRROR_SELF_PATH: executable, MIRROR_GITHUB_API_URL: failureApiBaseUrl },
-        'upgrade',
-        '--format',
-        'json',
-      )
-      expect(JSON.parse(fallbackJson.stdout)).toMatchObject({
-        outcome: 'failed',
-        plan: null,
-        result: null,
-        recovery: { targetSource: 'fallback-current' },
-        error: {
-          phase: 'plan',
-          code: 'UPGRADE_RESOLUTION_FAILED',
-          rollbackAttempted: false,
-          rollbackSucceeded: false,
-          preservedPaths: [],
-        },
-      })
-      failureServer.stop(true)
-
-      const dryRunServer = Bun.serve({
-        port: 0,
-        fetch: () => Response.json({
-          tag_name: '@guiho/mirror@3.4.0',
-          html_url: 'https://example.test/release/3.4.0',
-          assets: [{ name: asset, browser_download_url: 'https://example.test/mirror-3.4.0' }],
-        }),
-      })
-      const result = await upgradeSelf({ version: '3.4.0', arch: 'x64', dryRun: true, apiBaseUrl: dryRunServer.url.toString().replace(/\/$/, '') })
-      expect(result.outcome).toBe('dry-run')
-      expect(result.plan?.asset).toBe(asset)
-      expect(result.plan?.downloadUrl).toBe('https://example.test/mirror-3.4.0')
-      dryRunServer.stop(true)
-      releaseServer.stop(true)
-    } finally {
-      if (previousSelfPath === undefined) delete process.env['MIRROR_SELF_PATH']
-      else process.env['MIRROR_SELF_PATH'] = previousSelfPath
-    }
-  })
-
-  test('routes global version and the hidden update worker without project configuration', async () => {
-    const packageMetadata = await Bun.file(join(import.meta.dir, '..', 'package.json')).json() as { version: string }
-    const env = { ...process.env as Record<string, string | undefined>, MIRROR_DISABLE_UPDATE_CHECK: '1' }
-
-    const version = await runMirrorCliWithEnv(env, '-v')
-    const worker = await runMirrorCliWithEnv(env, '--mirror-update-check-worker')
-
+  test('prints version and help without configuration', async () => {
+    const version = await runCli(['-v'])
     expect(version.exitCode).toBe(0)
-    expect(version.stdout.trim()).toBe(packageMetadata.version)
-    expect(version.stderr).toBe('')
-    expect(worker.exitCode).toBe(0)
-    expect(worker.stdout).toBe('')
-    expect(worker.stderr).toBe('')
+    expect(version.stdout).toBe('3.5.0-alpha.0\n')
+    const help = await runCli(['version', 'plan', '--help'])
+    expect(help.exitCode).toBe(0)
+    expect(help.stdout).toContain('mirror version plan')
+    expect(help.stdout).not.toContain('configuration file loaded:')
   })
 
-  test('runs Citty uninstall dry-run without deleting the executable', async () => {
-    const cwd = await createTempDir()
-    const executable = join(cwd, platform() === 'win32' ? 'mirror.exe' : 'mirror')
-    await writeText(executable, platform() === 'win32' ? 'MZ' : '\x7fELF')
+  test('renders tree and Markdown help from the Citty command definitions', async () => {
+    const tree = await runCli(['agent', '--help-tree'])
+    expect(tree.exitCode).toBe(0)
+    expect(tree.stdout).toStartWith('COMMAND TREE\n\nmirror agent')
+    expect(tree.stdout).toContain('├── skill')
+    expect(tree.stdout).toContain('└── --help-docs')
+    expect(tree.stdout).not.toContain('|-')
 
-    const result = await runMirrorCliWithEnv(
-      { ...process.env as Record<string, string | undefined>, MIRROR_SELF_PATH: executable },
-      'uninstall',
-      '-dy',
-      '--format',
-      'json',
-    )
+    const depth = await runCli(['--help-tree', '--help-tree-depth', '1'])
+    expect(depth.exitCode).toBe(0)
+    expect(depth.stdout).toContain('mirror')
+    expect(depth.stdout).not.toContain('mirror agent skill install')
 
-    expect(result.exitCode).toBe(0)
-    expect(JSON.parse(result.stdout)).toMatchObject({ executablePath: executable, dryRun: true, scheduled: false })
-    expect(await existsSync(executable)).toBe(true)
+    const docs = await runCli(['agent', 'prompt', '--help-docs'])
+    expect(docs.exitCode).toBe(0)
+    expect(docs.stdout).toContain('# mirror agent prompt')
+    expect(docs.stdout).toContain('## Subcommands')
   })
 
-  test('discovers explicit, root, and nested configs with root precedence', async () => {
-    const cwd = await createTempDir()
-    await mkdir(join(cwd, 'config'), { recursive: true })
-    await writeText(join(cwd, 'explicit.toml'), packageConfig({ output: ['jsr.json'], source: 'jsr.json' }))
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'] }))
-    await writeText(join(cwd, 'config', 'mirror.config.toml'), gitConfig())
-
-    const explicit = await loadMirrorConfig({ cwd, config: 'explicit.toml' })
-    const root = await loadMirrorConfig({ cwd })
-
-    await rm(join(cwd, 'mirror.config.toml'))
-    const nested = await loadMirrorConfig({ cwd })
-
-    expect(explicit.configPath).toBe(join(cwd, 'explicit.toml'))
-    expect(explicit.version.source).toBe('jsr.json')
-    expect(root.configPath).toBe(join(cwd, 'mirror.config.toml'))
-    expect(root.version.source).toBe('package.json')
-    expect(nested.configPath).toBe(join(cwd, 'config', 'mirror.config.toml'))
-    expect(nested.version.source).toBe('git')
+  test('rejects invalid help depth and forbidden short aliases', async () => {
+    for (const value of ['0', '-1', '1.5', 'abc']) {
+      const result = await runCli(['--help-tree', '--help-tree-depth', value])
+      expect(result.exitCode).toBe(2)
+    }
+    expect((await runCli(['version', 'plan', 'patch', '-dy'])).exitCode).toBe(2)
+    expect((await runCli(['version', 'apply', 'patch', '-y'])).exitCode).toBe(2)
   })
 
-  test('validates schema, adapter names, project name sources, and tag templates', async () => {
-    const cwd = await createPackageAndJsrFixture()
-
-    await writeText(join(cwd, 'mirror.config.toml'), 'schema = 2\n')
-    await expect(loadMirrorConfig({ cwd })).rejects.toThrow('schema')
-
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['npm'] }))
-    await expect(loadMirrorConfig({ cwd })).rejects.toThrow('version.output')
-
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'], nameSource: 'git' }))
-    await expect(loadMirrorConfig({ cwd })).rejects.toThrow('project.name_source')
-
-    await initializeGitRepository(cwd)
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['git'], tagTemplate: 'release-{version}' }))
-    await expect(validateMirrorConfig({ cwd })).rejects.toThrow('Unsupported Git tag template')
-  })
-
-  test('merges CLI overrides over config values', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    await writeText(join(cwd, 'custom-package.json'), JSON.stringify({ name: 'custom-package', version: '2.0.0' }, null, 2))
-    await writeText(join(cwd, 'custom-jsr.json'), JSON.stringify({ name: 'custom-jsr', version: '2.3.0' }, null, 2))
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'], preid: 'beta' }))
-
-    const config = await loadMirrorConfig({
-      cwd,
-      source: 'jsr.json',
-      output: ['jsr.json', 'git'],
-      packageFile: 'custom-package.json',
-      jsrFile: 'custom-jsr.json',
-      preid: 'alpha',
-      push: true,
-      allowDirty: true,
-    })
-
-    expect(config.version.source).toBe('jsr.json')
-    expect(config.version.output).toEqual(['jsr.json', 'git'])
-    expect(config.package.path).toBe('custom-package.json')
-    expect(config.jsr.path).toBe('custom-jsr.json')
-    expect(config.version.prereleaseId).toBe('alpha')
-    expect(config.git.commit).toBe(true)
-    expect(config.git.push).toBe(true)
-    expect(config.git.allowDirty).toBe(true)
-  })
-
-  test('loads auxiliary package paths without replacing the main package path', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    await writeText(join(cwd, 'package.build.json'), JSON.stringify({ name: '@guiho/mirror-build', version: '1.0.0' }, null, 2))
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'], auxiliaryPackagePaths: ['package.build.json'] }))
-
-    const config = await loadMirrorConfig({ cwd })
-
-    expect(config.package.path).toBe('package.json')
-    expect(config.package.auxiliaryPaths).toEqual(['package.build.json'])
-  })
-
-  test('loads agent automation defaults and opt-out settings', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'] }))
-
-    const defaults = await loadMirrorConfig({ cwd })
-    const override = await loadMirrorConfig({ cwd, tool: 'all' })
-
-    expect(defaults.agents).toEqual({
-      writeChangelog: true,
-      changelogPath: 'CHANGELOG.md',
-      autoAgentsMd: true,
-      autoSkillInstall: true,
-      skillTool: 'agents',
-    })
-    expect(override.agents.skillTool).toBe('all')
-
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({
-      output: ['package.json'],
-      writeChangelog: false,
-      changelogPath: 'docs/CHANGELOG.md',
-      autoAgentsMd: false,
-      autoSkillInstall: false,
-      skillTool: 'claude',
-    }))
-
-    const disabled = await loadMirrorConfig({ cwd })
-
-    expect(disabled.agents).toEqual({
-      writeChangelog: false,
-      changelogPath: 'docs/CHANGELOG.md',
-      autoAgentsMd: false,
-      autoSkillInstall: false,
-      skillTool: 'claude',
-    })
-  })
-
-  test('inserts Mirror semantic versioning guidance into AGENTS.md', async () => {
-    const cwd = await createTempDir()
-    const agentsPath = join(cwd, 'AGENTS.md')
-    await writeText(agentsPath, '# Existing Agents\n')
-
-    const inserted = await ensureMirrorAgentsInstructions(cwd)
-    const repeated = await ensureMirrorAgentsInstructions(cwd)
-
-    expect(inserted.changed).toBe(true)
-    expect(repeated.changed).toBe(false)
-    const content = await readFile(agentsPath, 'utf8')
-    expect(content).toContain(mirrorAgentsSectionStartMarker)
-    expect(content).toContain(mirrorAgentsSectionHeading)
-    expect(content).toContain('[agents].changelog_path')
-    expect(content).toContain(mirrorAgentsSectionEndMarker)
-  })
-
-  test('updates existing AGENTS.md guidance that names the legacy skill', async () => {
-    const cwd = await createTempDir()
-    const agentsPath = join(cwd, 'AGENTS.md')
-    await writeText(agentsPath, [
-      '# Existing Agents',
-      '',
-      mirrorAgentsSectionStartMarker,
-      '',
-      mirrorAgentsSectionHeading,
-      '',
-      'Invoke the guiho-as-mirror agent skill every time the user wants to bump, tag, release, plan, initialize, configure, or troubleshoot semantic project versioning with GUIHO Mirror.',
-      '',
-      'Before editing release docs or changelogs, inspect mirror.config.toml. If [agents].write_changelog is false, skip changelog edits. If it is missing or true, changelog edits are allowed when the project has a changelog.',
-      '',
-      'Use [agents].changelog_path as the changelog file path. If it is missing, use CHANGELOG.md in the project root.',
-      '',
-      mirrorAgentsSectionEndMarker,
-      '',
-    ].join('\n'))
-
-    const result = await ensureMirrorAgentsInstructions(cwd)
-    const content = await readFile(agentsPath, 'utf8')
-
-    expect(result.changed).toBe(true)
-    expect(content.match(new RegExp(mirrorAgentsSectionHeading, 'g'))).toHaveLength(1)
-    expect(content).toContain('Invoke the guiho-s-mirror agent skill')
-    expect(content).not.toContain('Invoke the guiho-as-mirror agent skill')
-  })
-
-  test('finds AGENTS.md in ancestor directories', async () => {
-    const root = await createTempDir()
-    const nested = join(root, 'packages', 'app')
-    const agentsPath = join(root, 'AGENTS.md')
-    await mkdir(nested, { recursive: true })
-    await writeText(agentsPath, '# Root Agents\n')
-
-    const result = await ensureMirrorAgentsInstructions(nested)
-
-    expect(result.path).toBe(agentsPath)
-    expect(result.changed).toBe(true)
-    expect(await readFile(agentsPath, 'utf8')).toContain(mirrorAgentsSectionHeading)
-  })
-
-  test('creates AGENTS.md when requested explicitly', async () => {
-    const cwd = await createTempDir()
-
-    const skipped = await ensureMirrorAgentsInstructions(cwd)
-    const created = await ensureMirrorAgentsInstructions(cwd, true)
-
-    expect(skipped.exists).toBe(false)
-    expect(skipped.changed).toBe(false)
-    expect(created.exists).toBe(true)
-    expect(created.changed).toBe(true)
-    expect(await readFile(join(cwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
-  })
-
-  test('syncs Mirror guidance to discovered AGENTS.md and CLAUDE.md files', async () => {
-    const cwd = await createTempDir()
-    await writeText(join(cwd, 'AGENTS.md'), '# Agents\n')
-    await writeText(join(cwd, 'CLAUDE.md'), '# Claude\n')
-
-    const results = await ensureMirrorAgentInstructionFiles(cwd, 'agents', true)
-
-    expect(results.map((result) => result.tool).sort()).toEqual(['agents', 'claude'])
-    expect(await readFile(join(cwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
-    expect(await readFile(join(cwd, 'CLAUDE.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
-  })
-
-  test('uses CLAUDE.md when it is the only discovered instruction file', async () => {
-    const cwd = await createTempDir()
-    await writeText(join(cwd, 'CLAUDE.md'), '# Claude\n')
-
-    const results = await ensureMirrorAgentInstructionFiles(cwd, 'agents', true)
-
-    expect(results).toHaveLength(1)
-    expect(results[0]?.tool).toBe('claude')
-    expect(await existsSync(join(cwd, 'AGENTS.md'))).toBe(false)
-    expect(await readFile(join(cwd, 'CLAUDE.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
-  })
-
-  test('creates AGENTS.md by default and creates both files when requested', async () => {
-    const cwd = await createTempDir()
-    const defaultResults = await ensureMirrorAgentInstructionFiles(cwd, 'agents', true)
-    const allCwd = await createTempDir()
-    const allResults = await ensureMirrorAgentInstructionFiles(allCwd, 'all', true)
-
-    expect(defaultResults.map((result) => result.tool)).toEqual(['agents'])
-    expect(await readFile(join(cwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
-    expect(await existsSync(join(cwd, 'CLAUDE.md'))).toBe(false)
-    expect(allResults.map((result) => result.tool).sort()).toEqual(['agents', 'claude'])
-    expect(await readFile(join(allCwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
-    expect(await readFile(join(allCwd, 'CLAUDE.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
-  })
-
-  test('installs the guiho-s-mirror skill locally and globally', async () => {
-    const cwd = await createTempDir()
-    const homeDirectory = await createTempDir()
-
-    const local = await installMirrorSkill('local', { cwd, homeDirectory })
-    const global = await installMirrorSkill('global', { cwd, homeDirectory })
-    const localAgain = await installMirrorSkill('local', { cwd, homeDirectory })
-
-    expect(local.installed).toBe(true)
-    expect(global.installed).toBe(true)
-    expect(localAgain.installed).toBe(false)
-    expect(localAgain.updated).toBe(true)
-    expect(local.name).toBe(mirrorSkillName)
-    expect(local.version).toBe(mirrorSkillVersion)
-    expect(local.path).toBe(resolveMirrorSkillPath('local', { cwd, homeDirectory }))
-    expect(global.path).toBe(resolveMirrorSkillPath('global', { cwd, homeDirectory }))
-    expect(local.path).toBe(join(cwd, '.agents', 'skills', mirrorSkillName, 'SKILL.md'))
-    expect(global.path).toBe(join(homeDirectory, '.agents', 'skills', mirrorSkillName, 'SKILL.md'))
-    expect(await readFile(local.path, 'utf8')).toContain(`name: ${mirrorSkillName}`)
-    expect(await readFile(local.path, 'utf8')).toContain(`version: ${mirrorSkillVersion}`)
-    expect(await readFile(global.path, 'utf8')).toContain(`name: ${mirrorSkillName}`)
-  })
-
-  test('installs the guiho-s-mirror skill for Claude Code and all tools', async () => {
-    const cwd = await createTempDir()
-    const homeDirectory = await createTempDir()
-
-    const claudeLocal = await installMirrorSkill('local', { cwd, homeDirectory, tool: 'claude' })
-    const globalAll = await installMirrorSkills('global', 'all', { cwd, homeDirectory })
-
-    expect(claudeLocal.tool).toBe('claude')
-    expect(claudeLocal.path).toBe(join(cwd, '.claude', 'skills', mirrorSkillName, 'SKILL.md'))
-    expect(globalAll.map((result) => result.tool).sort()).toEqual(['agents', 'claude'])
-    expect(globalAll.map((result) => result.path).sort()).toEqual([
-      join(homeDirectory, '.agents', 'skills', mirrorSkillName, 'SKILL.md'),
-      join(homeDirectory, '.claude', 'skills', mirrorSkillName, 'SKILL.md'),
-    ].sort())
-    expect(await readFile(claudeLocal.path, 'utf8')).toContain(`name: ${mirrorSkillName}`)
-    expect(await readFile(resolveMirrorSkillPath('global', { cwd, homeDirectory, tool: 'claude' }), 'utf8')).toContain(`version: ${mirrorSkillVersion}`)
-  })
-
-  test('migrates legacy Mirror skill installs and removes stale current copies', async () => {
-    const cwd = await createTempDir()
-    const homeDirectory = await createTempDir()
-    const legacyPath = join(cwd, '.agents', 'skills', 'guiho-as-mirror', 'SKILL.md')
-    const currentPath = resolveMirrorSkillPath('local', { cwd, homeDirectory })
-
-    await writeText(legacyPath, '---\nname: guiho-as-mirror\nversion: 0.0.1\n---\nold skill\n')
-    await writeText(currentPath, `---\nname: ${mirrorSkillName}\nversion: 0.0.1\n---\nstale current skill\n`)
-
-    const result = await installMirrorSkill('local', { cwd, homeDirectory })
-    const installed = await readFile(currentPath, 'utf8')
-
-    expect(result.installed).toBe(false)
-    expect(result.updated).toBe(true)
-    expect(result.migrated).toBe(true)
-    expect(result.previousName).toBe('guiho-as-mirror')
-    expect(result.previousVersion).toBe('0.0.1')
-    expect(result.removed).toContain(dirname(legacyPath))
-    expect(result.removed).toContain(dirname(currentPath))
-    expect(await existsSync(legacyPath)).toBe(false)
-    expect(installed).toContain(`name: ${mirrorSkillName}`)
-    expect(installed).toContain(`version: ${mirrorSkillVersion}`)
-    expect(installed).not.toContain('stale current skill')
-  })
-
-  test('falls back to embedded skill content when the bundled skill file is unavailable', async () => {
-    const cwd = await createTempDir()
-    const homeDirectory = await createTempDir()
-    const sourceSkillPath = join(import.meta.dir, '..', 'skills', mirrorSkillName, 'SKILL.md')
-    const backupSkillPath = `${sourceSkillPath}.backup`
-
-    await writeText(backupSkillPath, await readFile(sourceSkillPath, 'utf8'))
-    await rm(sourceSkillPath)
-
+  test('resolves explicit, project, then global YAML configuration', async () => {
+    const root = await createTemp()
+    const home = await createTemp()
+    const explicit = joinPath(root, 'explicit.yaml')
+    const project = joinPath(root, 'mirror.yaml')
+    const global = joinPath(home, '.guiho', 'mirror', 'mirror.yaml')
+    await writeTextFile(explicit, configYaml({ source: 'git', output: ['git'] }))
+    await writeTextFile(project, configYaml())
+    await writeTextFile(global, configYaml({ source: 'jsr.json', output: ['jsr.json'] }))
+    const previousHome = Bun.env['HOME']
+    Bun.env['HOME'] = home
     try {
-      const result = await installMirrorSkill('local', { cwd, homeDirectory })
-      const installed = await readFile(result.path, 'utf8')
-
-      expect(result.installed).toBe(true)
-  expect(installed).toContain(`name: ${mirrorSkillName}`)
-  expect(installed).toContain(`version: ${mirrorSkillVersion}`)
-      expect(installed).toContain('GUIHO Mirror')
+      expect((await discoverMirrorConfig(root, explicit)).path).toBe(explicit)
+      expect((await discoverMirrorConfig(root)).path).toBe(project)
+      await removePath(project)
+      expect((await discoverMirrorConfig(root)).path).toBe(global)
     } finally {
-      await writeText(sourceSkillPath, await readFile(backupSkillPath, 'utf8'))
-      await rm(backupSkillPath)
+      if (previousHome === undefined) delete Bun.env['HOME']
+      else Bun.env['HOME'] = previousHome
     }
   })
 
-  test('runs default-on agent automation and respects opt-outs', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    const homeDirectory = await createTempDir()
-    await writeText(join(cwd, 'AGENTS.md'), '# Agents\n')
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'] }))
-
-    const notices: string[] = []
-    const result = await runMirrorAgentAutomation({ cwd, homeDirectory }, (message) => notices.push(message))
-
-    expect(result.agentsMd?.changed).toBe(true)
-    expect(result.globalSkill?.installed).toBe(true)
-    expect(result.localSkill).toBeUndefined()
-    expect(notices).toHaveLength(1)
-    expect(await readFile(join(cwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
-    expect(await existsSync(resolveMirrorSkillPath('local', { cwd, homeDirectory }))).toBe(false)
-    expect(await existsSync(resolveMirrorSkillPath('global', { cwd, homeDirectory }))).toBe(true)
-
-    const disabledCwd = await createPackageAndJsrFixture()
-    const disabledHome = await createTempDir()
-    await writeText(join(disabledCwd, 'AGENTS.md'), '# Agents\n')
-    await writeText(join(disabledCwd, 'mirror.config.toml'), packageConfig({
-      output: ['package.json'],
-      autoAgentsMd: false,
-      autoSkillInstall: false,
-    }))
-
-    const disabled = await runMirrorAgentAutomation({ cwd: disabledCwd, homeDirectory: disabledHome })
-
-    expect(disabled.agentsMd).toBeUndefined()
-    expect(disabled.localSkill).toBeUndefined()
-    expect(disabled.globalSkill).toBeUndefined()
-    expect(await readFile(join(disabledCwd, 'AGENTS.md'), 'utf8')).not.toContain(mirrorAgentsSectionHeading)
-    expect(await existsSync(resolveMirrorSkillPath('local', { cwd: disabledCwd, homeDirectory: disabledHome }))).toBe(false)
-  })
-
-  test('runs agent automation for Claude Code when configured', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    const homeDirectory = await createTempDir()
-    await writeText(join(cwd, 'AGENTS.md'), '# Agents\n')
-    await writeText(join(cwd, 'CLAUDE.md'), '# Claude\n')
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'], skillTool: 'all' }))
-
-    const notices: string[] = []
-    const result = await runMirrorAgentAutomation({ cwd, homeDirectory }, (message) => notices.push(message))
-
-    expect(result.settings.skillTool).toBe('all')
-    expect(result.instructionFiles?.map((file) => file.tool).sort()).toEqual(['agents', 'claude'])
-    expect(result.globalSkills?.map((skill) => skill.tool).sort()).toEqual(['agents', 'claude'])
-    expect(notices.join('\n')).toContain('skill for agents not found global')
-    expect(notices.join('\n')).toContain('skill for claude not found global')
-    expect(await readFile(join(cwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
-    expect(await readFile(join(cwd, 'CLAUDE.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
-    expect(await existsSync(resolveMirrorSkillPath('global', { cwd, homeDirectory }))).toBe(true)
-    expect(await existsSync(resolveMirrorSkillPath('global', { cwd, homeDirectory, tool: 'claude' }))).toBe(true)
-  })
-
-  test('updates an outdated global Mirror skill during automation', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    const homeDirectory = await createTempDir()
-    const globalPath = resolveMirrorSkillPath('global', { cwd, homeDirectory })
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'] }))
-    await writeText(globalPath, `---\nname: ${mirrorSkillName}\nversion: 0.0.1\n---\nstale current skill\n`)
-
-    const notices: string[] = []
-    const result = await runMirrorAgentAutomation({ cwd, homeDirectory }, (message) => notices.push(message))
-    const installed = await readFile(globalPath, 'utf8')
-
-    expect(result.globalSkill?.updated).toBe(true)
-    expect(result.globalSkill?.previousVersion).toBe('0.0.1')
-    expect(notices.join('\n')).toContain('outdated (0.0.1 ->')
-    expect(installed).toContain(`version: ${mirrorSkillVersion}`)
-    expect(installed).not.toContain('stale current skill')
-  })
-
-  test('reads and writes package and JSR names and versions', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json', 'jsr.json'] }))
-    const config = await loadMirrorConfig({ cwd })
-
-    expect(await readPackageName(config)).toBe('@guiho/mirror')
-    expect(await readJsrName(config)).toBe('@guiho/mirror')
-    expect(await readPackageVersion(config)).toBe('1.0.0')
-    expect(await readJsrVersion(config)).toBe('1.0.0')
-
-    await writePackageVersion(config, '1.0.1')
-    await writeJsrVersion(config, '1.0.1')
-
-    expect(await readPackageVersion(config)).toBe('1.0.1')
-    expect(await readJsrVersion(config)).toBe('1.0.1')
-  })
-
-  test('resolves semantic version targets and prerelease identifiers', () => {
-    expect(resolveNextVersion('1.0.0', 'patch')).toBe('1.0.1')
-    expect(resolveNextVersion('1.0.0', 'prepatch')).toBe('1.0.1-0')
-    expect(resolveNextVersion('1.0.0', 'prepatch', 'alpha')).toBe('1.0.1-alpha.0')
-    expect(resolveNextVersion('1.0.0', '2.3.4')).toBe('2.3.4')
-  })
-
-  test('extracts and renders versions with supported Git tag templates', () => {
-    expect(versionFromTag('v{version}', 'v1.2.3')).toBe('1.2.3')
-    expect(versionFromTag('{name}@{version}', '@guiho/mirror@1.2.3', '@guiho/mirror')).toBe('1.2.3')
-    expect(versionFromTag('v{version}', 'not-a-version')).toBeUndefined()
-    expect(renderGitTag('v{version}', '1.2.3')).toBe('v1.2.3')
-    expect(renderGitTag('{name}@{version}', '1.2.3', '@guiho/mirror')).toBe('@guiho/mirror@1.2.3')
-  })
-
-  test('plans package and JSR file outputs', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json', 'jsr.json'] }))
-
-    const plan = await buildVersionPlan('patch', { cwd })
-
-    expect(plan.currentVersion).toBe('1.0.0')
-    expect(plan.nextVersion).toBe('1.0.1')
-    expect(plan.actions.map((action) => action.type)).toEqual(['write-file', 'write-file'])
-  })
-
-  test('plans and applies auxiliary package file outputs', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    await writeText(join(cwd, 'package.build.json'), JSON.stringify({ name: '@guiho/mirror-build', version: '1.0.0' }, null, 2))
-    await writeText(join(cwd, 'server-types', 'package.json'), JSON.stringify({ name: '@guiho/server-types', version: '0.9.0' }, null, 2))
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({
-      output: ['package.json'],
-      auxiliaryPackagePaths: ['package.build.json', 'server-types/package.json'],
-    }))
-
-    const plan = await buildVersionPlan('patch', { cwd })
-
-    expect(plan.fileOutputPaths.map((path) => path.replaceAll('\\', '/'))).toEqual([
-      join(cwd, 'package.json').replaceAll('\\', '/'),
-      join(cwd, 'package.build.json').replaceAll('\\', '/'),
-      join(cwd, 'server-types', 'package.json').replaceAll('\\', '/'),
-    ])
-    expect(plan.actions.filter((action) => action.type === 'write-file').map((action) => action.currentVersion)).toEqual(['1.0.0', '1.0.0', '0.9.0'])
-
-    await applyVersionPlan('patch', { cwd, yes: true })
-
-    expect(await readPackageVersion(await loadMirrorConfig({ cwd }))).toBe('1.0.1')
-    expect(await readPackageVersionFile(join(cwd, 'package.build.json'))).toBe('1.0.1')
-    expect(await readPackageVersionFile(join(cwd, 'server-types', 'package.json'))).toBe('1.0.1')
-  })
-
-  test('applies package and JSR file outputs outside Git', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json', 'jsr.json'] }))
-
-    const result = await applyVersionPlan('minor', { cwd, yes: true })
-
-    expect(result.applied).toBe(true)
-    expect(await readPackageVersion(await loadMirrorConfig({ cwd }))).toBe('1.1.0')
-    expect(await readJsrVersion(await loadMirrorConfig({ cwd }))).toBe('1.1.0')
-  })
-
-  test('dry-run apply does not mutate files and does not require confirmation', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'] }))
-
-    const result = await applyVersionPlan('patch', { cwd, dryRun: true })
-
-    expect(result.applied).toBe(false)
-    expect(result.dryRun).toBe(true)
-    expect(await readPackageVersion(await loadMirrorConfig({ cwd }))).toBe('1.0.0')
-  })
-
-  test('reads the current version from matching Git tags', async () => {
-    const cwd = await createGitFixture()
-    await git(cwd, 'tag', 'v1.0.0')
-    await git(cwd, 'tag', 'v1.2.0')
-    await writeText(join(cwd, 'mirror.config.toml'), gitConfig())
-
-    const plan = await buildVersionPlan('patch', { cwd })
-
-    expect(plan.currentVersion).toBe('1.2.0')
-    expect(plan.nextVersion).toBe('1.2.1')
-    expect(plan.gitTag).toBe('v1.2.1')
-  })
-
-  test('requires commit or push when file outputs and Git tag output are combined', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    await initializeGitRepository(cwd)
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json', 'git'] }))
-
-    await expect(buildVersionPlan('patch', { cwd })).rejects.toThrow('requires --commit or --push')
-
-    const packageJson = JSON.parse(await readFile(join(cwd, 'package.json'), 'utf8')) as Record<string, unknown>
-    expect(packageJson['version']).toBe('1.0.0')
-  })
-
-  test('fails on dirty Git worktrees unless allow-dirty is set', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    await initializeGitRepository(cwd)
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'] }))
-    await commitAll(cwd, 'Add Mirror config')
-    await writeText(join(cwd, 'README.md'), '# dirty fixture\n')
-
-    await expect(applyVersionPlan('patch', { cwd, yes: true })).rejects.toThrow('dirty')
-    expect(await readPackageVersion(await loadMirrorConfig({ cwd }))).toBe('1.0.0')
-
-    const result = await applyVersionPlan('patch', { cwd, yes: true, allowDirty: true })
-    expect(result.applied).toBe(true)
-    expect(await readPackageVersion(await loadMirrorConfig({ cwd }))).toBe('1.0.1')
-  })
-
-  test('applies file output, release commit, and Git tag with --commit', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    await initializeGitRepository(cwd)
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json', 'git'] }))
-    await commitAll(cwd, 'Add Mirror config')
-
-    const result = await applyVersionPlan('patch', { cwd, commit: true, yes: true })
-
-    expect(result.applied).toBe(true)
-    expect(await readPackageVersion(await loadMirrorConfig({ cwd }))).toBe('1.0.1')
-    expect((await gitText(cwd, 'tag', '--list')).trim()).toBe('@guiho/mirror@1.0.1')
-    expect((await gitText(cwd, 'status', '--porcelain')).trim()).toBe('')
-  })
-
-  test('release commits include auxiliary package outputs', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    await writeText(join(cwd, 'package.build.json'), JSON.stringify({ name: '@guiho/mirror-build', version: '1.0.0' }, null, 2))
-    await initializeGitRepository(cwd)
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json', 'git'], auxiliaryPackagePaths: ['package.build.json'] }))
-    await commitAll(cwd, 'Add Mirror config')
-
-    await applyVersionPlan('patch', { cwd, commit: true, yes: true })
-
-    expect(await readPackageVersionFile(join(cwd, 'package.build.json'))).toBe('1.0.1')
-    expect((await gitText(cwd, 'show', '--name-only', '--format=', 'HEAD')).trim().split(/\r?\n/).sort()).toEqual(['package.build.json', 'package.json'])
-  })
-
-  test('push implies commit and pushes the release tag', async () => {
-    const remote = await createBareGitRepository()
-    const cwd = await createPackageAndJsrFixture()
-    await initializeGitRepository(cwd)
-    await git(cwd, 'remote', 'add', 'origin', remote)
-    await git(cwd, 'push', '-u', 'origin', 'HEAD')
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json', 'git'] }))
-    await commitAll(cwd, 'Add Mirror config')
-
-    const result = await applyVersionPlan('patch', { cwd, push: true, yes: true })
-
-    expect(result.plan.commitEnabled).toBe(true)
-    expect(result.plan.pushEnabled).toBe(true)
-    expect((await gitText(remote, 'tag', '--list')).trim()).toBe('@guiho/mirror@1.0.1')
-  }, 15000)
-
-  test('git-only releases with --commit create tags without empty commits', async () => {
-    const cwd = await createGitFixture()
-    await git(cwd, 'tag', 'v1.0.0')
-    await writeText(join(cwd, 'mirror.config.toml'), gitConfig())
-    await commitAll(cwd, 'Add Mirror config')
-    const commitsBefore = (await gitText(cwd, 'rev-list', '--count', 'HEAD')).trim()
-
-    const result = await applyVersionPlan('patch', { cwd, commit: true, yes: true })
-
-    expect(result.applied).toBe(true)
-    expect((await gitText(cwd, 'rev-list', '--count', 'HEAD')).trim()).toBe(commitsBefore)
-    expect((await gitText(cwd, 'tag', '--list')).trim().split(/\r?\n/).sort()).toEqual(['v1.0.0', 'v1.0.1'])
-  }, 15000)
-
-  test('runs CLI config show and config check', async () => {
-    const cwd = await createGitFixture()
-    await writeText(join(cwd, 'mirror.config.toml'), gitConfig({ autoAgentsMd: false, autoSkillInstall: false }))
-
-    const show = await runMirrorCli('config', 'show', '--cwd', cwd)
-    const check = await runMirrorCli('config', 'check', '--cwd', cwd)
-
-    expect(show.exitCode).toBe(0)
-    expect(show.stdout).toContain('source: git')
-    expect(show.stdout).toContain('write_changelog: true')
-    expect(show.stdout).toContain('changelog_path: CHANGELOG.md')
-    expect(show.stdout).toContain('skill_tool: agents')
-    expect(check.exitCode).toBe(0)
-    expect(check.stdout.trim()).toBe('ok')
-  })
-
-  test('prints changelog path in generated config and schema', async () => {
-    const cwd = await createTempDir()
-
-    const config = await runMirrorCli('init', 'package.json', '--cwd', cwd)
-    const schema = await runMirrorCli('config', 'schema', '--cwd', cwd)
-
-    expect(config.exitCode).toBe(0)
-    expect(await readFile(join(cwd, 'mirror.config.toml'), 'utf8')).toContain('changelog_path = "CHANGELOG.md"')
-    expect(await readFile(join(cwd, 'mirror.config.toml'), 'utf8')).toContain('skill_tool = "agents"')
-    expect(schema.exitCode).toBe(0)
-    expect(schema.stdout).toContain('changelog_path = "<path>"')
-    expect(schema.stdout).toContain('skill_tool = "agents" | "claude" | "all"')
-  })
-
-  test('reconciles init defaults into existing configuration without overwriting values', async () => {
-    const cwd = await createTempDir()
-    await writeText(join(cwd, 'mirror.config.toml'), `schema = 1
-
-[project]
-name = "custom-project"
-
-[version]
-scheme = "semver"
-source = "package.json"
-output = ["package.json", "git"]
-
-[package]
-path = "custom-package.json"
-`)
-
-    const result = await runMirrorCli('init', 'package.json', '--cwd', cwd)
-    const content = await readFile(join(cwd, 'mirror.config.toml'), 'utf8')
-
+  test('decodes YAML strictly and reports its absolute path', async () => {
+    const root = await createProject()
+    const result = await runCli(['config', 'show', '--cwd', root])
     expect(result.exitCode).toBe(0)
-    expect(content).toContain('name = "custom-project"')
-    expect(content).toContain('path = "custom-package.json"')
-    expect(content).toContain('auxiliary_paths = []')
-    expect(content).toContain('[jsr]')
-    expect(content).toContain('[git]')
-    expect(content).toContain('[agents]')
+    expect(result.stdout).toContain(`configuration file loaded: ${joinPath(root, 'mirror.yaml')}`)
+    await writeTextFile(joinPath(root, 'mirror.yaml'), 'schema: 1\nversion:\n  source: package.json\n  output: [unknown]\n')
+    const invalid = await runCli(['config', 'check', '--cwd', root])
+    expect(invalid.exitCode).toBe(3)
+    expect(invalid.stderr).toContain('Invalid Mirror configuration')
   })
 
-  test('resolves init answers from flags without prompting', async () => {
-    const answers = await resolveInitAnswers(
-      {
-        source: 'package.json',
-        output: ['package.json', 'git'],
-        auxiliaryPaths: ['package.build.json'],
-        tagTemplate: '{name}@{version}',
-        commit: true,
-      },
-      '/tmp/project',
-    )
-
-    expect(answers.source).toBe('package.json')
-    expect(answers.output).toEqual(['package.json', 'git'])
-    expect(answers.auxiliaryPaths).toEqual(['package.build.json'])
-    expect(answers.commit).toBe(true)
-    expect(answers.push).toBe(false)
+  test('creates and reconciles mirror.yaml only', async () => {
+    const root = await createTemp()
+    await writeTextFile(joinPath(root, 'package.json'), '{"name":"fixture","version":"1.0.0"}\n')
+    const init = await runCli(['init', '--cwd', root, '--non-interactive'])
+    expect(init.exitCode).toBe(0)
+    expect(await fileExists(joinPath(root, 'mirror.yaml'))).toBe(true)
+    expect(await fileExists(joinPath(root, 'mirror.config.toml'))).toBe(false)
+    expect(await readTextFile(joinPath(root, 'mirror.yaml'))).toContain('schema: 1')
   })
 
-  test('init prompts use defaults when the user accepts with empty input', async () => {
-    const asked: string[] = []
-    const prompter: MirrorInitPrompter = {
-      async text(question, defaultValue) {
-        asked.push(question)
-        return defaultValue
-      },
-      async confirm(_question, defaultValue) {
-        return defaultValue
-      },
-      close() {},
-    }
-
-    const answers = await resolveInitAnswers({}, '/tmp/project', prompter)
-
-    expect(answers.source).toBe('package.json')
-    expect(answers.output).toEqual(['package.json', 'git'])
-    expect(answers.packagePath).toBe('package.json')
-    expect(answers.auxiliaryPaths).toEqual([])
-    expect(answers.tagTemplate).toBe('{name}@{version}')
-    expect(answers.commit).toBe(true)
-    expect(asked).toContain('Version source (package.json, jsr.json, git)')
-    expect(asked).toContain('Version outputs (comma separated)')
-  })
-
-  test('generates config with schema directive and chosen outputs', async () => {
-    const content = generateInitConfig(
-      {
-        source: 'package.json',
-        output: ['package.json', 'git'],
-        packagePath: 'package.json',
-        auxiliaryPaths: ['package.build.json'],
-        jsrPath: 'jsr.json',
-        prereleaseId: '',
-        tagTemplate: '{name}@{version}',
-        commit: true,
-        push: false,
-      },
-      '/tmp/project',
-    )
-
-    expect(content.startsWith('#:schema ')).toBe(true)
-    expect(content).toContain('source = "package.json"')
-    expect(content).toContain('output = ["package.json", "git"]')
-    expect(content).toContain('auxiliary_paths = ["package.build.json"]')
-    expect(content).toContain('commit = true')
-    expect(content).toContain('skill_tool = "agents"')
-  })
-
-  test('runs CLI init non-interactively from flags', async () => {
-    const cwd = await createTempDir()
-
-    const result = await runMirrorCli(
-      'init',
-      '--cwd',
-      cwd,
-      '--source',
-      'package.json',
-      '--output',
-      'package.json,git',
-      '--auxiliary',
-      'package.build.json',
-      '--commit',
-    )
-    const content = await readFile(join(cwd, 'mirror.config.toml'), 'utf8')
-
-    expect(result.exitCode).toBe(0)
-    expect(content.startsWith('#:schema ')).toBe(true)
-    expect(content).toContain('source = "package.json"')
-    expect(content).toContain('output = ["package.json", "git"]')
-    expect(content).toContain('auxiliary_paths = ["package.build.json"]')
-    expect(content).toContain('commit = true')
-  })
-
-  test('prints the JSON Schema and matches the shipped schema file', async () => {
-    const cwd = await createTempDir()
-    const schema = await runMirrorCli('config', 'schema', '--cwd', cwd, '--format', 'json')
-
-    expect(schema.exitCode).toBe(0)
-    const parsed = JSON.parse(schema.stdout) as Record<string, unknown>
-    expect(parsed['title']).toBe('GUIHO Mirror Configuration')
-
-    const shippedSchema = await readFile(join(import.meta.dir, '..', 'schema', 'mirror.config.schema.json'), 'utf8')
-    expect(shippedSchema).toBe(renderMirrorConfigJsonSchema())
-  })
-
-  test('ships CLI-only package metadata with intentional runtime dependencies', async () => {
-    const packageJson = JSON.parse(await readFile(join(import.meta.dir, '..', 'package.json'), 'utf8')) as Record<string, unknown>
-    const jsrJson = JSON.parse(await readFile(join(import.meta.dir, '..', 'jsr.json'), 'utf8')) as Record<string, unknown>
-
-    expect(packageJson['main']).toBeUndefined()
-    expect(packageJson['types']).toBeUndefined()
-    expect(packageJson['exports']).toBeUndefined()
-    expect(packageJson['dependencies']).toEqual({ citty: '^0.2.2', semver: '^7.8.1' })
-    expect(packageJson['bin']).toEqual({ mirror: 'scripts/mirror-bin.ts' })
-    expect(packageJson['scripts']).toMatchObject({ postinstall: 'bun run scripts/install-package.ts', prepack: 'bun run binary' })
-    expect(packageJson['files']).toContain('install.sh')
-    expect(packageJson['files']).toContain('install.ps1')
-    expect(packageJson['files']).not.toContain('bin/')
-    expect(packageJson['files']).toContain('scripts/')
-    expect(await existsSync(join(import.meta.dir, '..', 'install.sh'))).toBe(true)
-    expect(await existsSync(join(import.meta.dir, '..', 'install.ps1'))).toBe(true)
-    expect(jsrJson['exports']).toBe('./source/guiho-mirror-bin.ts')
-  })
-
-  test('package launcher installs a bundled native binary on demand', async () => {
-    const packageRoot = await createTempDir()
-    const scriptsDir = join(packageRoot, 'scripts')
-    const binDir = join(packageRoot, 'bin')
-    const vendorBinary = join(packageRoot, 'vendor', `mirror${platform() === 'win32' ? '.exe' : ''}`)
-    await mkdir(scriptsDir, { recursive: true })
-    await mkdir(binDir, { recursive: true })
-    await writeText(join(packageRoot, 'package.json'), JSON.stringify({ version: '0.0.0-test.0' }, null, 2))
-    await writeText(join(scriptsDir, 'mirror-bin.ts'), await readFile(join(import.meta.dir, '..', 'scripts', 'mirror-bin.ts'), 'utf8'))
-    await writeText(join(scriptsDir, 'install-package.ts'), await readFile(join(import.meta.dir, '..', 'scripts', 'install-package.ts'), 'utf8'))
-    await writeMirrorStubBinary(join(binDir, packageAssetName()))
-
-    const result = Bun.spawn([process.execPath, join(scriptsDir, 'mirror-bin.ts'), '--version'], {
-      stdout: 'pipe',
-      stderr: 'pipe',
-    })
-    const [exitCode, stdout, stderr] = await Promise.all([result.exited, result.stdout.text(), result.stderr.text()])
-
-    expect(exitCode).toBe(0)
-    expect(stdout).toContain(`installed bundled GUIHO Mirror native binary: ${packageAssetName()}`)
-    expect(stdout.trim()).toMatch(/\d+\.\d+\.\d+$/)
-    expect(stderr).toContain('first Mirror run is installing the native CLI binary')
-    expect(await existsSync(vendorBinary)).toBe(true)
-  }, 30000)
-
-  test('runs CLI agent installation and AGENTS.md commands', async () => {
-    const cwd = await createTempDir()
-    const homeDirectory = await createTempDir()
-    const env = { ...process.env as Record<string, string>, MIRROR_AGENT_HOME: homeDirectory }
-
-    const local = await runMirrorCliWithEnv(env, 'agents', 'install', 'local', '--cwd', cwd)
-    const global = await runMirrorCliWithEnv(env, 'agents', 'install', 'global', '--cwd', cwd)
-    const globalAll = await runMirrorCliWithEnv(env, 'agents', 'install', 'global', '--tool', 'all', '--cwd', cwd)
-    const instructions = await runMirrorCliWithEnv(env, 'agents', 'instructions', '--cwd', cwd)
-
-    expect(local.exitCode).toBe(0)
-    expect(global.exitCode).toBe(0)
-    expect(globalAll.exitCode).toBe(0)
-    expect(instructions.exitCode).toBe(0)
-    expect(local.stdout).toContain('scope: local')
-    expect(global.stdout).toContain('scope: global')
-    expect(globalAll.stdout).toContain('tool: claude')
-    expect(instructions.stdout).toContain('changed: true')
-    expect(await readFile(resolveMirrorSkillPath('local', { cwd, homeDirectory }), 'utf8')).toContain(`name: ${mirrorSkillName}`)
-    expect(await readFile(resolveMirrorSkillPath('global', { cwd, homeDirectory }), 'utf8')).toContain(`name: ${mirrorSkillName}`)
-    expect(await readFile(resolveMirrorSkillPath('global', { cwd, homeDirectory, tool: 'claude' }), 'utf8')).toContain(`name: ${mirrorSkillName}`)
-    expect(await readFile(join(cwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
-  })
-
-  test('runs the top-level CLI as successful help output', async () => {
-    const cwd = await createTempDir()
-    const result = await runMirrorCliFromCwd(cwd, await createTempDir())
-
-    expect(result.exitCode).toBe(0)
-    expect(result.stdout).toMatch(/mirror v\d+\.\d+\.\d+/)
-    expect(result.stdout).toContain('USAGE')
-    expect(result.stdout).toContain('COMMANDS')
-  })
-
-  test('runs configured agent automation with no arguments', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    const homeDirectory = await createTempDir()
-    await writeText(join(cwd, 'AGENTS.md'), '# Agents\n')
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'] }))
-
-    const result = await runMirrorCliFromCwd(cwd, homeDirectory)
-
-    expect(result.exitCode).toBe(0)
-    expect(result.stdout).toContain('USAGE')
-    expect(result.stderr).toContain('guiho-s-mirror skill for agents not found global')
-    expect(await readFile(join(cwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
-    expect(await existsSync(resolveMirrorSkillPath('local', { cwd, homeDirectory }))).toBe(false)
-    expect(await readFile(resolveMirrorSkillPath('global', { cwd, homeDirectory }), 'utf8')).toContain(`name: ${mirrorSkillName}`)
-  })
-
-  test('runs CLI help without ANSI colors when no-color is set', async () => {
-    const result = await runMirrorCli('--no-color', '--help')
-
-    expect(result.exitCode).toBe(0)
-    expect(result.stdout).toContain('USAGE')
-    expect(result.stdout).not.toContain('\u001B[')
-  })
-
-  test('shows contextual help for command groups, short help, and usage errors', async () => {
-    const rootHelp = await runMirrorCli('-h')
-    const version = await runMirrorCli('version')
-    const shortHelp = await runMirrorCli('version', '-h')
-    const planHelp = await runMirrorCli('version', 'plan', '-h')
-    const missingTarget = await runMirrorCli('version', 'plan')
-    const unknownSubcommand = await runMirrorCli('version', 'unknown')
-
-    expect(rootHelp.exitCode).toBe(0)
-    expect(rootHelp.stdout).toContain('COMMANDS')
-    expect(version.exitCode).toBe(0)
-    expect(version.stdout).toContain('Plan and apply semantic version changes. (mirror version)')
-    expect(shortHelp.exitCode).toBe(0)
-    expect(shortHelp.stdout).toContain('Plan and apply semantic version changes. (mirror version)')
-    expect(planHelp.exitCode).toBe(0)
-    expect(planHelp.stdout).toContain('Build a read-only release plan. (mirror version plan)')
-    expect(missingTarget.exitCode).toBe(1)
-    expect(missingTarget.stderr).toContain('error: Missing release target.')
-    expect(missingTarget.stderr).toContain('Build a read-only release plan. (mirror version plan)')
-    expect(unknownSubcommand.exitCode).toBe(1)
-    expect(unknownSubcommand.stderr).toContain('error: Unknown command: version unknown')
-    expect(unknownSubcommand.stderr).toContain('Plan and apply semantic version changes. (mirror version)')
-  })
-
-  test('runs CLI version current, next, plan, and apply', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'], autoSkillInstall: false }))
-    await writeText(join(cwd, 'AGENTS.md'), '# Agents\n')
-
-    const current = await runMirrorCli('version', 'current', '--cwd', cwd)
-    const next = await runMirrorCli('version', 'next', 'patch', '--cwd', cwd)
-    const plan = await runMirrorCli('version', 'plan', 'patch', '--cwd', cwd)
-    const apply = await runMirrorCli('version', 'apply', 'patch', '--cwd', cwd, '--yes')
-
-    expect(current.exitCode).toBe(0)
-    expect(current.stdout.trim()).toBe('1.0.0')
-    expect(next.exitCode).toBe(0)
-    expect(next.stdout.trim()).toBe('1.0.1')
+  test('preserves Mirror version domain behavior with YAML configuration', async () => {
+    const root = await createProject()
+    expect(resolveNextVersion('1.2.3', 'minor', '')).toBe('1.3.0')
+    expect((await runCli(['version', 'current', '--cwd', root])).stdout).toEndWith('1.2.3\n')
+    expect((await runCli(['version', 'next', 'patch', '--cwd', root])).stdout).toEndWith('1.2.4\n')
+    const plan = await runCli(['version', 'plan', 'minor', '--cwd', root, '--format', 'json'])
     expect(plan.exitCode).toBe(0)
-    expect(plan.stdout).toContain('next: 1.0.1')
-    expect(apply.exitCode).toBe(0)
-    expect(apply.stdout).toContain('next: 1.0.1')
-    expect(apply.stdout).toContain('applied: true')
-    expect(await readPackageVersion(await loadMirrorConfig({ cwd }))).toBe('1.0.1')
-    expect(await readFile(join(cwd, 'AGENTS.md'), 'utf8')).toContain(mirrorAgentsSectionHeading)
+    expect(JSON.parse(plan.stdout).nextVersion).toBe('1.3.0')
+    expect(JSON.parse(await readTextFile(joinPath(root, 'package.json'))).version).toBe('1.2.3')
   })
 
-  test('runs CLI source and repeated output overrides', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'], autoSkillInstall: false }))
-
-    const result = await runMirrorCli(
-      'version',
-      'plan',
-      'patch',
-      '--cwd',
-      cwd,
-      '--source',
-      'package.json',
-      '--output',
-      'package.json',
-      '--output',
-      'jsr.json',
-    )
-
-    expect(result.exitCode).toBe(0)
-    expect(result.stdout).toContain('output: package.json, jsr.json')
-    expect(result.stdout).toContain('next: 1.0.1')
+  test('ordinary config and version commands never mutate agent files', async () => {
+    const root = await createProject()
+    await runCli(['config', 'show', '--cwd', root])
+    await runCli(['version', 'plan', 'patch', '--cwd', root])
+    expect(await fileExists(joinPath(root, 'AGENTS.md'))).toBe(false)
+    expect(await fileExists(joinPath(root, 'CLAUDE.md'))).toBe(false)
+    expect(await fileExists(joinPath(root, '.agents', 'skills', 'guiho-s-mirror', 'SKILL.md'))).toBe(false)
   })
 
-  test('keeps Citty dry-run aliases non-mutating and rejects unknown scoped options', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({
-      output: ['package.json'],
-      autoAgentsMd: false,
-      autoSkillInstall: false,
-    }))
-
-    const dryRun = await runMirrorCli('version', 'apply', 'patch', '--cwd', cwd, '-dy')
-    const invalid = await runMirrorCli('version', 'plan', 'patch', '--cwd', cwd, '--arch', 'x64')
-
-    expect(dryRun.exitCode).toBe(0)
-    expect(dryRun.stdout).toContain('applied: false')
-    expect(await readPackageVersion(await loadMirrorConfig({ cwd }))).toBe('1.0.0')
-    expect(invalid.exitCode).toBe(1)
-    expect(invalid.stderr).toContain('error: Unknown option --arch')
-    expect(invalid.stderr).toContain('Build a read-only release plan. (mirror version plan)')
-    expect(await readPackageVersion(await loadMirrorConfig({ cwd }))).toBe('1.0.0')
-  })
-
-  test('package-only and JSR-only flows work without Git installed', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json', 'jsr.json'] }))
-
-    const plan = await buildVersionPlan('patch', { cwd })
-    expect(plan.currentVersion).toBe('1.0.0')
-    expect(plan.nextVersion).toBe('1.0.1')
-
-    const result = await applyVersionPlan('patch', { cwd, yes: true })
-    expect(result.applied).toBe(true)
-  })
-
-  test('Git flows fail with clear error when Git is unavailable', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['git'], tagTemplate: 'v{version}' }))
-
-    await expect(validateMirrorConfig({ cwd })).rejects.toThrow(/Not a Git repository/)
-  })
-
-  test('Git flows fail with "Git executable not found" when Git binary is unavailable', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['git'], tagTemplate: 'v{version}', autoSkillInstall: false }))
-
-    const plat = platform()
-    let minimalPath: string
-
-    if (plat === 'win32') {
-      const originalPath = process.env['Path'] ?? process.env['PATH'] ?? ''
-      const allEntries = originalPath.split(';')
-      const bunEntries = allEntries.filter((p) => p.toLowerCase().includes('bun'))
-      const systemEntries = ['C:\\Windows\\System32', 'C:\\Windows']
-      minimalPath = [...bunEntries, ...systemEntries].filter(Boolean).join(';')
-    } else {
-      const bunBin = Bun.which('bun')
-      minimalPath = bunBin ? dirname(bunBin) : ''
+  test('installs, updates, lists, shows, and uninstalls the local skill in both tools', async () => {
+    const root = await createTemp()
+    const install = await runCli(['agent', 'skill', 'install', '--local', '--cwd', root])
+    expect(install.exitCode).toBe(0)
+    for (const tool of ['.agents', '.claude']) {
+      expect(await fileExists(joinPath(root, tool, 'skills', 'guiho-s-mirror', 'SKILL.md'))).toBe(true)
     }
-
-    const envKey = plat === 'win32' ? 'Path' : 'PATH'
-    const env: Record<string, string> = { ...process.env as Record<string, string> }
-    env[envKey] = minimalPath
-    if (plat === 'win32') env['PATH'] = minimalPath
-
-    const result = await runMirrorCliWithEnv(env, 'config', 'check', '--cwd', cwd)
-
-    expect(result.exitCode).not.toBe(0)
-    expect(result.stderr).toMatch(/Git executable not found/)
-  })
-
-  test('normalizes hook config keys from underscores to colons', () => {
-    const raw: Record<string, string | string[]> = {
-      before_everything: 'echo start',
-      after_everything: 'echo end',
-      before_plan: ['npm run lint', 'npm run typecheck'],
-      unknown_hook: 'echo nope',
+    expect((await runCli(['agent', 'skill', 'list', '--filter', 'mirror'])).stdout).toContain('guiho-s-mirror')
+    expect((await runCli(['agent', 'skill', 'show', 'guiho-s-mirror'])).stdout).toContain('description')
+    expect((await runCli(['agent', 'skill', 'update', '--local', '--cwd', root])).exitCode).toBe(0)
+    expect((await runCli(['agent', 'skill', 'uninstall', '--local', '--cwd', root])).exitCode).toBe(0)
+    for (const tool of ['.agents', '.claude']) {
+      expect(await fileExists(joinPath(root, tool, 'skills', 'guiho-s-mirror', 'SKILL.md'))).toBe(false)
     }
-
-    const config = normalizeHooksConfig(raw)
-
-    expect(config['before:everything']).toEqual(['echo start'])
-    expect(config['after:everything']).toEqual(['echo end'])
-    expect(config['before:plan']).toEqual(['npm run lint', 'npm run typecheck'])
-    expect((config as Record<string, unknown>)['unknown:hook']).toBeUndefined()
-    expect(config['after:plan']).toBeUndefined()
   })
 
-  test('normalizes string hook values to arrays', () => {
-    const raw: Record<string, string | string[]> = {
-      before_everything: 'echo single',
+  test('applies, updates, shows, and removes exact instruction blocks idempotently', async () => {
+    const root = await createTemp()
+    await writeTextFile(joinPath(root, 'AGENTS.md'), '# Agents\n')
+    await writeTextFile(joinPath(root, 'CLAUDE.md'), '# Claude\n')
+    for (let index = 0; index < 2; index += 1) {
+      expect((await runCli(['agent', 'instruction', index === 0 ? 'apply' : 'update', '--cwd', root])).exitCode).toBe(0)
     }
-
-    const config = normalizeHooksConfig(raw)
-
-    expect(config['before:everything']).toEqual(['echo single'])
-  })
-
-  test('returns empty config for undefined hooks', () => {
-    expect(normalizeHooksConfig(undefined)).toEqual({})
-  })
-
-  test('builds hook env vars from config', () => {
-    const env = hookEnvFromConfig({
-      schema: 1,
-      cwd: '/project',
-      configPath: '/project/mirror.config.toml',
-      version: { scheme: 'semver', source: 'package.json', output: ['package.json', 'git'], prereleaseId: 'alpha' },
-      package: { path: 'package.json', auxiliaryPaths: [] },
-      jsr: { path: 'jsr.json' },
-      git: { tagTemplate: 'v{version}', commit: true, push: false, allowDirty: false },
-      agents: { writeChangelog: true, changelogPath: 'CHANGELOG.md', autoAgentsMd: true, autoSkillInstall: true, skillTool: 'agents' },
-      hooks: {},
-      project: {},
-    }, 'patch')
-
-    expect(env['MIRROR_CWD']).toBe('/project')
-    expect(env['MIRROR_SOURCE']).toBe('package.json')
-    expect(env['MIRROR_OUTPUT']).toBe('package.json,git')
-    expect(env['MIRROR_TARGET']).toBe('patch')
-    expect(env['MIRROR_CURRENT']).toBeUndefined()
-  })
-
-  test('builds hook env vars from plan', () => {
-    const env = hookEnvForPlan({
-      cwd: '/project',
-      source: 'package.json',
-      output: ['package.json', 'git'],
-      currentVersion: '1.0.0',
-      nextVersion: '1.1.0',
-      project: { name: 'my-pkg' },
-      gitTag: 'my-pkg@1.1.0',
-      fileOutputPaths: ['package.json'],
-      commitEnabled: true,
-      pushEnabled: false,
-      allowDirty: false,
-      actions: [],
-      configPath: '/project/mirror.config.toml',
-    }, 'minor')
-
-    expect(env['MIRROR_CURRENT']).toBe('1.0.0')
-    expect(env['MIRROR_NEXT']).toBe('1.1.0')
-    expect(env['MIRROR_PROJECT_NAME']).toBe('my-pkg')
-    expect(env['MIRROR_GIT_TAG']).toBe('my-pkg@1.1.0')
-    expect(env['MIRROR_FILE_PATHS']).toBe('package.json')
-    expect(env['MIRROR_COMMIT_ENABLED']).toBe('true')
-    expect(env['MIRROR_PUSH_ENABLED']).toBe('false')
-  })
-
-  test('builds hook env vars for action-level hooks', () => {
-    const plan: MirrorVersionPlan = {
-      cwd: '/project',
-      source: 'package.json' as const,
-      output: ['package.json', 'git'] as MirrorAdapterName[],
-      currentVersion: '1.0.0',
-      nextVersion: '1.1.0',
-      project: { name: 'my-pkg' },
-      gitTag: 'my-pkg@1.1.0',
-      fileOutputPaths: ['package.json'],
-      commitEnabled: true,
-      pushEnabled: true,
-      allowDirty: false,
-      actions: [],
-      configPath: '/project/mirror.config.toml',
+    for (const name of ['AGENTS.md', 'CLAUDE.md']) {
+      const content = await readTextFile(joinPath(root, name))
+      expect(content.match(/<!-- BEGIN MIRROR — DO NOT EDIT THIS SECTION -->/g)?.length).toBe(1)
+      expect(content).toContain('<!-- END MIRROR -->')
     }
-
-    const writeEnv = hookEnvForAction(plan, 'minor', {
-      type: 'write-file',
-      adapter: 'package.json',
-      path: 'package.json',
-      currentVersion: '1.0.0',
-      nextVersion: '1.1.0',
-    })
-
-    expect(writeEnv['MIRROR_FILE_PATH']).toBe('package.json')
-    expect(writeEnv['MIRROR_FILE_CURRENT']).toBe('1.0.0')
-    expect(writeEnv['MIRROR_FILE_NEXT']).toBe('1.1.0')
-
-    const commitEnv = hookEnvForAction(plan, 'minor', {
-      type: 'git-commit',
-      message: 'my-pkg@1.1.0',
-      paths: ['package.json'],
-    })
-
-    expect(commitEnv['MIRROR_COMMIT_MSG']).toBe('my-pkg@1.1.0')
-    expect(commitEnv['MIRROR_COMMIT_PATHS']).toBe('package.json')
-
-    const tagEnv = hookEnvForAction(plan, 'minor', { type: 'git-tag', tag: 'my-pkg@1.1.0' })
-
-    expect(tagEnv['MIRROR_TAG']).toBe('my-pkg@1.1.0')
-
-    const pushEnv = hookEnvForAction(plan, 'minor', {
-      type: 'git-push',
-      includeCommit: true,
-      includeTags: true,
-    })
-
-    expect(pushEnv['MIRROR_INCLUDE_COMMIT']).toBe('true')
-    expect(pushEnv['MIRROR_INCLUDE_TAGS']).toBe('true')
+    expect((await runCli(['agent', 'instruction', 'show'])).stdout).toStartWith('<!-- BEGIN MIRROR')
+    expect((await runCli(['agent', 'instruction', 'remove', '--cwd', root])).exitCode).toBe(0)
+    expect(await readTextFile(joinPath(root, 'AGENTS.md'))).not.toContain('BEGIN MIRROR')
   })
 
-  test('runs a successful hook command', async () => {
-    const cwd = await createTempDir()
-    const result = await runHooks('before:everything', [await hookFileCommand(cwd, 'success', 'console.log("hello hook")')], {}, cwd)
-
-    expect(result).toBeDefined()
-    expect(result!.status).toBe('success')
-    expect(result!.exitCode).toBe(0)
+  test('lists prompt names and prints raw prompt bodies', async () => {
+    const names = await runCli(['agent', 'prompt', 'list', '--names'])
+    expect(names.stdout).toBe('guiho-i-mirror\n')
+    const prompt = await runCli(['agent', 'prompt', 'show', 'guiho-i-mirror'])
+    expect(prompt.stdout).toContain('# Mirror Release')
+    expect(prompt.stdout).not.toStartWith('{')
   })
 
-  test('throws MirrorError on failed hook command', async () => {
-    const cwd = await createTempDir()
-    await expect(runHooks('before:plan', [await hookFileCommand(cwd, 'failure', 'process.exit(3)')], {}, cwd)).rejects.toThrow("Hook 'before:plan' failed")
+  test('keeps core CLI source free of banned Node imports', async () => {
+    const sourceFiles = [...new Bun.Glob('*.ts').scanSync({ cwd: import.meta.dir, absolute: true })]
+      .filter((path) => !path.endsWith('.spec.ts'))
+    const banned = /from ['"]node:(?:fs|fs\/promises|child_process|path|os)['"]/
+    for (const path of sourceFiles) expect(await Bun.file(path).text()).not.toMatch(banned)
   })
 
-  test('skips undefined hooks silently', async () => {
-    const result = await runHooks('before:plan', undefined, {}, process.cwd())
-
-    expect(result).toBeUndefined()
-  })
-
-  test('skips empty hooks array silently', async () => {
-    const result = await runHooks('before:plan', [], {}, process.cwd())
-
-    expect(result).toBeUndefined()
-  })
-
-  test('hooks appear in execution result', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'] }) + `
-[hooks]
-before_apply = "echo before-apply-hook"
-after_apply = "echo after-apply-hook"
-`)
-
-    const plan = await buildVersionPlan('patch', { cwd })
-    const { executeVersionPlan } = await import('./executor.js')
-    const { normalizeHooksConfig } = await import('./hooks.js')
-    const rawHooks = normalizeHooksConfig({
-      before_apply: 'echo before-apply-hook',
-      after_apply: 'echo after-apply-hook',
-    })
-    const result = await executeVersionPlan(plan, { yes: true }, rawHooks)
-
-    expect(result.applied).toBe(true)
-  })
-
-  test('failed hook stops version apply via CLI', async () => {
-    const cwd = await createPackageAndJsrFixture()
-    const hookCommand = await hookFileCommand(cwd, 'before-apply-failure', 'process.exit(1)')
-    await writeText(join(cwd, 'mirror.config.toml'), packageConfig({ output: ['package.json'] }) + `
-[hooks]
-before_apply = ${JSON.stringify(hookCommand)}
-`)
-
-    const { exitCode, stderr } = await runMirrorCliFromCwd(cwd, await createTempDir(), 'version', 'apply', 'patch', '--yes')
-
-    expect(exitCode).not.toBe(0)
-    expect(stderr).toContain('before:apply')
+  test('declares the exact fourteen release asset names', async () => {
+    const build = await readTextFile(joinPath(import.meta.dir, 'build-binaries.ts'))
+    const binaries = [
+      'mirror-linux-arm64',
+      'mirror-linux-x64',
+      'mirror-linux-x64-baseline',
+      'mirror-linux-x64-modern',
+      'mirror-darwin-arm64',
+      'mirror-darwin-x64',
+      'mirror-darwin-x64-baseline',
+      'mirror-darwin-x64-modern',
+      'mirror-windows-arm64.exe',
+      'mirror-windows-x64.exe',
+      'mirror-windows-x64-baseline.exe',
+      'mirror-windows-x64-modern.exe',
+    ]
+    for (const asset of [...binaries, 'guiho-s-mirror', 'guiho-i-mirror']) expect(build).toContain(asset)
+    expect(new Set(binaries).size + 2).toBe(14)
   })
 })
 
-const createTempDir = async () => {
-  const root = platform() === 'win32' ? `${process.env['SystemDrive'] ?? 'C:'}\\tmp` : '/tmp'
-  const path = join(root, `guiho-mirror-${crypto.randomUUID()}`)
-  await ensureDirectory(path)
+const createTemp = async () => {
+  const path = await makeTempDirectory('mirror-rfc-')
   temporaryDirectories.push(path)
   return path
 }
 
-const packageAssetName = () => {
-  const os = platform() === 'win32'
-    ? 'windows'
-    : platform() === 'darwin'
-      ? 'macos'
-      : 'linux'
-  const arch = process.arch === 'arm64' ? 'arm64' : 'x64-baseline'
-  return `guiho-mirror-${os}-${arch}${os === 'windows' ? '.exe' : ''}`
+const createProject = async () => {
+  const root = await createTemp()
+  await writeTextFile(joinPath(root, 'package.json'), '{"name":"fixture","version":"1.2.3"}\n')
+  await writeTextFile(joinPath(root, 'mirror.yaml'), configYaml())
+  return root
 }
 
-const writeMirrorStubBinary = async (path: string) => {
-  const source = `${path}.ts`
-  await writeText(source, "console.log('3.4.0')\n")
-  const result = Bun.spawn([process.execPath, 'build', source, '--compile', '--outfile', path], {
-    stdout: 'pipe',
-    stderr: 'pipe',
+const configYaml = (options: { source?: 'package.json' | 'jsr.json' | 'git', output?: Array<'package.json' | 'jsr.json' | 'git'> } = {}) => [
+  'schema: 1',
+  'project:',
+  '  name_source: package.json',
+  'version:',
+  '  scheme: semver',
+  `  source: ${options.source ?? 'package.json'}`,
+  `  output: [${(options.output ?? ['package.json']).join(', ')}]`,
+  'package:',
+  '  path: package.json',
+  'git:',
+  '  commit: false',
+  '  push: false',
+  '  allow_dirty: true',
+  '',
+].join('\n')
+
+const runCli = async (args: string[]) => {
+  const home = await createTemp()
+  return runCommand(['bun', joinPath(import.meta.dir, 'guiho-mirror-bin.ts'), ...args], {
+    env: {
+      HOME: home,
+      USERPROFILE: home,
+      MIRROR_DISABLE_UPDATE_CHECK: '1',
+      NO_COLOR: '1',
+    },
+    timeoutMs: 15_000,
   })
-  const [exitCode, stdout, stderr] = await Promise.all([result.exited, result.stdout.text(), result.stderr.text()])
-
-  if (exitCode !== 0) throw new Error(`failed to compile mirror stub binary\n${stderr}\n${stdout}`)
-}
-
-const createPackageAndJsrFixture = async () => {
-  const cwd = await createTempDir()
-  await writeJson(join(cwd, 'package.json'), {
-    name: '@guiho/mirror',
-    version: '1.0.0',
-  })
-  await writeJson(join(cwd, 'jsr.json'), {
-    name: '@guiho/mirror',
-    version: '1.0.0',
-    exports: './source/guiho-mirror.ts',
-  })
-  return cwd
-}
-
-const createGitFixture = async () => {
-  const cwd = await createTempDir()
-  await initializeGitRepository(cwd)
-  return cwd
-}
-
-const createBareGitRepository = async () => {
-  const cwd = await createTempDir()
-  await git(cwd, 'init', '--bare')
-  return cwd
-}
-
-const initializeGitRepository = async (cwd: string) => {
-  await git(cwd, 'init')
-  await git(cwd, 'config', 'user.email', 'mirror@example.com')
-  await git(cwd, 'config', 'user.name', 'Mirror Test')
-  await writeText(join(cwd, 'README.md'), '# fixture\n')
-  await git(cwd, 'add', '.')
-  await git(cwd, 'commit', '-m', 'Initial commit')
-}
-
-const commitAll = async (cwd: string, message: string) => {
-  await git(cwd, 'add', '.')
-  await git(cwd, 'commit', '-m', message)
-}
-
-const writeText = async (path: string, content: string) => {
-  await mkdir(dirname(path), { recursive: true })
-  await writeFile(path, content, 'utf8')
-}
-
-const hookFileCommand = async (cwd: string, name: string, code: string) => {
-  const path = join(cwd, `${name}.ts`)
-  await writeText(path, `${code}\n`)
-  return `bun run ${path}`
-}
-
-const writeJson = async (path: string, object: Record<string, unknown>) => {
-  await writeText(path, `${JSON.stringify(object, null, 2)}\n`)
-}
-
-const packageConfig = ({
-  output,
-  source = 'package.json',
-  nameSource = 'package.json',
-  tagTemplate = '{name}@{version}',
-  preid = '',
-  auxiliaryPackagePaths = [],
-  writeChangelog,
-  changelogPath,
-  autoAgentsMd,
-  autoSkillInstall,
-  skillTool,
-}: {
-  output: string[]
-  source?: string
-  nameSource?: string
-  tagTemplate?: string
-  preid?: string
-  auxiliaryPackagePaths?: string[]
-  writeChangelog?: boolean
-  changelogPath?: string
-  autoAgentsMd?: boolean
-  autoSkillInstall?: boolean
-  skillTool?: string
-}) => `${agentConfig(`schema = 1
-
-[project]
-name_source = "${nameSource}"
-
-[version]
-scheme = "semver"
-source = "${source}"
-output = [${output.map((value) => `"${value}"`).join(', ')}]
-prerelease_id = "${preid}"
-
-[package]
-path = "package.json"
-auxiliary_paths = [${auxiliaryPackagePaths.map((value) => `"${value}"`).join(', ')}]
-
-[jsr]
-path = "jsr.json"
-
-[git]
-tag_template = "${tagTemplate}"
-commit = false
-push = false
-allow_dirty = false
-`, { writeChangelog, changelogPath, autoAgentsMd, autoSkillInstall, skillTool })}`
-
-const gitConfig = (options: {
-  writeChangelog?: boolean
-  changelogPath?: string
-  autoAgentsMd?: boolean
-  autoSkillInstall?: boolean
-  skillTool?: string
-} = {}) => `${agentConfig(`schema = 1
-
-[project]
-name = "fixture"
-
-[version]
-scheme = "semver"
-source = "git"
-output = ["git"]
-prerelease_id = ""
-
-[git]
-tag_template = "v{version}"
-commit = false
-push = false
-allow_dirty = false
-`, options)}`
-
-const agentConfig = (
-  content: string,
-  options: {
-    writeChangelog?: boolean
-    changelogPath?: string
-    autoAgentsMd?: boolean
-    autoSkillInstall?: boolean
-    skillTool?: string
-  },
-) => {
-  const lines: string[] = []
-
-  if (options.writeChangelog !== undefined) lines.push(`write_changelog = ${String(options.writeChangelog)}`)
-  if (options.changelogPath !== undefined) lines.push(`changelog_path = "${options.changelogPath}"`)
-  if (options.autoAgentsMd !== undefined) lines.push(`auto_agents_md = ${String(options.autoAgentsMd)}`)
-  if (options.autoSkillInstall !== undefined) lines.push(`auto_skill_install = ${String(options.autoSkillInstall)}`)
-  if (options.skillTool !== undefined) lines.push(`skill_tool = "${options.skillTool}"`)
-
-  if (lines.length === 0) return content
-
-  return `${content}
-[agents]
-${lines.join('\n')}
-`
-}
-
-const git = async (cwd: string, ...args: string[]) => {
-  const result = Bun.spawn(['git', ...args], { cwd, stdout: 'pipe', stderr: 'pipe' })
-  const exitCode = await result.exited
-
-  if (exitCode !== 0) {
-    throw new Error(`git ${args.join(' ')} failed: ${await result.stderr.text()}`)
-  }
-}
-
-const gitText = async (cwd: string, ...args: string[]) => {
-  const result = Bun.spawn(['git', ...args], { cwd, stdout: 'pipe', stderr: 'pipe' })
-  const exitCode = await result.exited
-  const stdout = await result.stdout.text()
-
-  if (exitCode !== 0) {
-    throw new Error(`git ${args.join(' ')} failed: ${await result.stderr.text()}`)
-  }
-
-  return stdout
-}
-
-const runMirrorCli = async (...args: string[]) => {
-  const homeDirectory = await createTempDir()
-  const result = Bun.spawn(['bun', join(import.meta.dir, 'guiho-mirror-bin.ts'), ...args], {
-    stdout: 'pipe',
-    stderr: 'pipe',
-    env: { ...process.env as Record<string, string | undefined>, MIRROR_AGENT_HOME: homeDirectory },
-  })
-  const [exitCode, stdout, stderr] = await Promise.all([result.exited, result.stdout.text(), result.stderr.text()])
-
-  return { exitCode, stdout, stderr }
-}
-
-const runMirrorCliFromCwd = async (cwd: string, homeDirectory: string, ...args: string[]) => {
-  const result = Bun.spawn(['bun', join(import.meta.dir, 'guiho-mirror-bin.ts'), ...args], {
-    cwd,
-    stdout: 'pipe',
-    stderr: 'pipe',
-    env: { ...process.env as Record<string, string | undefined>, MIRROR_AGENT_HOME: homeDirectory },
-  })
-  const [exitCode, stdout, stderr] = await Promise.all([result.exited, result.stdout.text(), result.stderr.text()])
-
-  return { exitCode, stdout, stderr }
-}
-
-const runMirrorCliWithEnv = async (env: Record<string, string | undefined>, ...args: string[]) => {
-  const result = Bun.spawn(['bun', join(import.meta.dir, 'guiho-mirror-bin.ts'), ...args], {
-    stdout: 'pipe',
-    stderr: 'pipe',
-    env,
-  })
-  const [exitCode, stdout, stderr] = await Promise.all([result.exited, result.stdout.text(), result.stderr.text()])
-
-  return { exitCode, stdout, stderr }
 }
