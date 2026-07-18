@@ -85,21 +85,91 @@ describe('Mirror v3', () => {
       expect(await readUpdateCache({ cacheDir: dir })).toBeNull()
 
       const packageMetadata = await Bun.file(join(import.meta.dir, '..', 'package.json')).json() as { version: string }
-      const current = await upgradeSelf({ version: packageMetadata.version, arch: 'x64', cacheDir: dir })
-      expect(current.upToDate).toBe(true)
-      expect(current.scheduled).toBe(false)
-      expect(current.asset).toBeUndefined()
+      const asset = platform() === 'win32' ? 'guiho-mirror-windows-x64-baseline.exe' : platform() === 'darwin' ? 'guiho-mirror-macos-x64-baseline' : 'guiho-mirror-linux-x64-baseline'
+      const releaseServer = Bun.serve({
+        port: 0,
+        fetch: () => Response.json({
+          tag_name: `@guiho/mirror@${packageMetadata.version}`,
+          html_url: 'https://example.test/release',
+          assets: [{ name: asset, browser_download_url: 'https://example.test/mirror' }],
+        }),
+      })
+      const apiBaseUrl = releaseServer.url.toString().replace(/\/$/, '')
+      const current = await upgradeSelf({ version: packageMetadata.version, arch: 'x64', cacheDir: dir, apiBaseUrl })
+      expect(current.outcome).toBe('up-to-date')
+      expect(current.plan?.asset).toBe(asset)
       expect(await readUpdateCache({ cacheDir: dir })).toBeNull()
 
-      const cli = await runMirrorCliWithEnv({ ...process.env as Record<string, string | undefined>, MIRROR_SELF_PATH: executable }, 'upgrade', '--version', packageMetadata.version)
+      const cli = await runMirrorCliWithEnv({ ...process.env as Record<string, string | undefined>, MIRROR_SELF_PATH: executable, MIRROR_GITHUB_API_URL: apiBaseUrl }, 'upgrade', '--version', packageMetadata.version)
       expect(cli.exitCode).toBe(0)
-      expect(cli.stdout).toContain('Already up to date.')
+      expect(cli.stdout).toContain('Already up to date:')
       expect(cli.stdout).not.toContain('Upgrade downloaded.')
+      expect(cli.stdout).toContain(`install Mirror ${packageMetadata.version} directly`)
 
-      const result = await upgradeSelf({ version: '3.4.0', arch: 'x64', dryRun: true })
-      expect(result.upToDate).toBe(false)
-      expect(result.asset).toBe(platform() === 'win32' ? 'guiho-mirror-windows-x64-baseline.exe' : platform() === 'darwin' ? 'guiho-mirror-macos-x64-baseline' : 'guiho-mirror-linux-x64-baseline')
-      expect(result.url).toContain('%40guiho%2Fmirror%403.4.0')
+      const cliJson = await runMirrorCliWithEnv(
+        { ...process.env as Record<string, string | undefined>, MIRROR_SELF_PATH: executable, MIRROR_GITHUB_API_URL: apiBaseUrl },
+        'upgrade',
+        '--version',
+        packageMetadata.version,
+        '--format',
+        'json',
+      )
+      const envelope = JSON.parse(cliJson.stdout) as Record<string, unknown>
+      expect(envelope).toMatchObject({
+        schemaVersion: 1,
+        command: 'mirror upgrade',
+        outcome: 'up-to-date',
+        error: null,
+      })
+      expect(envelope).toHaveProperty('result')
+      expect(envelope).toHaveProperty('recovery.targetSource', 'resolved')
+      expect(envelope).not.toHaveProperty('plan.temporaryPath')
+      expect(envelope).not.toHaveProperty('plan.backupPath')
+      expect(envelope).not.toHaveProperty('plan.failedArtifactPath')
+
+      const failureServer = Bun.serve({ port: 0, fetch: () => new Response('offline', { status: 503, statusText: 'Service Unavailable' }) })
+      const failureApiBaseUrl = failureServer.url.toString().replace(/\/$/, '')
+      const fallbackText = await runMirrorCliWithEnv(
+        { ...process.env as Record<string, string | undefined>, MIRROR_SELF_PATH: executable, MIRROR_GITHUB_API_URL: failureApiBaseUrl },
+        'upgrade',
+      )
+      expect(fallbackText.exitCode).not.toBe(0)
+      expect(fallbackText.stdout).toContain(`Repair reinstall for installed Mirror ${packageMetadata.version} (upgrade target was not resolved):`)
+      const fallbackJson = await runMirrorCliWithEnv(
+        { ...process.env as Record<string, string | undefined>, MIRROR_SELF_PATH: executable, MIRROR_GITHUB_API_URL: failureApiBaseUrl },
+        'upgrade',
+        '--format',
+        'json',
+      )
+      expect(JSON.parse(fallbackJson.stdout)).toMatchObject({
+        outcome: 'failed',
+        plan: null,
+        result: null,
+        recovery: { targetSource: 'fallback-current' },
+        error: {
+          phase: 'plan',
+          code: 'UPGRADE_RESOLUTION_FAILED',
+          rollbackAttempted: false,
+          rollbackSucceeded: false,
+          preservedPaths: [],
+        },
+      })
+      failureServer.stop(true)
+
+      const dryRunServer = Bun.serve({
+        port: 0,
+        fetch: () => Response.json({
+          tag_name: '@guiho/mirror@3.4.0',
+          html_url: 'https://example.test/release/3.4.0',
+          assets: [{ name: asset, browser_download_url: 'https://example.test/mirror-3.4.0' }],
+        }),
+      })
+      const result = await upgradeSelf({ version: '3.4.0', arch: 'x64', dryRun: true, apiBaseUrl: dryRunServer.url.toString().replace(/\/$/, '') })
+      expect(result.outcome).toBe('dry-run')
+      expect(result.plan?.asset).toBe(asset)
+      expect(result.plan?.downloadUrl).toBe('https://example.test/mirror-3.4.0')
+      dryRunServer.stop(true)
+      releaseServer.stop(true)
     } finally {
       if (previousSelfPath === undefined) delete process.env['MIRROR_SELF_PATH']
       else process.env['MIRROR_SELF_PATH'] = previousSelfPath

@@ -41,7 +41,7 @@ irm https://raw.githubusercontent.com/CGuiho/mirror/main/mirror/install.ps1 | ie
 The Windows PowerShell installer returns after success instead of calling `exit`, so it does not intentionally close the host PowerShell session.
 
 x64 installs prefer the `baseline` binary first, then fall back to default and
-`modern`. The installers add the install directory to PATH where possible.
+`modern`. The installers add the install directory to PATH where possible. Pass an exact stable or prerelease version with `--version '<semver>'` on POSIX or `-Version '<semver>'` on PowerShell. Installers print the plan before download, verify the temporary and canonical executable versions, replace through a same-directory backup, and roll back on failure.
 
 ### Initializing
 
@@ -121,10 +121,12 @@ Installs Mirror-aware agent guidance for projects that use AI coding agents.
 
 #### `mirror upgrade`
 Upgrades the installed native Mirror binary from GitHub Releases.
-- `mirror upgrade`: Upgrade to latest compatible release.
+- `mirror upgrade`: Print the plan before download, transactionally replace the canonical executable, verify its exact version, and roll back on failure.
 - `mirror upgrade check`: Check latest release metadata.
-- `mirror upgrade list`: List available release versions.
+- `mirror upgrade list`: List every published stable and prerelease version newest first with channel, date, current/latest markers, and compatible assets.
 - Flags: `--version`, `--arch`, `--variant baseline|default|modern`, `--dry-run`, `--format text|json`.
+
+Every bare upgrade outcome prints an installer command pinned to the resolved version and a separate process-stop command. Success is emitted only after a fresh process launched from the canonical path reports the target; only old-backup cleanup may be deferred.
 
 #### `mirror uninstall`
 Removes the installed native Mirror executable. On Windows, removal is scheduled after the current process exits.

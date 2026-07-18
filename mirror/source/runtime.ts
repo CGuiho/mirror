@@ -9,6 +9,7 @@ export type CommandResult = {
   stdout: string
   stderr: string
   exitCode: number
+  timedOut: boolean
 }
 
 export const fileExists = async (path: string) => Bun.file(path).exists()
@@ -40,23 +41,31 @@ export const ensureParentDirectory = async (path: string) => {
   await ensureDirectory(dirnamePath(path))
 }
 
-export const runCommand = async (command: string[], options: { cwd?: string, env?: Record<string, string> } = {}): Promise<CommandResult> => {
+export const runCommand = async (command: string[], options: { cwd?: string, env?: Record<string, string>, timeoutMs?: number } = {}): Promise<CommandResult> => {
   const proc = Bun.spawn(command, {
     cwd: options.cwd,
     env: { ...process.env, ...options.env },
     stdout: 'pipe',
     stderr: 'pipe',
   })
+  let timedOut = false
+  const timeout = options.timeoutMs
+    ? setTimeout(() => {
+      timedOut = true
+      proc.kill()
+    }, options.timeoutMs)
+    : null
   const [stdout, stderr, exitCode] = await Promise.all([
     new Response(proc.stdout).text(),
     new Response(proc.stderr).text(),
     proc.exited,
   ])
+  if (timeout) clearTimeout(timeout)
 
-  return { stdout, stderr, exitCode }
+  return { stdout, stderr, exitCode, timedOut }
 }
 
-export const runCommandChecked = async (command: string[], options: { cwd?: string, env?: Record<string, string>, label?: string } = {}) => {
+export const runCommandChecked = async (command: string[], options: { cwd?: string, env?: Record<string, string>, label?: string, timeoutMs?: number } = {}) => {
   const result = await runCommand(command, options)
   if (result.exitCode !== 0) {
     const label = options.label ?? command.join(' ')

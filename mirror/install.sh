@@ -3,34 +3,38 @@ set -Eeuo pipefail
 
 repo="${MIRROR_REPO:-CGuiho/mirror}"
 version="${MIRROR_VERSION:-latest}"
+api_base_url="${MIRROR_GITHUB_API_URL:-https://api.github.com}"
+release_base_url="${MIRROR_RELEASE_BASE_URL:-https://github.com/${repo}/releases/download}"
 install_dir="${MIRROR_INSTALL_DIR:-$HOME/.local/bin}"
 arch_override=""
 variant_override=""
 os=""
 arch=""
+target_version=""
 tmp=""
+backup=""
 candidates=()
+curl_security_args=(--proto '=https' --tlsv1.2)
 
-cleanup() { [[ -z "$tmp" ]] || rm -rf -- "$tmp"; }
+if [[ "${MIRROR_ALLOW_INSECURE_TEST_URLS:-0}" == '1' ]]; then
+  curl_security_args=()
+fi
+
+cleanup() { [[ -z "$tmp" ]] || rm -f -- "$tmp"; }
 trap cleanup EXIT
 
 usage() {
   cat <<EOF
-Install GUIHO Mirror as a native CLI binary from GitHub Releases.
+Install GUIHO Mirror as a verified native CLI binary from GitHub Releases.
 
 Usage: install.sh [flags]
 
 Flags:
-  -v, --version VERSION   Version to install (default: latest).
-  --arch ARCH             Force architecture: x64 | arm64 (default: auto-detect)
-  --variant VARIANT       Force x64 variant: baseline | default | modern (default: baseline)
+  -v, --version VERSION   Exact semantic version, including prerelease (default: latest stable)
+  --arch ARCH             Force architecture: x64 | arm64
+  --variant VARIANT       Force x64 variant: baseline | default | modern
   --install-dir DIR       Install directory (default: \$HOME/.local/bin)
   -h, --help              Show this help
-
-Environment variables:
-  MIRROR_VERSION          Same as --version
-  MIRROR_REPO             GitHub repo (default: CGuiho/mirror)
-  MIRROR_INSTALL_DIR      Same as --install-dir
 EOF
 }
 
@@ -55,12 +59,24 @@ parse_args() {
   done
 }
 
+normalize_version() {
+  local value="${1#@guiho/mirror@}"
+  value="${value#v}"
+  [[ "$value" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$ ]] || fail "invalid Mirror semantic version: $1"
+  printf '%s\n' "$value"
+}
+
+resolve_target_version() {
+  if [[ "$version" != "latest" ]]; then normalize_version "$version"; return; fi
+  local metadata tag
+  metadata="$(curl --fail --location --silent --show-error "${curl_security_args[@]}" -H 'User-Agent: mirror-installer' "${api_base_url%/}/repos/${repo}/releases/latest")"
+  tag="$(printf '%s\n' "$metadata" | grep -m1 '"tag_name"' | sed -E 's/.*"tag_name"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')"
+  [[ -n "$tag" && "$tag" != "$metadata" ]] || fail 'latest Mirror release metadata did not include tag_name'
+  normalize_version "$tag"
+}
+
 detect_os() {
-  case "$(uname -s)" in
-    Linux) printf 'linux\n' ;;
-    Darwin) printf 'macos\n' ;;
-    *) fail "unsupported OS: $(uname -s)" ;;
-  esac
+  case "$(uname -s)" in Linux) printf 'linux\n' ;; Darwin) printf 'macos\n' ;; *) fail "unsupported OS: $(uname -s)" ;; esac
 }
 
 detect_arch() {
@@ -68,17 +84,13 @@ detect_arch() {
     case "$arch_override" in x64|arm64) printf '%s\n' "$arch_override" ;; *) fail "invalid --arch '$arch_override'" ;; esac
     return
   fi
-  case "$(uname -m)" in
-    x86_64|amd64) printf 'x64\n' ;;
-    arm64|aarch64) printf 'arm64\n' ;;
-    *) fail "unsupported architecture: $(uname -m)" ;;
-  esac
+  case "$(uname -m)" in x86_64|amd64) printf 'x64\n' ;; arm64|aarch64) printf 'arm64\n' ;; *) fail "unsupported architecture: $(uname -m)" ;; esac
 }
 
 build_candidates() {
   local variant="${variant_override:-baseline}"
   if [[ "$arch" == "arm64" ]]; then
-    [[ -z "$variant_override" ]] || fail "--variant is only valid for x64 installs"
+    [[ -z "$variant_override" ]] || fail '--variant is only valid for x64 installs'
     candidates=("guiho-mirror-${os}-arm64")
     return
   fi
@@ -91,80 +103,133 @@ build_candidates() {
 }
 
 build_url() {
-  local asset="$1"
-  if [[ "$version" == "latest" ]]; then
-    printf 'https://github.com/%s/releases/latest/download/%s\n' "$repo" "$asset"
-    return
-  fi
-  local tag
-  case "$version" in @guiho/mirror@*) tag="$version" ;; @*) tag="$version" ;; *) tag="@guiho/mirror@${version}" ;; esac
+  local tag="@guiho/mirror@${target_version}"
   local encoded="${tag//@/%40}"
   encoded="${encoded//\//%2F}"
-  printf 'https://github.com/%s/releases/download/%s/%s\n' "$repo" "$encoded" "$asset"
+  printf '%s/%s/%s\n' "${release_base_url%/}" "$encoded" "$1"
 }
 
 verify_native_binary() {
-  local path="$1"
-  local magic2 magic4
-  magic2="$(LC_ALL=C head -c 2 "$path" 2>/dev/null || true)"
-  magic4="$(LC_ALL=C head -c 4 "$path" 2>/dev/null || true)"
-  case "$magic4" in $'\177ELF'|$'\xcf\xfa\xed\xfe'|$'\xce\xfa\xed\xfe'|$'\xca\xfe\xba\xbe') return 0 ;; '<!DO'|'<htm') return 1 ;; esac
-  case "$magic2" in MZ) return 0 ;; '#!') return 1 ;; esac
-  return 2
+  local magic4
+  magic4="$(LC_ALL=C head -c 4 "$1" 2>/dev/null || true)"
+  case "$os:$magic4" in
+    linux:$'\177ELF'|macos:$'\xcf\xfa\xed\xfe'|macos:$'\xce\xfa\xed\xfe'|macos:$'\xfe\xed\xfa\xcf'|macos:$'\xfe\xed\xfa\xce'|macos:$'\xca\xfe\xba\xbe'|macos:$'\xbe\xba\xfe\xca') return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
-shell_profile_path() {
-  local shell_name="${SHELL##*/}"
-  case "$shell_name" in fish) printf '%s/.config/fish/config.fish\n' "$HOME" ;; zsh) printf '%s/.zshrc\n' "$HOME" ;; bash) printf '%s/.bashrc\n' "$HOME" ;; *) printf '%s/.profile\n' "$HOME" ;; esac
+read_binary_version() {
+  local binary="$1" timeout_seconds="${MIRROR_VERIFY_TIMEOUT_SECONDS:-10}"
+  local output_file="${binary}.version-$$" error_file="${binary}.version-error-$$"
+  "$binary" --version >"$output_file" 2>"$error_file" &
+  local pid=$! ticks=0 max_ticks=$((timeout_seconds * 10))
+  while kill -0 "$pid" 2>/dev/null; do
+    if (( ticks >= max_ticks )); then
+      kill -TERM "$pid" 2>/dev/null || true
+      sleep 0.1
+      kill -KILL "$pid" 2>/dev/null || true
+      wait "$pid" 2>/dev/null || true
+      rm -f -- "$output_file" "$error_file"
+      printf 'timed out after %s seconds while running %s --version\n' "$timeout_seconds" "$binary" >&2
+      return 124
+    fi
+    sleep 0.1
+    ((ticks += 1))
+  done
+  local exit_code=0
+  wait "$pid" || exit_code=$?
+  if (( exit_code != 0 )); then
+    local details
+    details="$(cat "$error_file" 2>/dev/null || true)"
+    rm -f -- "$output_file" "$error_file"
+    printf '%s --version failed with exit code %s%s\n' "$binary" "$exit_code" "${details:+: $details}" >&2
+    return "$exit_code"
+  fi
+  tr -d '\r\n' <"$output_file"
+  rm -f -- "$output_file" "$error_file"
+}
+
+download_candidate() {
+  local asset="$1" url="$2" http_code exit_code
+  set +e
+  http_code="$(curl --location --silent --show-error "${curl_security_args[@]}" --output "$tmp" --write-out '%{http_code}' "$url")"
+  exit_code=$?
+  set -e
+  if [[ $exit_code -ne 0 ]]; then fail "download failed for $url (curl exit $exit_code)"; fi
+  if [[ "$http_code" == '404' ]]; then return 1; fi
+  [[ "$http_code" =~ ^2 ]] || fail "download failed for $url (HTTP $http_code)"
+  verify_native_binary "$tmp" || fail "$asset is not a native $os binary"
+  chmod 755 "$tmp"
+  local downloaded_version
+  if ! downloaded_version="$(read_binary_version "$tmp")"; then
+    fail "could not verify downloaded binary version"
+  fi
+  [[ "$downloaded_version" == "$target_version" ]] || fail "downloaded binary reported $downloaded_version; expected $target_version"
+}
+
+install_candidate() {
+  local destination="$install_dir/mirror" failed="$install_dir/.mirror-failed-$(date +%s)-$$"
+  local had_previous=0
+  printf 'Replacing...\n'
+  if [[ -e "$destination" ]]; then mv -- "$destination" "$backup"; had_previous=1; fi
+  if ! mv -- "$tmp" "$destination"; then
+    (( had_previous == 0 )) || mv -- "$backup" "$destination"
+    fail "could not install Mirror at $destination"
+  fi
+  tmp=""
+  printf 'Verifying...\n'
+  local installed_version="" verification_failed=0
+  if ! installed_version="$(read_binary_version "$destination")"; then
+    verification_failed=1
+  elif [[ "$installed_version" != "$target_version" ]]; then
+    verification_failed=1
+  fi
+  if (( verification_failed == 1 )); then
+    mv -- "$destination" "$failed" || true
+    (( had_previous == 0 )) || mv -- "$backup" "$destination"
+    fail "installed binary reported ${installed_version:-no version}; expected $target_version. Previous Mirror restored; failed artifact preserved at $failed"
+  fi
+  [[ ! -e "$backup" ]] || rm -f -- "$backup" || printf 'warning: verified upgrade is active; old backup remains at %s\n' "$backup" >&2
+  printf 'Installed Mirror %s to %s\n' "$target_version" "$destination"
 }
 
 ensure_path() {
   export PATH="$install_dir:$PATH"
-  local profile shell_name
-  profile="$(shell_profile_path)"
-  shell_name="${SHELL##*/}"
-  if [[ "$shell_name" == "fish" ]]; then
-    mkdir -p "$HOME/.config/fish"
+  local profile="${HOME}/.profile"
+  case "${SHELL##*/}" in fish) profile="${HOME}/.config/fish/config.fish" ;; zsh) profile="${HOME}/.zshrc" ;; bash) profile="${HOME}/.bashrc" ;; esac
+  mkdir -p "$(dirname "$profile")"
+  if [[ "${SHELL##*/}" == 'fish' ]]; then
     grep -Fq "$install_dir" "$profile" 2>/dev/null || printf '\n# Added by Mirror installer\nfish_add_path %q\n' "$install_dir" >>"$profile"
   else
     grep -Fq "$install_dir" "$profile" 2>/dev/null || printf '\n# Added by Mirror installer\nexport PATH=%q:\$PATH\n' "$install_dir" >>"$profile"
   fi
-  printf 'mirror: ensured %s is added to PATH in %s\n' "$install_dir" "$profile"
-  printf 'mirror: restart your terminal, or run: export PATH=%q:\$PATH\n' "$install_dir"
-}
-
-install_binary() {
-  tmp="$(mktemp -d)"
-  for asset in "${candidates[@]}"; do
-    local url
-    url="$(build_url "$asset")"
-    printf '  Trying %s\n' "$url"
-    if curl --fail --location --silent --show-error --proto '=https' --tlsv1.2 "$url" --output "$tmp/mirror"; then
-      verify_native_binary "$tmp/mirror" || { printf '  %s was not a native binary, trying next...\n' "$asset" >&2; continue; }
-      mkdir -p "$install_dir"
-      install -m 0755 "$tmp/mirror" "$install_dir/mirror"
-      printf 'Installed mirror to %s/mirror\n' "$install_dir"
-      ensure_path
-      printf 'Run: mirror --version\n'
-      return 0
-    fi
-    printf '  not available, trying next...\n'
-  done
-  fail "no compatible Mirror binary found. Check available assets at: https://github.com/${repo}/releases"
 }
 
 main() {
   parse_args "$@"
-  require_command curl
-  require_command head
-  require_command install
-  require_command mktemp
-  require_command uname
+  for command in curl grep head sed uname; do require_command "$command"; done
   os="$(detect_os)"
   arch="$(detect_arch)"
+  target_version="$(resolve_target_version)"
   build_candidates
-  printf 'mirror: %s  os=%s  arch=%s%s\n' "$version" "$os" "$arch" "${variant_override:+ variant=${variant_override}}"
-  install_binary
+  mkdir -p "$install_dir"
+  tmp="$install_dir/.mirror-install-$$-$RANDOM"
+  backup="$install_dir/.mirror-backup-$$-$RANDOM"
+
+  local asset url selected=0
+  for asset in "${candidates[@]}"; do
+    url="$(build_url "$asset")"
+    printf '%s\n' '------------------------------------------------------------' '  Installing Mirror' '------------------------------------------------------------'
+    printf '  version : %s\n  os      : %s\n  arch    : %s\n  binary  : %s\n  path    : %s/mirror\n  url     : %s\n' "$target_version" "$os" "$arch" "$asset" "$install_dir" "$url"
+    printf '%s\n' '------------------------------------------------------------' 'Downloading...'
+    if download_candidate "$asset" "$url"; then selected=1; break; fi
+    printf '  %s is not published; trying the next compatible asset.\n' "$asset"
+  done
+  (( selected == 1 )) || fail "Mirror $target_version has no compatible $os/$arch binary"
+  printf 'Validating...\n'
+  install_candidate
+  [[ "${MIRROR_NO_PATH_UPDATE:-0}" == '1' ]] || ensure_path
+  printf 'Run: mirror --version\n'
 }
 
 main "$@"

@@ -14,7 +14,7 @@ documents:
   "CHANGELOG.md": "Release changelog for this scope."
   "README.md": "Human-facing README for this scope."
   "TECHNICAL.md": "Markdown companion document in repository root."
-  "TODO.md": "Task index and pending work for this scope."
+  "todo.md": "Task index and pending work for this scope."
   "xdocs-overview.md": "Generated companion overview that links back to this directory xdocs descriptor."
 tags:
   - "repository"

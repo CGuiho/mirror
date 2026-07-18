@@ -5,8 +5,8 @@ parent: "mirror"
 children: []
 files:
   "compile.sh": "File in devops."
-  "install.ps1": "File in devops."
-  "install.sh": "File in devops."
+  "install.ps1": "Thin checkout wrapper that delegates all Windows installation behavior to mirror/install.ps1."
+  "install.sh": "Thin checkout wrapper that delegates all POSIX installation behavior to mirror/install.sh."
 documents:
   "xdocs-overview.md": "Generated companion overview that links back to this directory xdocs descriptor."
 tags:
