@@ -24,7 +24,7 @@ export const removePath = async (path: string) => {
   await Bun.$`rm -rf ${path}`.quiet()
 }
 
-export const makeTempDirectory = async (prefix = 'guiho-mirror-') => {
+export const makeTempDirectory = async (prefix = 'mirror-temp-') => {
   const root = process.env['TMPDIR'] ?? process.env['TEMP'] ?? process.env['TMP'] ?? '/tmp'
   const path = `${root.replaceAll('\\', '/')}/${prefix}${crypto.randomUUID()}`
   await Bun.write(`${path}/.keep`, '')
