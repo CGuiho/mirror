@@ -4,12 +4,13 @@
   "version": "3.5.0-alpha.0",
   "type": "module",
   "bin": {
-    "mirror": "scripts/mirror-bin.ts"
+    "mirror": "scripts/mirror-bin.mjs"
   },
   "files": [
     "README.md",
     "scripts/",
     "skills/",
+    "prompts/",
     "schema/",
     "jsr.json",
     "CHANGELOG.md",
@@ -37,7 +38,6 @@
     "access": "public"
   },
   "scripts": {
-    "postinstall": "bun run scripts/install-package.ts",
     "prepack": "bun run binary",
     "dev": "bun run --watch source/guiho-mirror-bin.ts",
     "build": "bun run binary",
@@ -63,6 +63,7 @@
     "url": "https://github.com/CGuiho/mirror/issues"
   },
   "dependencies": {
+    "@sinclair/typebox": "^0.34.52",
     "citty": "^0.2.2",
     "semver": "^7.8.1"
   },
