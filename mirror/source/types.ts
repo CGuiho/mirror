@@ -15,6 +15,21 @@ export type MirrorAgentToolSelection = MirrorAgentTool | 'all'
 export type MirrorNativePlatform = 'linux' | 'macos' | 'windows'
 export type MirrorNativeArch = 'x64' | 'arm64'
 export type MirrorNativeVariant = 'baseline' | 'default' | 'modern'
+export type MirrorUpgradePhase = 'plan' | 'download' | 'validate' | 'replace' | 'verify' | 'cache' | 'cleanup'
+export type MirrorUpgradePhaseStatus = 'started' | 'succeeded' | 'skipped' | 'failed'
+export type MirrorUpgradeOutcome = 'upgraded' | 'up-to-date' | 'dry-run' | 'rolled-back' | 'failed'
+export type MirrorUpgradeRecoverySource = 'resolved' | 'fallback-current'
+export type MirrorUpgradeFailureCode =
+  | 'UPGRADE_RESOLUTION_FAILED'
+  | 'UPGRADE_ASSET_UNAVAILABLE'
+  | 'UPGRADE_DOWNLOAD_FAILED'
+  | 'UPGRADE_DOWNLOAD_INVALID'
+  | 'UPGRADE_TEMP_VERSION_MISMATCH'
+  | 'UPGRADE_RENAME_CURRENT_FAILED'
+  | 'UPGRADE_INSTALL_FAILED'
+  | 'UPGRADE_CANONICAL_VERSION_MISMATCH'
+  | 'UPGRADE_ROLLBACK_FAILED'
+export type MirrorUpgradeWarningCode = 'UPGRADE_CACHE_FAILED' | 'UPGRADE_CLEANUP_PENDING'
 
 export type MirrorHookName =
   | 'before:everything' | 'after:everything'
@@ -147,15 +162,93 @@ export type MirrorUpdateCache = {
   releaseUrl: string
 }
 
-export type MirrorUpgradeResult = {
+export type MirrorUpgradeRecovery = {
+  targetVersion: string
+  targetSource: MirrorUpgradeRecoverySource
+  installCommand: string
+  stopProcessCommand: string
+}
+
+export type MirrorUpgradePlan = {
   currentVersion: string
   targetVersion: string
-  asset?: string
-  url?: string
+  targetTag: string
+  releaseUrl: string
+  platform: MirrorNativePlatform
+  arch: MirrorNativeArch
+  variant: MirrorNativeVariant
+  asset: string
+  downloadUrl: string
   executablePath: string
-  dryRun: boolean
-  scheduled: boolean
+  temporaryPath: string
+  backupPath: string
+  failedArtifactPath: string
   upToDate: boolean
+  dryRun: boolean
+  recovery: MirrorUpgradeRecovery
+}
+
+export type MirrorUpgradeEvent = {
+  sequence: number
+  phase: MirrorUpgradePhase
+  status: MirrorUpgradePhaseStatus
+  message: string
+}
+
+export type MirrorUpgradeFailure = {
+  code: MirrorUpgradeFailureCode
+  message: string
+  rollbackAttempted: boolean
+  rollbackSucceeded: boolean
+  preservedPaths: string[]
+}
+
+export type MirrorUpgradeWarning = {
+  code: MirrorUpgradeWarningCode
+  message: string
+  path?: string
+}
+
+export type MirrorUpgradeResult = {
+  schemaVersion: 1
+  command: 'mirror upgrade'
+  plan: MirrorUpgradePlan | null
+  events: MirrorUpgradeEvent[]
+  outcome: MirrorUpgradeOutcome
+  installedVersion: string
+  cacheUpdated: boolean
+  cleanupPending: boolean
+  warnings: MirrorUpgradeWarning[]
+  failure?: MirrorUpgradeFailure
+  recovery: MirrorUpgradeRecovery
+}
+
+export type MirrorAvailableRelease = {
+  version: string
+  tag: string
+  channel: string
+  prerelease: boolean
+  publishedAt: string
+  releaseUrl: string
+  current: boolean
+  latestStable: boolean
+  compatible: boolean
+  compatibleAsset?: string
+}
+
+export type MirrorReleaseCatalog = {
+  schemaVersion: 1
+  command: 'mirror upgrade list'
+  currentVersion: string
+  latestStableVersion: string | null
+  complete: true
+  platform: MirrorNativePlatform
+  arch: MirrorNativeArch
+  variant: MirrorNativeVariant
+  pagesFetched: number
+  releaseCount: number
+  releases: MirrorAvailableRelease[]
+  warnings: string[]
 }
 
 export type MirrorUninstallResult = {
