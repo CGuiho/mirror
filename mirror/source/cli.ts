@@ -409,7 +409,236 @@ function createMirrorCommandTree(rawArgs: string[]): { command: CommandDef<any>,
   const uninstallCommand = defineCommand({
     meta: { name: 'mirror uninstall', description: 'Remove the installed Mirror native binary.' },
     args: uninstallArgs,
-    setup: withLeafCommand(state, ['uninst…2481 tokens truncated…e.latestStable ? 'latest-stable' : ''].filter(Boolean).join(','))
+    setup: withLeafCommand(state, ['uninstall'], 0, uninstallArgs),
+    run: async ({ args }) => runUninstall(resolveCliOptions(state, args), state),
+  })
+
+  const initCommand = defineCommand({
+    meta: { name: 'mirror init', description: 'Create or reconcile mirror.config.toml.' },
+    args: initArgs,
+    setup: withLeafCommand(state, ['init'], 1, initArgs),
+    run: async ({ args }) => runInit(resolveCliOptions(state, args), adapterArg(stringArg(args, 'adapter')), state),
+  })
+
+  const homeCommand = defineCommand({
+    meta: { name: 'mirror', description: 'Show the Mirror home page.', hidden: true },
+    args: rootArgs,
+    run: async () => {
+      const options = resolveCliOptions(state, state.rootArgs)
+      await prepareAgents(options)
+      await printCittyHelp(state.usageCommand, options, state)
+      void scheduleBackgroundUpdateCheck()
+    },
+  })
+
+  const command = defineCommand({
+    meta: {
+      name: 'mirror',
+      version: mirrorVersion,
+      description: 'Deterministic semantic versioning for GUIHO projects.',
+    },
+    args: rootArgs,
+    default: '_home',
+    subCommands: {
+      _home: homeCommand,
+      init: initCommand,
+      config: configCommand,
+      agents: agentsCommand,
+      version: versionCommand,
+      upgrade: upgradeCommand,
+      uninstall: uninstallCommand,
+    },
+    setup: async (context) => {
+      state.rootArgs = context.args
+      state.usageCommand = command
+      state.usagePath = resolveUsagePath(context.args._, state.usageCommands)
+      state.usageCommand = state.usageCommands.get(state.usagePath.join(' ')) ?? command
+      state.noColor = booleanArg(context.args, 'color') === false || rawArgs.includes('--no-color')
+      state.verbose = Boolean(booleanArg(context.args, 'verbose'))
+      assertKnownArguments(context.args, state)
+      validateStringFlagValues(rawArgs, state)
+
+      if (rawArgs.includes('--mirror-update-check-worker')) {
+        await runBackgroundUpdateCheck()
+        throw new CliHandled()
+      }
+
+      if (rawArgs.length === 1 && (booleanArg(context.args, 'version') || booleanArg(context.args, 'v'))) {
+        write(`${mirrorVersion}\n`, state)
+        throw new CliHandled()
+      }
+
+      const options = resolveCliOptions(state, context.args)
+      if (booleanArg(context.args, 'helpTree')) {
+        write(`${showMirrorCommandHelpTree(state.usagePath)}\n`, state)
+        throw new CliHandled()
+      }
+      if (booleanArg(context.args, 'helpDocs')) {
+        write(showMirrorCommandHelpDocs(state.usagePath), state)
+        throw new CliHandled()
+      }
+      if (booleanArg(context.args, 'help') || booleanArg(context.args, 'h')) {
+        await printCittyHelp(state.usageCommand, options, state)
+        throw new CliHandled()
+      }
+    },
+  })
+
+  const commands: Array<[string, CommandDef<any>]> = [
+    ['init', initCommand],
+    ['config', configCommand],
+    ['config show', configShowCommand],
+    ['config check', configCheckCommand],
+    ['config schema', configSchemaCommand],
+    ['agents', agentsCommand],
+    ['agents install', agentsInstallCommand],
+    ['agents instructions', agentsInstructionsCommand],
+    ['version', versionCommand],
+    ['version current', versionCurrentCommand],
+    ['version next', versionNextCommand],
+    ['version plan', versionPlanCommand],
+    ['version apply', versionApplyCommand],
+    ['upgrade', upgradeCommand],
+    ['upgrade check', upgradeCheckCommand],
+    ['upgrade list', upgradeListCommand],
+    ['uninstall', uninstallCommand],
+  ]
+  for (const [path, definition] of commands) state.usageCommands.set(path, definition)
+  state.usageCommand = command
+
+  return { command, state }
+}
+
+function createGroupHelpCommand(state: CliState, name: string): CommandDef<any> {
+  return defineCommand({
+    meta: { name, description: 'Show command help.', hidden: true },
+    args: commonArgs,
+    run: async () => {
+      await printCittyHelp(state.usageCommand, resolveCliOptions(state, state.rootArgs), state)
+    },
+  })
+}
+
+function withGroupCommand(state: CliState, path: string[]): (context: CommandContext<any>) => void {
+  return (context) => {
+    state.inheritedArgs = context.args
+    if (state.usagePath.length <= path.length) {
+      state.usageCommand = context.cmd
+      state.usagePath = path
+    }
+  }
+}
+
+function withLeafCommand(
+  state: CliState,
+  path: string[],
+  positionalCount: number,
+  argsDefinition: Record<string, { readonly type?: string, readonly alias?: string | readonly string[] }>,
+): (context: CommandContext<any>) => void {
+  return (context) => {
+    state.usageCommand = context.cmd
+    state.usagePath = path
+    assertAllowedFlags(context.rawArgs, argsDefinition, state)
+    assertPositionalCount(context.args, positionalCount, state)
+  }
+}
+
+async function runInit(options: MirrorCliOptions, positionalSource: MirrorAdapterName | undefined, state: CliState): Promise<void> {
+  const cwd = resolvePath(options.cwd ?? process.cwd())
+  const flags: MirrorInitFlags = {
+    source: options.source ?? positionalSource,
+    output: options.output,
+    packagePath: options.packageFile,
+    auxiliaryPaths: options.auxiliary,
+    jsrPath: options.jsrFile,
+    tagTemplate: options.tagTemplate,
+    name: options.name,
+    prereleaseId: options.preid,
+    commit: options.commit ? true : undefined,
+    push: options.push ? true : undefined,
+  }
+  const interactive = isInteractiveInit(options)
+  const prompter = interactive ? createReadlineInitPrompter() : undefined
+
+  try {
+    const answers = await resolveInitAnswers(flags, cwd, prompter)
+    const path = await writeInitConfigFromAnswers(answers, cwd, Boolean(options.yes))
+    write(reportValue(`created ${path}`, options.format), state)
+  } finally {
+    await prompter?.close()
+  }
+}
+
+async function runApply(target: string, options: MirrorCliOptions, state: CliState): Promise<void> {
+  await prepareAgents(options)
+  const config = await loadMirrorConfig(options)
+  const hooks = config.hooks
+  const hookResults: MirrorHookResult[] = []
+  const baseEnv = hookEnvFromConfig(config, target)
+
+  try {
+    await runHooks('before:everything', hooks['before:everything'], baseEnv, config.cwd)
+  } catch (error) {
+    hookResults.push({
+      name: 'before:everything',
+      commands: hooks['before:everything'] ?? [],
+      status: 'failure',
+      durationMs: 0,
+      exitCode: error instanceof MirrorError ? error.exitCode : 1,
+      stderr: error instanceof Error ? error.message : String(error),
+    })
+    throw error
+  }
+
+  try {
+    await runHooks('before:plan', hooks['before:plan'], baseEnv, config.cwd)
+    const plan = await buildVersionPlan(target, options)
+    const planEnv = hookEnvForPlan(plan, target)
+    await runHooks('after:plan', hooks['after:plan'], planEnv, config.cwd)
+
+    if (options.format !== 'json') write(mirrorBanner(plan.configPath ? plan.configPath : ''), state)
+    if (options.format !== 'json') write(reportPlan(plan, options.format), state)
+    await runHooks('before:apply', hooks['before:apply'], planEnv, config.cwd)
+
+    try {
+      const result = await executeVersionPlan(plan, options, hooks, target)
+      result.hookResults = hookResults
+      write(options.format === 'json' ? reportExecution(result, options.format) : reportExecutionSummary(result, options.format), state)
+    } finally {
+      const resultEnv = hookEnvForResult(plan, target, true, Boolean(options.dryRun))
+      await runHooksQuiet('after:apply', hooks['after:apply'], resultEnv, config.cwd, hookResults)
+    }
+  } finally {
+    await runHooksQuiet('after:everything', hooks['after:everything'], baseEnv, config.cwd, hookResults)
+  }
+}
+
+async function runUpgradeCheck(options: MirrorCliOptions, state: CliState): Promise<void> {
+  const result = await checkForLatestVersion()
+  if (options.format === 'json') {
+    write(`${JSON.stringify(result, null, 2)}\n`, state)
+    return
+  }
+  write(`current: ${result.currentVersion}\n`, state)
+  write(`latest: ${result.latestVersion}\n`, state)
+  write(`update_available: ${String(result.updateAvailable)}\n`, state)
+  if (result.updateAvailable) write('Run: mirror upgrade\n', state)
+}
+
+async function runUpgradeList(options: MirrorCliOptions, state: CliState): Promise<void> {
+  const catalog = await listAvailableVersions({ arch: options.arch, variant: options.variant })
+  if (options.format === 'json') {
+    write(`${JSON.stringify(catalog, null, 2)}\n`, state)
+    return
+  }
+  write('AVAILABLE MIRROR VERSIONS\n\n', state)
+  if (catalog.releases.length === 0) {
+    write('No published Mirror releases were found.\n', state)
+    return
+  }
+  const versionWidth = Math.max('VERSION'.length, ...catalog.releases.map((release) => release.version.length))
+  const channelWidth = Math.max('CHANNEL'.length, ...catalog.releases.map((release) => release.channel.length))
+  const markerValues = catalog.releases.map((release) => [release.current ? 'current' : '', release.latestStable ? 'latest-stable' : ''].filter(Boolean).join(','))
   const markerWidth = Math.max('MARKERS'.length, ...markerValues.map((value) => value.length))
   const tagWidth = Math.max('TAG'.length, ...catalog.releases.map((release) => release.tag.length))
   write(`${'VERSION'.padEnd(versionWidth)}  ${'CHANNEL'.padEnd(channelWidth)}  PUBLISHED   ${'MARKERS'.padEnd(markerWidth)}  ASSET  ${'TAG'.padEnd(tagWidth)}  RELEASE\n`, state)
