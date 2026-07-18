@@ -402,7 +402,15 @@ Exactly one source is used. Multiple outputs are allowed.
 - `path`: Optional path to `package.json`. Default: `package.json`.
 - `auxiliary_paths`: Optional array of extra `package.json` files that mirror the main package version. Default: `[]`.
 
-The main package path remains the source of truth for package version reads and project name reads. Auxiliary package files are write-only mirrors: when `package.json` is in `[version].output`, Mirror plans and writes the same next version to each au…48 tokens truncated…tag format. Default: `v{version}`.
+The main package path remains the source of truth for package version reads and project name reads. Auxiliary package files are write-only mirrors: when `package.json` is in `[version].output`, Mirror plans and writes the same next version to each auxiliary package file and includes those files in release commits.
+
+### `[jsr]`
+
+- `path`: Optional path to `jsr.json`. Default: `jsr.json`.
+
+### `[git]`
+
+- `tag_template`: Optional tag format. Default: `v{version}`.
 - `commit`: Optional release commit default. Default: `false`.
 - `push`: Optional release push default. Default: `false`.
 - `allow_dirty`: Optional dirty worktree behavior. Default: `false`.
