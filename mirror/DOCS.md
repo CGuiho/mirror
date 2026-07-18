@@ -95,6 +95,18 @@ irm https://raw.githubusercontent.com/CGuiho/mirror/main/mirror/install.ps1 | ie
 
 The Windows PowerShell installer returns after success instead of calling `exit`, so it does not intentionally close the host PowerShell session when run through `irm ... | iex`.
 
+Install an exact stable or prerelease version with the same canonical scripts:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/mirror/install.sh | bash -s -- --version '3.5.0-alpha.1'
+```
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/CGuiho/mirror/main/mirror/install.ps1'))) -Version '3.5.0-alpha.1'"
+```
+
+Both installers print the resolved version, platform, architecture, selected asset, destination, and URL before downloading. Production metadata and asset URLs must use HTTPS; controlled local fixtures require the explicit `MIRROR_ALLOW_INSECURE_TEST_URLS=1` override. Exact requests must receive the same canonical release version from metadata. The downloaded and canonical executables must print only the exact semantic version from `--version` within the bounded deadline. Installers replace through a same-directory backup, preserve a failed candidate, and restore the prior executable on every post-mutation failure. Only HTTP 404 selects the next compatible asset; filesystem, verification, and other HTTP failures remain fatal. `Installed` is printed only after canonical verification.
+
 Package-manager installs are also supported:
 
 ```bash
@@ -273,9 +285,11 @@ mirror version apply <target> --yes
 
 ### `mirror upgrade`
 
-Upgrades the installed native Mirror binary from GitHub Releases. Source checkouts refuse self-upgrade to avoid replacing the Bun runtime or development launcher by mistake.
+Upgrades the installed native Mirror binary from GitHub Releases. Source checkouts refuse self-upgrade to avoid replacing the Bun runtime or development launcher by mistake. Mirror resolves release metadata first, prints the complete current/target/OS/architecture/asset/path/URL plan, and prints `Downloading...` before awaiting the release body.
 
-When the resolved target matches the installed version, Mirror prints `Already up to date.` and exits successfully without downloading a binary, writing update cache state, or scheduling executable replacement. JSON output reports `upToDate: true`.
+After native-format and temporary-version validation, Mirror renames the canonical executable to a same-directory backup, renames the target into the canonical path, launches that exact path with `--version`, and requires the exact target before reporting success. Every candidate, canonical, and rollback version probe has a bounded 10-second deadline so a hung executable cannot stall the transaction forever. Replacement or verification failure restores and verifies the previous executable. Only deletion of a verified old backup may be deferred; replacement itself is never reported as scheduled success. Verified update-cache state is committed after canonical verification.
+
+When the resolved target matches the installed version, Mirror exits successfully without downloading, replacing, or updating cache state. Dry runs also avoid mutation. Every bare `mirror upgrade` outcome—success, failure, already current, or dry run—prints a copy-paste installer command pinned to the normalized target and a separate process-stop command. Pre-resolution failures pin recovery to the installed current version instead of inventing a target.
 
 ```bash
 mirror upgrade
@@ -287,6 +301,24 @@ mirror upgrade list
 ```
 
 Flags: `--version <version>`, `--arch <x64|arm64>`, `--variant <baseline|default|modern>`, `--dry-run`, `--format text|json`.
+
+Windows recovery example:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/CGuiho/mirror/main/mirror/install.ps1'))) -Version '3.4.2'"
+powershell.exe -NoProfile -Command "Get-Process mirror -ErrorAction SilentlyContinue | Stop-Process -Force"
+```
+
+Linux/macOS recovery example:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/mirror/install.sh | bash -s -- --version '3.4.2'
+pkill -x mirror
+```
+
+`mirror upgrade list` exhausts GitHub pagination, excludes drafts, accepts only canonical `@guiho/mirror@<semver>` release tags, sorts stable and prerelease versions newest-first, and reports channel, publication time, tag, release URL, current/latest-stable markers, and compatible asset. JSON returns a complete-catalog envelope with `complete: true`, page/release counts, platform selection, releases, and malformed-tag warnings. A later-page error fails the command rather than returning an apparently complete partial catalog.
+
+Upgrade JSON contains one parseable document with `schemaVersion`, `command`, `outcome`, a sanitized public `plan` (or `null` on resolution failure), ordered `events`, `result`, `recovery`, and a structured `error` with phase/code/message. Failure errors also expose `rollbackAttempted`, `rollbackSucceeded`, and `preservedPaths`; text failures print the same recovery state and preserved artifacts. Internal temporary and backup paths are absent on normal outcomes. Resolution failures return `plan: null`, `result: null`, and visibly label recovery as a `fallback-current` repair reinstall. JSON stdout never mixes in progress prose.
 
 ### `mirror uninstall`
 
@@ -370,15 +402,7 @@ Exactly one source is used. Multiple outputs are allowed.
 - `path`: Optional path to `package.json`. Default: `package.json`.
 - `auxiliary_paths`: Optional array of extra `package.json` files that mirror the main package version. Default: `[]`.
 
-The main package path remains the source of truth for package version reads and project name reads. Auxiliary package files are write-only mirrors: when `package.json` is in `[version].output`, Mirror plans and writes the same next version to each auxiliary package file and includes those files in release commits.
-
-### `[jsr]`
-
-- `path`: Optional path to `jsr.json`. Default: `jsr.json`.
-
-### `[git]`
-
-- `tag_template`: Optional tag format. Default: `v{version}`.
+The main package path remains the source of truth for package version reads and project name reads. Auxiliary package files are write-only mirrors: when `package.json` is in `[version].output`, Mirror plans and writes the same next version to each au…48 tokens truncated…tag format. Default: `v{version}`.
 - `commit`: Optional release commit default. Default: `false`.
 - `push`: Optional release push default. Default: `false`.
 - `allow_dirty`: Optional dirty worktree behavior. Default: `false`.
@@ -568,7 +592,9 @@ Before a version is published, update this file and any other relevant user-faci
 - `source/guiho-mirror-bin.ts`: CLI binary entrypoint.
 - `source/cli.ts`: declarative Citty command tree, thin domain adapters, compatibility normalization, contextual usage handling, and process-facing error handling.
 - `source/help.ts`: data-driven help text, command-tree output, and Markdown help-doc rendering.
-- `source/self-management.ts`: background update checks, update cache, native binary upgrade, and uninstall helpers.
+- `source/self-management.ts`: release resolution, complete catalog pagination, ordered upgrade phases, transactional canonical replacement, exact-version verification, rollback, post-verification cache/cleanup, recovery commands, background update checks, and uninstall helpers.
+- `source/self-management.spec.ts`: release, recovery, output-order, native replacement, rollback, and running-Windows-executable regressions.
+- `source/installer.spec.ts`: exact-version canonical installer, progress ordering, verification, and rollback subprocess regressions.
 - `source/config.ts`: Bun TOML discovery, schema validation, defaulting, init config generation, init reconciliation, and override merge.
 - `source/init.ts`: init answer resolution, interactive prompts (TTY-only), and defaults.
 - `source/schema.ts`: JSON Schema for `mirror.config.toml` and the `#:schema` reference.
