@@ -6,6 +6,7 @@ children:
   - "mirror-mirror-schema"
   - "mirror-mirror-scripts"
   - "mirror-mirror-skills"
+  - "mirror-mirror-prompts"
   - "mirror-mirror-source"
 files:
   ".npmignore": "File in mirror."
@@ -14,8 +15,8 @@ files:
   "install.ps1": "Canonical Windows installer with exact-version release resolution, plan-first output, native/version validation, transactional destination replacement, canonical verification, rollback, and PATH setup."
   "install.sh": "Canonical Linux/macOS installer with exact-version resolution, deterministic asset fallback, plan-first output, native/version validation, transactional replacement, canonical verification, rollback, and PATH setup."
   "jsr.json": "JSON configuration or structured data file."
-  "mirror.config.toml": "TOML configuration file."
-  "package.json": "CLI-only package metadata, Bun scripts, semver engine dependency, Citty routing dependency, and publish configuration."
+  "mirror.yaml": "Authoritative YAML self-hosting configuration."
+  "package.json": "CLI-only package metadata, Node bootstrap bin mapping, Bun scripts, TypeBox, semver, Citty, and publish configuration."
   "tsconfig.build.json": "TypeScript compiler configuration."
   "tsconfig.json": "TypeScript compiler configuration."
 documents:
