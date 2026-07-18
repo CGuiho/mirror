@@ -22,10 +22,11 @@ keywords:
 
 ## Summary
 
-The complete local MR-16 gate passed. Mirror `3.5.1` is the separately
-authorized patch after correcting version-sensitive release assertions. The
-source and release workflow are ready, but public release availability is
-still waiting on the protected GitHub `production` environment.
+The complete local MR-16 gate passed. Mirror `3.5.2` is the separately
+authorized correction patch after aligning durable completion and public
+release-gate evidence. The source and release workflow are ready, but public
+release availability is still waiting on the protected GitHub `production`
+environment.
 
 ## Scope
 
@@ -56,14 +57,14 @@ Public release availability was checked independently after the local gate:
 
 | Check | Result |
 | --- | --- |
-| Local `main`, `origin/main`, and `@guiho/mirror@3.5.1` tag | Passed: all resolve to `343af5f4cc2071c3e1c747d2519a46e1ceb9f355` |
-| GitHub publish workflow for `@guiho/mirror@3.5.1` | Waiting: run [29662386344](https://github.com/CGuiho/mirror/actions/runs/29662386344) is held by the protected `production` environment |
+| Local `main`, `origin/main`, and `@guiho/mirror@3.5.2` tag immediately after version apply | Passed: all resolved to `9132782d84de12416c3c605243800df16f68052b` |
+| GitHub publish workflow for `@guiho/mirror@3.5.2` | Waiting: run [29663073275](https://github.com/CGuiho/mirror/actions/runs/29663073275) is held by the protected `production` environment |
 | Latest public GitHub Release | `@guiho/mirror@3.4.2`, with the legacy twelve binary assets |
 | Live `mirror upgrade --dry-run --format json` | Correctly routes to upgrade resolution, then reports `UPGRADE_ASSET_UNAVAILABLE` because public `3.4.2` has no RFC-named compatible asset |
-| Live `mirror upgrade --version 3.5.1 --dry-run --format json` | Correctly preserves the nested exact-version value, then reports `UPGRADE_RESOLUTION_FAILED` with GitHub `404 Not Found` because no public `3.5.1` release exists |
+| Live `mirror upgrade --version 3.5.2 --dry-run --format json` | Correctly preserves the nested exact-version value, then reports `UPGRADE_RESOLUTION_FAILED` with GitHub `404 Not Found` because no public `3.5.2` release exists |
 
 These are external publication results, not source-test failures. They prevent
-calling `3.5.1` publicly installable or upgradeable until the environment gate
+calling `3.5.2` publicly installable or upgradeable until the environment gate
 is approved and the exact fourteen assets are present.
 
 ## Manual Checks
@@ -96,6 +97,6 @@ misrepresented as a warning-free whole-repository check.
 
 Validated for source compliance and release-workflow readiness. The
 implementation task is completed because its approved scope excludes
-publication and live installation. Public `3.5.1` distribution is not ready:
+publication and live installation. Public `3.5.2` distribution is not ready:
 the production workflow is waiting, and package publication and public GitHub
 Release creation remain outside this implementation task.
