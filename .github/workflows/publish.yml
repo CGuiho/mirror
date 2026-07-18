@@ -36,7 +36,13 @@ jobs:
       - run: bun run build
         working-directory: mirror
 
-      - name: Publish native binaries to GitHub release
+      - name: Stage exact release assets
+        working-directory: mirror
+        run: |
+          cp skills/guiho-s-mirror/SKILL.md bin/guiho-s-mirror
+          cp prompts/guiho-i-mirror.md bin/guiho-i-mirror
+
+      - name: Publish exact RFC 0034 assets to GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         working-directory: mirror
@@ -51,20 +57,36 @@ jobs:
           fi
 
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
-            gh release upload "${GITHUB_REF_NAME}" bin/guiho-mirror-* --clobber
+            gh release upload "${GITHUB_REF_NAME}" bin/mirror-* bin/guiho-s-mirror bin/guiho-i-mirror --clobber
           else
-            gh release create "${GITHUB_REF_NAME}" bin/guiho-mirror-* --title "${GITHUB_REF_NAME}" --verify-tag "${RELEASE_FLAGS[@]}"
+            gh release create "${GITHUB_REF_NAME}" bin/mirror-* bin/guiho-s-mirror bin/guiho-i-mirror --title "${GITHUB_REF_NAME}" --verify-tag "${RELEASE_FLAGS[@]}"
           fi
 
-      - name: Verify GitHub release binary assets
+      - name: Verify exact fourteen GitHub release assets
         env:
           GH_TOKEN: ${{ github.token }}
         working-directory: mirror
         run: |
-          COUNT=$(gh release view "${GITHUB_REF_NAME}" --json assets --jq '[.assets[] | select(.name | startswith("guiho-mirror-"))] | length')
-
-          if [ "$COUNT" -ne 12 ]; then
-            echo "Expected 12 Mirror native binary assets, found $COUNT" >&2
+          EXPECTED=$(cat <<'EOF'
+          guiho-i-mirror
+          guiho-s-mirror
+          mirror-darwin-arm64
+          mirror-darwin-x64
+          mirror-darwin-x64-baseline
+          mirror-darwin-x64-modern
+          mirror-linux-arm64
+          mirror-linux-x64
+          mirror-linux-x64-baseline
+          mirror-linux-x64-modern
+          mirror-windows-arm64.exe
+          mirror-windows-x64-baseline.exe
+          mirror-windows-x64-modern.exe
+          mirror-windows-x64.exe
+          EOF
+          )
+          ACTUAL=$(gh release view "${GITHUB_REF_NAME}" --json assets --jq -r '.assets[].name' | sort)
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "Mirror release does not contain the exact fourteen RFC 0034 assets." >&2
             gh release view "${GITHUB_REF_NAME}" --json assets --jq '.assets[].name' >&2
             exit 1
           fi
