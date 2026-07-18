@@ -18,9 +18,9 @@ describe('Mirror canonical installers', () => {
   test('keeps PowerShell and POSIX candidate order aligned with the upgrade domain', async () => {
     const powershell = await readTextFile(joinPath(import.meta.dir, '..', 'install.ps1'))
     const posix = await readTextFile(joinPath(import.meta.dir, '..', 'install.sh'))
-    for (const platform of ['windows', 'linux', 'macos'] as const) {
+    for (const platform of ['windows', 'linux', 'darwin'] as const) {
       for (const variant of ['baseline', 'default', 'modern'] as const) {
-        const candidates = buildAssetCandidates(platform, 'x64', variant).map((candidate) => platform === 'windows' ? candidate : candidate.replace(`guiho-mirror-${platform}-`, 'guiho-mirror-${os}-'))
+        const candidates = buildAssetCandidates(platform, 'x64', variant).map((candidate) => platform === 'windows' ? candidate : candidate.replace(`mirror-${platform}-`, 'mirror-${os}-'))
         const script = platform === 'windows' ? powershell : posix
         const candidateLine = script.split(/\r?\n/).find((line) => platform === 'windows' ? line.includes(`'${variant}' {`) : line.trimStart().startsWith(`${variant})`)) ?? ''
         const positions = candidates.map((candidate) => candidateLine.indexOf(candidate))
@@ -34,6 +34,7 @@ describe('Mirror canonical installers', () => {
     const fixture = await createInstallerFixture('3.4.1', '3.4.2', { kind: 'version', version: '3.4.2' })
     try {
       const result = await runInstaller(fixture, '3.4.2')
+      if (result.exitCode !== 0) throw new Error(`${result.stdout}\n${result.stderr}`)
       expect(result.exitCode).toBe(0)
       expect(result.stdout.indexOf('Downloading...')).toBeGreaterThan(result.stdout.indexOf('  url     :'))
       expect(result.stdout.indexOf('Replacing...')).toBeGreaterThan(result.stdout.indexOf('Validating...'))
@@ -77,8 +78,9 @@ describe('Mirror canonical installers', () => {
       const recovery = createUpgradeRecovery(targetVersion, 'resolved', platform)
       expect(recovery.installCommand).toContain(targetVersion)
       const result = platform === 'windows'
-        ? await runCommand(['powershell.exe', '-NoProfile', '-Command', recovery.installCommand], { env: installerEnvironment(fixture) })
-        : await runShellCommand(recovery.installCommand, { env: installerEnvironment(fixture) })
+        ? await runCommand(['powershell.exe', '-NoProfile', '-Command', recovery.installCommand], { cwd: fixture.root, env: installerEnvironment(fixture) })
+        : await runShellCommand(recovery.installCommand, { cwd: fixture.root, env: installerEnvironment(fixture) })
+      if (result.exitCode !== 0) throw new Error(`${result.stdout}\n${result.stderr}`)
       expect(result.exitCode).toBe(0)
       expect(`${result.stdout}\n${result.stderr}`).toContain(`Installed Mirror ${targetVersion}`)
       expect((await runCommand([fixture.destination, '--version'])).stdout.trim()).toBe(targetVersion)
@@ -93,6 +95,7 @@ describe('Mirror canonical installers', () => {
     const fixture = await createInstallerFixture('3.4.1', '3.4.2', { kind: 'version', version: '3.4.2' }, { firstCandidateMissing: true })
     try {
       const result = await runInstaller(fixture, '3.4.2')
+      if (result.exitCode !== 0) throw new Error(`${result.stdout}\n${result.stderr}`)
       expect(result.exitCode).toBe(0)
       expect(result.stdout).toContain('is not published; trying the next compatible asset')
       expect((await runCommand([fixture.destination, '--version'])).stdout.trim()).toBe('3.4.2')
@@ -215,6 +218,10 @@ async function createInstallerFixture(
         const releaseAssets = options.firstCandidateMissing
           ? [asset, fallbackAsset].map((name) => ({ name, browser_download_url: `${serverUrl}/assets/${name}` }))
           : [{ name: asset, browser_download_url: `${serverUrl}/assets/${asset}` }]
+        releaseAssets.push(
+          { name: 'guiho-s-mirror', browser_download_url: `${serverUrl}/assets/guiho-s-mirror` },
+          { name: 'guiho-i-mirror', browser_download_url: `${serverUrl}/assets/guiho-i-mirror` },
+        )
         return Response.json({
           tag_name: `@guiho/mirror@${options.returnedVersion ?? targetVersion}`,
           html_url: `${serverUrl}/release`,
@@ -222,6 +229,8 @@ async function createInstallerFixture(
         })
       }
       if (options.firstCandidateMissing && url.pathname.endsWith(`/${asset}`)) return new Response('missing', { status: 404 })
+      if (url.pathname.endsWith('/guiho-s-mirror')) return new Response('---\nname: guiho-s-mirror\n---\n# Mirror\n')
+      if (url.pathname.endsWith('/guiho-i-mirror')) return new Response('# Mirror Release\n')
       if (url.pathname.endsWith(`/${fallbackAsset}`)) return new Response(Bun.file(candidate))
       return new Response(Bun.file(candidate))
     },
@@ -247,10 +256,11 @@ async function runInstaller(fixture: InstallerFixture, version: string, extraEnv
       '-ApiBaseUrl',
       fixture.server.url.toString().replace(/\/$/, ''),
       '-NoPathUpdate',
-    ], { env: installerEnvironment(fixture, extraEnv) })
+    ], { cwd: fixture.root, env: installerEnvironment(fixture, extraEnv) })
   }
 
   return runCommand(['bash', joinPath(import.meta.dir, '..', 'install.sh'), '--version', version, '--install-dir', fixture.installDir], {
+    cwd: fixture.root,
     env: installerEnvironment(fixture, extraEnv),
   })
 }
@@ -261,6 +271,8 @@ function installerEnvironment(fixture: InstallerFixture, extraEnv: Record<string
     MIRROR_GITHUB_API_URL: serverUrl,
     MIRROR_RELEASE_BASE_URL: `${serverUrl}/releases/download`,
     MIRROR_INSTALL_DIR: fixture.installDir,
+    HOME: fixture.root,
+    USERPROFILE: fixture.root,
     MIRROR_NO_PATH_UPDATE: '1',
     MIRROR_ALLOW_INSECURE_TEST_URLS: '1',
     ...extraEnv,
