@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- Added complete paginated `mirror upgrade list` output with semantic ordering, stable/prerelease channels, publication dates, current/latest markers, compatible assets, and structured JSON.
+- Added exact-version install and process-stop recovery commands after every bare upgrade outcome, plus native Windows replacement, rollback, delayed-download output, and installer regression coverage.
+
+### Changed
+
+- Changed `mirror upgrade` to print its complete plan before downloading, stream download/validation/replacement/verification phases, and commit update cache only after canonical verification.
+- Hardened the canonical PowerShell and POSIX installers with exact-version resolution, native/version validation, transactional replacement, canonical verification, rollback, and plan-first output; devops installers now delegate to those scripts.
+
+### Fixed
+
+- Replaced unverified scheduled Windows replacement with immediate rename-and-swap; only deletion of a verified old backup may be deferred.
+- Prevented false success when the canonical executable remains outdated and preserved the previous executable when replacement or verification fails.
+
 ## [3.5.0-alpha.0] - 2026-07-14
 
 ### Added
