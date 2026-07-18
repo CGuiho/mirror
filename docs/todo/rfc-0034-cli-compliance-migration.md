@@ -31,7 +31,7 @@ its Bun-dependent npm launcher.
 ## Todo Index
 
 - Task: `RFC 0034 CLI Compliance Migration`
-- Status: todo
+- Status: completed
 - Index: [todo.md](../../todo.md)
 
 ## Outcome
@@ -62,8 +62,8 @@ plus `guiho-s-mirror` and `guiho-i-mirror`.
 
 - Editing every downstream GUIHO consumer repository in this task.
 - Preserving a legacy TOML reader or dual configuration.
-- Publishing, tagging, versioning, pushing, or live installation without
-  separate authorization.
+- Publishing or live installation. Versioning, tagging, and Git ref pushes
+  received separate authorization after this plan was approved.
 - Changing Mirror's semantic-version calculation beyond what RFC validation
   and output discipline require.
 
@@ -130,9 +130,10 @@ plus `guiho-s-mirror` and `guiho-i-mirror`.
 ## After Finishing
 
 - Produce an implementation review and validation report.
-- Keep the TODO in `testing` until every completion-gate check passes.
+- Mark the TODO `completed` after every completion-gate check passes.
 - Produce the downstream `mirror.yaml` migration handoff.
-- Request separate authorization for Mirror versioning and publication.
+- Use the separately authorized Mirror-managed version application; do not
+  publish the package.
 
 ## Related Files
 
@@ -144,6 +145,14 @@ plus `guiho-s-mirror` and `guiho-i-mirror`.
   behavior that the generated RFC help system supersedes where conflicting.
 - [Plan review](../reviews/plans/rfc-0034-cli-compliance-migration-review.md) -
   Ready-for-execution review of self-hosting, sequencing, and release gates.
+- [Implementation record](./rfc-0034-cli-compliance-migration-implementation.md) -
+  Completed units, changed surfaces, and release handoff.
+- [Implementation review](../reviews/implementation/rfc-0034-cli-compliance-migration-review.md) -
+  Acceptance review against the approved plan.
+- [Validation report](../validation/rfc-0034-cli-compliance-migration.md) -
+  Commands, behavior checks, build evidence, and readiness.
+- [Downstream handoff](../validation/rfc-0034-downstream-handoff.md) -
+  Repositories that still require YAML migration.
 
 ## References
 
