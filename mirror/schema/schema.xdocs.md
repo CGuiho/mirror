@@ -4,7 +4,7 @@ description: "Module directory mirror/schema in schema."
 parent: "mirror-mirror"
 children: []
 files:
-  "mirror.config.schema.json": "JSON configuration or structured data file."
+  "mirror.schema.json": "JSON Schema generated from the authoritative TypeBox mirror.yaml contract."
 documents:
   "xdocs-overview.md": "Generated companion overview that links back to this directory xdocs descriptor."
 tags:
