@@ -10,7 +10,7 @@ files:
   ".gitignore": "Git ignore rules for generated or local-only files."
   "xdocs.config.toml": "TOML configuration file."
 documents:
-  "AGENTS.md": "Agent instructions and repository guidance for this scope."
+  "AGENTS.md": "Agent instructions requiring the GUIHO SWE agent and CLI engineer skill for Mirror CLI work, including the approved breaking RFC 0034 migration."
   "CHANGELOG.md": "Release changelog for this scope."
   "README.md": "Human-facing README for this scope."
   "TECHNICAL.md": "Markdown companion document in repository root."
@@ -22,6 +22,8 @@ tags:
 keywords:
   - "mirror"
   - "mirror"
+  - "RFC 0034"
+  - "cli engineer"
 flags: []
 status: stable
 ---
