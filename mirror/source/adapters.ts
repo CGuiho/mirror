@@ -4,6 +4,7 @@
 
 import type { MirrorConfig, MirrorJsonObject } from './types.js'
 import { MirrorError } from './errors.js'
+import { MirrorVersionDocumentSchema, decodeWithSchema, type MirrorVersionDocument } from './schema.js'
 import { assertValidSemver, sortSemverDescending } from './version.js'
 import { resolveMirrorPath } from './config.js'
 import { fileExists, readTextFile, runCommand, writeTextFile } from './runtime.js'
@@ -193,20 +194,23 @@ const readJsonObject = async (path: string, label: string): Promise<MirrorJsonOb
 }
 
 const readVersionField = async (path: string, label: string): Promise<string> => {
-  const json = await readJsonObject(path, label)
-  const version = json['version']
-
-  if (typeof version !== 'string') throw new MirrorError(`${label} must contain a string version field: ${path}`)
-  assertValidSemver(version, `${label} version`)
-
-  return version
+  const json = decodeWithSchema<typeof MirrorVersionDocumentSchema, MirrorVersionDocument>(
+    MirrorVersionDocumentSchema,
+    await readJsonObject(path, label),
+    `${label} version document at ${path}`,
+  )
+  return json.version
 }
 
 const readNameField = async (path: string, label: string): Promise<string> => {
-  const json = await readJsonObject(path, label)
-  const name = json['name']
+  const json = decodeWithSchema<typeof MirrorVersionDocumentSchema, MirrorVersionDocument>(
+    MirrorVersionDocumentSchema,
+    await readJsonObject(path, label),
+    `${label} version document at ${path}`,
+  )
+  const name = json.name
 
-  if (typeof name !== 'string' || name.length === 0) throw new MirrorError(`${label} must contain a string name field: ${path}`)
+  if (!name) throw new MirrorError(`${label} must contain a string name field: ${path}`)
 
   return name
 }
