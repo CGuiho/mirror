@@ -5,15 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [3.5.0] - 2026-07-18
 
 ### Added
 
+- Added full RFC 0034 TypeBox validation, YAML configuration, startup/cache
+  lifecycle, generated Developer Context help, singular agent namespace,
+  Node-compatible npm bootstrap, and exact fourteen-asset release contract.
+- Added `guiho-i-mirror`, dual-tool skill installation, idempotent exact-marker
+  instruction actions, stable/prerelease upgrade pagination, and downstream
+  YAML migration evidence.
 - Added complete paginated `mirror upgrade list` output with semantic ordering, stable/prerelease channels, publication dates, current/latest markers, compatible assets, and structured JSON.
 - Added exact-version install and process-stop recovery commands after every bare upgrade outcome, plus native Windows replacement, rollback, delayed-download output, and installer regression coverage.
 
 ### Changed
 
+- Replaced TOML configuration, plural agent commands, implicit agent mutation,
+  legacy aliases, old release filenames, and the Bun-dependent package launcher
+  with the approved breaking RFC 0034 contracts.
 - Changed `mirror upgrade` to print its complete plan before downloading, stream download/validation/replacement/verification phases, and commit update cache only after canonical verification.
 - Hardened the canonical PowerShell and POSIX installers with exact-version resolution, native/version validation, transactional replacement, canonical verification, rollback, and plan-first output; devops installers now delegate to those scripts.
 
