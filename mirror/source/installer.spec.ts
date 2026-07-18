@@ -31,7 +31,7 @@ describe('Mirror canonical installers', () => {
   })
 
   test('installs and verifies an exact published version transactionally', async () => {
-    const fixture = await createInstallerFixture('3.4.1', '3.4.2', `console.log('3.4.2')`)
+    const fixture = await createInstallerFixture('3.4.1', '3.4.2', { kind: 'version', version: '3.4.2' })
     try {
       const result = await runInstaller(fixture, '3.4.2')
       expect(result.exitCode).toBe(0)
@@ -53,14 +53,14 @@ describe('Mirror canonical installers', () => {
     const fixture = await createInstallerFixture(
       '3.4.1',
       targetVersion,
-      `console.log(process.execPath.includes('.mirror-install-') ? '${targetVersion}' : '9.9.9')`,
+      { kind: 'candidate-canonical-version', candidateVersion: targetVersion, canonicalVersion: '9.9.9' },
     )
     try {
       const result = await runInstaller(fixture, targetVersion)
       expect(result.exitCode).not.toBe(0)
       expect(`${result.stdout}\n${result.stderr}`).toContain('expected 3.4.2')
       expect((await runCommand([fixture.destination, '--version'])).stdout.trim()).toBe('3.4.1')
-      const preserved = await Array.fromAsync(new Bun.Glob('.mirror-failed-*').scan({ cwd: fixture.installDir }))
+      const preserved = await Array.fromAsync(new Bun.Glob('.mirror-failed-*').scan({ cwd: fixture.installDir, dot: true }))
       expect(preserved.length).toBe(1)
     } finally {
       fixture.server.stop(true)
@@ -69,16 +69,18 @@ describe('Mirror canonical installers', () => {
 
   test('executes the printed recovery command for an exact prerelease', async () => {
     const targetVersion = '3.5.0-alpha.1'
-    const fixture = await createInstallerFixture('3.4.2', targetVersion, `console.log('${targetVersion}')`)
+    const fixture = await createInstallerFixture('3.4.2', targetVersion, { kind: 'version', version: targetVersion })
     const previousScriptUrl = process.env['MIRROR_INSTALL_SCRIPT_URL']
     try {
       process.env['MIRROR_INSTALL_SCRIPT_URL'] = fixture.scriptUrl
-      const recovery = createUpgradeRecovery(targetVersion, 'resolved', detectNativePlatform())
+      const platform = detectNativePlatform()
+      const recovery = createUpgradeRecovery(targetVersion, 'resolved', platform)
       expect(recovery.installCommand).toContain(targetVersion)
-      const result = await runShellCommand(recovery.installCommand, {
-        env: installerEnvironment(fixture),
-      })
+      const result = platform === 'windows'
+        ? await runCommand(['powershell.exe', '-NoProfile', '-Command', recovery.installCommand], { env: installerEnvironment(fixture) })
+        : await runShellCommand(recovery.installCommand, { env: installerEnvironment(fixture) })
       expect(result.exitCode).toBe(0)
+      expect(`${result.stdout}\n${result.stderr}`).toContain(`Installed Mirror ${targetVersion}`)
       expect((await runCommand([fixture.destination, '--version'])).stdout.trim()).toBe(targetVersion)
     } finally {
       if (previousScriptUrl === undefined) delete process.env['MIRROR_INSTALL_SCRIPT_URL']
@@ -88,7 +90,7 @@ describe('Mirror canonical installers', () => {
   }, 60_000)
 
   test('falls back only after the first compatible candidate returns HTTP 404', async () => {
-    const fixture = await createInstallerFixture('3.4.1', '3.4.2', `console.log('3.4.2')`, { firstCandidateMissing: true })
+    const fixture = await createInstallerFixture('3.4.1', '3.4.2', { kind: 'version', version: '3.4.2' }, { firstCandidateMissing: true })
     try {
       const result = await runInstaller(fixture, '3.4.2')
       expect(result.exitCode).toBe(0)
@@ -101,7 +103,7 @@ describe('Mirror canonical installers', () => {
 
   test('rejects a PowerShell exact-version response whose release tag does not match', async () => {
     if (detectNativePlatform() !== 'windows') return
-    const fixture = await createInstallerFixture('3.4.1', '3.4.2', `console.log('3.4.2')`, { returnedVersion: '9.9.9' })
+    const fixture = await createInstallerFixture('3.4.1', '3.4.2', { kind: 'version', version: '3.4.2' }, { returnedVersion: '9.9.9' })
     try {
       const result = await runInstaller(fixture, '3.4.2')
       expect(result.exitCode).not.toBe(0)
@@ -113,7 +115,7 @@ describe('Mirror canonical installers', () => {
   }, 60_000)
 
   test('requires version stdout to contain only the exact semantic version', async () => {
-    const fixture = await createInstallerFixture('3.4.1', '3.4.2', `console.log('Mirror 3.4.2')`)
+    const fixture = await createInstallerFixture('3.4.1', '3.4.2', { kind: 'version', version: 'Mirror 3.4.2' })
     try {
       const result = await runInstaller(fixture, '3.4.2')
       expect(result.exitCode).not.toBe(0)
@@ -125,7 +127,7 @@ describe('Mirror canonical installers', () => {
   }, 60_000)
 
   test('rejects numeric prerelease identifiers with leading zeroes before installation', async () => {
-    const fixture = await createInstallerFixture('3.4.1', '3.5.0-alpha.1', `console.log('3.5.0-alpha.1')`)
+    const fixture = await createInstallerFixture('3.4.1', '3.5.0-alpha.1', { kind: 'version', version: '3.5.0-alpha.1' })
     try {
       const result = await runInstaller(fixture, '3.5.0-alpha.01')
       expect(result.exitCode).not.toBe(0)
@@ -137,7 +139,7 @@ describe('Mirror canonical installers', () => {
   }, 60_000)
 
   test('times out a hanging downloaded binary and preserves the installed executable', async () => {
-    const fixture = await createInstallerFixture('3.4.1', '3.4.2', 'setInterval(() => undefined, 1_000)')
+    const fixture = await createInstallerFixture('3.4.1', '3.4.2', { kind: 'hang' })
     try {
       const result = await runInstaller(fixture, '3.4.2', { MIRROR_VERIFY_TIMEOUT_SECONDS: '1' })
       expect(result.exitCode).not.toBe(0)
@@ -153,14 +155,14 @@ describe('Mirror canonical installers', () => {
     const fixture = await createInstallerFixture(
       '3.4.1',
       targetVersion,
-      `if (process.execPath.includes('.mirror-install-')) console.log('${targetVersion}'); else setInterval(() => undefined, 1_000)`,
+      { kind: 'candidate-version-canonical-hang', candidateVersion: targetVersion },
     )
     try {
       const result = await runInstaller(fixture, targetVersion, { MIRROR_VERIFY_TIMEOUT_SECONDS: '1' })
       expect(result.exitCode).not.toBe(0)
       expect(`${result.stdout}\n${result.stderr}`.toLowerCase()).toContain('timed out')
       expect((await runCommand([fixture.destination, '--version'])).stdout.trim()).toBe('3.4.1')
-      const preserved = await Array.fromAsync(new Bun.Glob('.mirror-failed-*').scan({ cwd: fixture.installDir }))
+      const preserved = await Array.fromAsync(new Bun.Glob('.mirror-failed-*').scan({ cwd: fixture.installDir, dot: true }))
       expect(preserved.length).toBe(1)
     } finally {
       fixture.server.stop(true)
@@ -176,10 +178,16 @@ type InstallerFixture = {
   server: ReturnType<typeof Bun.serve>
 }
 
+type FixtureProgram =
+  | { kind: 'version', version: string }
+  | { kind: 'hang' }
+  | { kind: 'candidate-canonical-version', candidateVersion: string, canonicalVersion: string }
+  | { kind: 'candidate-version-canonical-hang', candidateVersion: string }
+
 async function createInstallerFixture(
   currentVersion: string,
   targetVersion: string,
-  targetSource: string,
+  targetProgram: FixtureProgram,
   options: { firstCandidateMissing?: boolean, returnedVersion?: string } = {},
 ): Promise<InstallerFixture> {
   const root = joinPath(process.env['TEMP'] ?? process.env['TMP'] ?? '/tmp', `mirror-installer-${crypto.randomUUID()}`)
@@ -190,14 +198,15 @@ async function createInstallerFixture(
   const extension = platform === 'windows' ? '.exe' : ''
   const destination = joinPath(installDir, `mirror${extension}`)
   const candidate = joinPath(root, `candidate${extension}`)
-  await compileFixture(root, 'current.ts', destination, `console.log('${currentVersion}')`)
-  await compileFixture(root, 'target.ts', candidate, targetSource)
+  await compileFixture(root, 'current', destination, { kind: 'version', version: currentVersion })
+  await compileFixture(root, 'target', candidate, targetProgram)
   const assets = buildAssetCandidates(platform, detectNativeArch(), 'baseline')
   const asset = assets[0]!
   const fallbackAsset = assets[1] ?? asset
   let serverUrl = ''
   const server = Bun.serve({
     port: 0,
+    idleTimeout: 120,
     fetch(request) {
       const url = new URL(request.url)
       if (url.pathname === '/install.ps1') return new Response(Bun.file(joinPath(import.meta.dir, '..', 'install.ps1')))
@@ -258,9 +267,65 @@ function installerEnvironment(fixture: InstallerFixture, extraEnv: Record<string
   }
 }
 
-async function compileFixture(root: string, sourceName: string, outfile: string, source: string) {
-  const sourcePath = joinPath(root, sourceName)
-  await writeTextFile(sourcePath, `${source}\n`)
+async function compileFixture(root: string, sourceName: string, outfile: string, program: FixtureProgram) {
+  if (detectNativePlatform() === 'windows') {
+    const sourcePath = joinPath(root, `${sourceName}.cs`)
+    await writeTextFile(sourcePath, createWindowsFixtureSource(program))
+    const windowsDirectory = process.env['WINDIR'] ?? 'C:\\Windows'
+    const compiler = joinPath(windowsDirectory, 'Microsoft.NET', 'Framework64', 'v4.0.30319', 'csc.exe')
+    const nativeOutfile = outfile.replaceAll('/', '\\')
+    const nativeSourcePath = sourcePath.replaceAll('/', '\\')
+    const result = await runCommand([compiler, '/nologo', '/target:exe', `/out:${nativeOutfile}`, nativeSourcePath])
+    if (result.exitCode !== 0) throw new Error(result.stderr || result.stdout)
+    return
+  }
+
+  const sourcePath = joinPath(root, `${sourceName}.ts`)
+  await writeTextFile(sourcePath, `${createPosixFixtureSource(program)}\n`)
   const result = await runCommand(['bun', 'build', sourcePath, '--compile', '--outfile', outfile])
   if (result.exitCode !== 0) throw new Error(result.stderr || result.stdout)
+}
+
+function createPosixFixtureSource(program: FixtureProgram) {
+  switch (program.kind) {
+    case 'version':
+      return `console.log(${JSON.stringify(program.version)})`
+    case 'hang':
+      return 'setInterval(() => undefined, 1_000)'
+    case 'candidate-canonical-version':
+      return `console.log(process.execPath.includes('.mirror-install-') ? ${JSON.stringify(program.candidateVersion)} : ${JSON.stringify(program.canonicalVersion)})`
+    case 'candidate-version-canonical-hang':
+      return `if (process.execPath.includes('.mirror-install-')) console.log(${JSON.stringify(program.candidateVersion)}); else setInterval(() => undefined, 1_000)`
+  }
+}
+
+function createWindowsFixtureSource(program: FixtureProgram) {
+  const candidateCheck = "Environment.GetCommandLineArgs()[0].IndexOf(\".mirror-install-\", StringComparison.OrdinalIgnoreCase) >= 0"
+  let body: string
+  switch (program.kind) {
+    case 'version':
+      body = `Console.WriteLine(${toCSharpString(program.version)});`
+      break
+    case 'hang':
+      body = 'Thread.Sleep(Timeout.Infinite);'
+      break
+    case 'candidate-canonical-version':
+      body = `Console.WriteLine(${candidateCheck} ? ${toCSharpString(program.candidateVersion)} : ${toCSharpString(program.canonicalVersion)});`
+      break
+    case 'candidate-version-canonical-hang':
+      body = `if (${candidateCheck}) Console.WriteLine(${toCSharpString(program.candidateVersion)}); else Thread.Sleep(Timeout.Infinite);`
+      break
+  }
+  return `using System;
+using System.Threading;
+public static class Program {
+  public static void Main(string[] args) {
+    ${body}
+  }
+}
+`
+}
+
+function toCSharpString(value: string) {
+  return `"${value.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`
 }
