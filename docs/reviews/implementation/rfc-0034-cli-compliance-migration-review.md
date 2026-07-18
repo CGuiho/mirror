@@ -18,7 +18,7 @@ keywords:
 
 ## Verdict
 
-Accepted.
+Accepted for implementation and release-workflow readiness.
 
 ## Findings
 
@@ -50,6 +50,12 @@ descriptors are aligned.
 
 ## Residual Risk
 
-The GitHub release workflow has been statically validated but is not executed
-locally. Package publication and GitHub release creation are intentionally out
-of scope.
+The GitHub release workflow has been statically validated and its
+`@guiho/mirror@3.5.1` run is waiting on the protected `production` environment.
+The latest public release remains `3.4.2`; live latest-version dry-run
+resolution therefore reports `UPGRADE_ASSET_UNAVAILABLE`, and live exact
+`3.5.1` resolution reports GitHub `404 Not Found`. These results confirm that
+the nested `upgrade --version` route is not intercepted by the root version
+flag, but they also mean `3.5.1` is not publicly installable or upgradeable
+yet. Approving the production environment, package publication, and public
+GitHub Release creation remain outside the implementation scope.
