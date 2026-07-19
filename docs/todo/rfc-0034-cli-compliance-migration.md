@@ -40,7 +40,7 @@ Mirror uses Bun, strict TypeScript ESM, raw Citty, and TypeBox; reads only
 `mirror.yaml` through the RFC precedence rules; implements exact startup,
 Developer Context help, agent, upgrade, installer, output, npm bootstrap, and
 storage behavior; and builds and stages exactly the twelve `mirror-*` native
-binaries plus `guiho-s-mirror` and `guiho-i-mirror` for the GitHub release
+binaries plus `guiho-s-mirror.md` and `guiho-i-mirror.md` for the GitHub release
 workflow.
 
 ## Scope
@@ -93,6 +93,9 @@ workflow.
   installed.
 - Exactly fourteen RFC-named assets are built and selected; no
   `guiho-mirror-*` or `macos` assets remain.
+- Release descriptions contain only the exact version's changelog section, and
+  installer agent assets are validated as the expected Markdown resources
+  before installation.
 - Full local checks, xdocs validation, implementation review, and validation
   report pass.
 
