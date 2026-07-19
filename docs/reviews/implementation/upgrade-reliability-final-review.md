@@ -29,6 +29,11 @@ Source implementation, automated tests, and CI are accepted. GitHub issues
 new release is published and the design's live older-to-newer binary checks
 pass. Local or CI evidence alone is not the approved closure gate.
 
+The corrective tag is `@guiho/mirror@3.5.3` at
+`d8513748fb8d41f3118f94309e19c3fbca4ada2f`. Its
+[publish run](https://github.com/CGuiho/mirror/actions/runs/29668661444) is
+waiting for the protected `production` environment.
+
 ## Issue 9 Acceptance
 
 | Criterion | Evidence | Status |
