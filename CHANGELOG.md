@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.3] - 2026-07-19
+
+### Fixed
+
+- Renamed the two GitHub agent assets to `guiho-s-mirror.md` and
+  `guiho-i-mirror.md`, with one authoritative manifest enforcing exactly
+  fourteen unique release filenames and no extras.
+- Fixed the GitHub CLI asset verifier to pass one filter to `--jq`, and made
+  reruns reconcile stale assets instead of preserving extras.
+- Limited GitHub Release descriptions to the exact version's changelog section
+  and idempotently reconciled notes for existing releases.
+- Rejected empty, executable, binary, or identity-mismatched Markdown agent
+  assets before installers write skill or instruction resources.
+
 ## [3.5.2] - 2026-07-19
 
 ### Fixed
