@@ -165,9 +165,10 @@ Ordinary config/version commands never mutate agent resources.
 - `--dry-run`;
 - `--format <text|json>`.
 
-The x64 default is `baseline`. `upgrade list` defaults to stable releases and
-supports `--page`, `--per-page`, and `--pre-releases`. Remote payloads and
-positive integers are TypeBox-validated. Upgrade downloads, validates,
+The x64 default is `baseline`. `upgrade list` includes every stable and
+prerelease version by default and supports `--page` and `--per-page`; the
+legacy `--pre-releases` spelling remains accepted. Remote payloads and positive
+integers are TypeBox-validated. Upgrade downloads, validates,
 transactionally replaces, verifies, caches, refreshes both global skills, and
 reconciles local instruction blocks.
 
