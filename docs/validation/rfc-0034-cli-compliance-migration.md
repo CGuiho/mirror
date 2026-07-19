@@ -22,11 +22,14 @@ keywords:
 
 ## Summary
 
-The complete local MR-16 gate passed. Mirror `3.5.2` is the separately
-authorized correction patch after aligning durable completion and public
-release-gate evidence. The source and release workflow are ready, but public
-release availability is still waiting on the protected GitHub `production`
-environment.
+The complete local MR-16 gate passed for `3.5.2`, but its publish workflow later
+failed in the exact-asset verifier because `gh release view --jq` was passed
+two arguments (`-r` and the filter). The correction uses the supported single
+filter form, exact `.md` agent filenames, one authoritative fourteen-name
+manifest, explicit uniqueness/no-extra checks, exact-version changelog release
+notes, and installer Markdown validation. A new tag run is required to prove
+the corrected public release path; the protected `production` environment
+remains an external gate.
 
 ## Scope
 
@@ -50,6 +53,9 @@ Git hygiene.
 | Strict xdocs changed scopes | Passed with zero errors and zero warnings |
 | `xdocs tree` | Passed |
 | `git diff --check` | Passed |
+| Corrected release workflow full package gate | Passed: typecheck, 42 tests, 0 failures, 216 assertions, and exact 12-native/14-total build |
+| Exact changelog-section extraction | Passed: exact/prefix/final/prerelease/missing/duplicate boundaries |
+| Agent Markdown payload validation | Passed: PE/NUL payload rejected before skill/instruction writes |
 
 ## Public Release Gate
 
@@ -58,7 +64,7 @@ Public release availability was checked independently after the local gate:
 | Check | Result |
 | --- | --- |
 | Local `main`, `origin/main`, and `@guiho/mirror@3.5.2` tag immediately after version apply | Passed: all resolved to `9132782d84de12416c3c605243800df16f68052b` |
-| GitHub publish workflow for `@guiho/mirror@3.5.2` | Waiting: run [29663073275](https://github.com/CGuiho/mirror/actions/runs/29663073275) is held by the protected `production` environment |
+| GitHub publish workflow for `@guiho/mirror@3.5.2` | Failed: run [29663073275](https://github.com/CGuiho/mirror/actions/runs/29663073275), job `88128892604`, exposed the invalid two-argument `gh --jq` call after the environment gate |
 | Latest public GitHub Release | `@guiho/mirror@3.4.2`, with the legacy twelve binary assets |
 | Live `mirror upgrade --dry-run --format json` | Correctly routes to upgrade resolution, then reports `UPGRADE_ASSET_UNAVAILABLE` because public `3.4.2` has no RFC-named compatible asset |
 | Live `mirror upgrade --version 3.5.2 --dry-run --format json` | Correctly preserves the nested exact-version value, then reports `UPGRADE_RESOLUTION_FAILED` with GitHub `404 Not Found` because no public `3.5.2` release exists |
@@ -95,8 +101,7 @@ misrepresented as a warning-free whole-repository check.
 
 ## Readiness
 
-Validated for source compliance and release-workflow readiness. The
-implementation task is completed because its approved scope excludes
-publication and live installation. Public `3.5.2` distribution is not ready:
-the production workflow is waiting, and package publication and public GitHub
-Release creation remain outside this implementation task.
+Validated for source compliance; the corrected release workflow is locally
+ready for a new tag run. Public distribution and the live published-binary
+checks required to close issues #9 and #10 are not yet complete. Package
+publication and production-environment approval remain outside this task.
