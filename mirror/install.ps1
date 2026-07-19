@@ -108,15 +108,17 @@ function Add-InstallDirToPath { param([string]$Directory)
 
 function Install-MirrorAgentAssets {
   param([object]$Release, [string]$TemporaryDirectory)
-  $skillAsset = @($Release.assets) | Where-Object { $_.name -eq 'guiho-s-mirror' -and $_.browser_download_url } | Select-Object -First 1
-  $promptAsset = @($Release.assets) | Where-Object { $_.name -eq 'guiho-i-mirror' -and $_.browser_download_url } | Select-Object -First 1
-  if (-not $skillAsset -or -not $promptAsset) { throw 'Mirror release is missing guiho-s-mirror or guiho-i-mirror.' }
-  $skillTemp = Join-Path $TemporaryDirectory 'guiho-s-mirror'
-  $promptTemp = Join-Path $TemporaryDirectory 'guiho-i-mirror'
+  $skillAsset = @($Release.assets) | Where-Object { $_.name -eq 'guiho-s-mirror.md' -and $_.browser_download_url } | Select-Object -First 1
+  $promptAsset = @($Release.assets) | Where-Object { $_.name -eq 'guiho-i-mirror.md' -and $_.browser_download_url } | Select-Object -First 1
+  if (-not $skillAsset -or -not $promptAsset) { throw 'Mirror release is missing guiho-s-mirror.md or guiho-i-mirror.md.' }
+  $skillTemp = Join-Path $TemporaryDirectory 'guiho-s-mirror.md'
+  $promptTemp = Join-Path $TemporaryDirectory 'guiho-i-mirror.md'
   Write-Host "Downloading skill asset: $($skillAsset.browser_download_url)"
   Invoke-WebRequest -Uri $skillAsset.browser_download_url -OutFile $skillTemp -UseBasicParsing
   Write-Host "Downloading instruction asset: $($promptAsset.browser_download_url)"
   Invoke-WebRequest -Uri $promptAsset.browser_download_url -OutFile $promptTemp -UseBasicParsing
+  Assert-MirrorMarkdownAsset -Path $skillTemp -ExpectedName 'guiho-s-mirror'
+  Assert-MirrorMarkdownAsset -Path $promptTemp -ExpectedName 'guiho-i-mirror'
   $agentSkill = Join-Path $HOME '.agents\skills\guiho-s-mirror'
   $claudeSkill = Join-Path $HOME '.claude\skills\guiho-s-mirror'
   foreach ($directory in @($agentSkill, $claudeSkill)) {
@@ -141,6 +143,29 @@ function Install-MirrorAgentAssets {
     $clean = [regex]::Replace($content, $pattern, "`r`n").TrimEnd()
     Set-Content -LiteralPath $target -Value "$clean`r`n`r`n$start`r`n$($body.TrimEnd())`r`n$end`r`n" -NoNewline
     Write-Host "Reconciled instruction block: $target"
+  }
+}
+
+function Assert-MirrorMarkdownAsset {
+  param([string]$Path, [string]$ExpectedName)
+  $bytes = [IO.File]::ReadAllBytes($Path)
+  if ($bytes.Length -eq 0) { throw "$ExpectedName release asset is empty." }
+  if ($bytes.Length -ge 2 -and $bytes[0] -eq 0x4D -and $bytes[1] -eq 0x5A) {
+    throw "$ExpectedName release asset is a Windows executable, not Markdown."
+  }
+  if ($bytes -contains 0) { throw "$ExpectedName release asset contains binary NUL bytes." }
+  try {
+    $utf8 = New-Object Text.UTF8Encoding($false, $true)
+    $content = $utf8.GetString($bytes)
+  } catch {
+    throw "$ExpectedName release asset is not valid UTF-8 Markdown."
+  }
+  if (-not $content.StartsWith("---`n") -and -not $content.StartsWith("---`r`n")) {
+    throw "$ExpectedName release asset is missing YAML frontmatter."
+  }
+  $escapedName = [regex]::Escape($ExpectedName)
+  if ($content -notmatch "(?m)^name:\s*$escapedName\s*`r?$") {
+    throw "$ExpectedName release asset has incorrect or missing frontmatter identity."
   }
 }
 
