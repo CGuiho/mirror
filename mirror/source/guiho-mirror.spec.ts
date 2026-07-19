@@ -102,6 +102,12 @@ describe('Mirror RFC 0034 CLI', () => {
       expect(exactEnvelope.recovery.stopProcessCommand).toContain('mirror')
       expect(exact.stdout.trim()).not.toBe(packageJson.version)
 
+      const exactText = await runCli(['upgrade', '--version', packageJson.version], { env })
+      expect(exactText.exitCode).toBe(0)
+      expect(exactText.stdout).toContain(`Already up to date: ${packageJson.version}`)
+      expect(exactText.stdout).toContain(`install Mirror ${packageJson.version} directly`)
+      expect(exactText.stdout).toContain(exactEnvelope.recovery.installCommand)
+
       const failed = await runCli(['upgrade', '--version', nextVersion, '--format', 'json'], { env })
       expect(failed.exitCode).toBe(1)
       const failedEnvelope = JSON.parse(failed.stdout)
