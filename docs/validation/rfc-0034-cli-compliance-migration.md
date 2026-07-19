@@ -53,7 +53,7 @@ Git hygiene.
 | Strict xdocs changed scopes | Passed with zero errors and zero warnings |
 | `xdocs tree` | Passed |
 | `git diff --check` | Passed |
-| Corrected release workflow full package gate | Passed: typecheck, 42 tests, 0 failures, 216 assertions, and exact 12-native/14-total build |
+| Corrected release workflow full package gate | Passed: typecheck, 43 tests, 0 failures, 241 assertions, and exact 12-native/14-total build |
 | Exact changelog-section extraction | Passed: exact/prefix/final/prerelease/missing/duplicate boundaries |
 | Agent Markdown payload validation | Passed: PE/NUL payload rejected before skill/instruction writes |
 
