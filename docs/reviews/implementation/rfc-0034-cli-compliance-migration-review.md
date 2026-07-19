@@ -56,8 +56,10 @@ failed because `gh release view --jq` received the unsupported extra `-r`
 argument. The corrective workflow now uses one jq filter, an authoritative
 fourteen-name manifest, explicit count/uniqueness/exact-set checks, `.md` agent
 assets, exact-version release notes, and idempotent existing-release repair.
-These corrections are locally validated but require a later tag workflow run.
-The protected `production` environment remains an external gate.
+These corrections are locally validated in `@guiho/mirror@3.5.3`. Publish run
+[29668661444](https://github.com/CGuiho/mirror/actions/runs/29668661444)
+is waiting for the protected `production` environment, which remains the
+external gate.
 The latest public release remains `3.4.2`; live latest-version dry-run
 resolution therefore reports `UPGRADE_ASSET_UNAVAILABLE`, and live exact
 `3.5.2` resolution reports GitHub `404 Not Found`. These results confirm that
