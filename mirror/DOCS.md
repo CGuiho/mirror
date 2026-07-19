@@ -177,7 +177,10 @@ reconciles local instruction blocks.
 source URL, download progress, binary destination, both skill destinations,
 instruction files, and final verification. Each installs the binary, configures
 PATH when required, installs both global skill copies, and reconciles project
-instructions.
+instructions. Downloaded `guiho-s-mirror.md` and `guiho-i-mirror.md` payloads
+must be nonempty text with YAML frontmatter naming the expected resource.
+Installers reject PE, NUL-containing, invalid UTF-8 on Windows, binary, or
+identity-mismatched content before writing skills or instruction blocks.
 
 The npm `bin` points to `scripts/mirror-bin.mjs`. The Node ESM bootstrap detects
 platform/architecture, defaults x64 to baseline, caches the package-version
@@ -209,8 +212,16 @@ mirror-windows-arm64.exe
 mirror-windows-x64.exe
 mirror-windows-x64-baseline.exe
 mirror-windows-x64-modern.exe
-guiho-s-mirror
-guiho-i-mirror
+guiho-s-mirror.md
+guiho-i-mirror.md
 ```
 
 GitHub workflow validation rejects missing, duplicate, legacy, or extra assets.
+The workflow obtains this exact set from the same TypeScript manifest as the
+build, requires exactly fourteen unique remote names, and uses the supported
+single `--jq '.assets[].name'` GitHub CLI argument.
+
+GitHub Release notes are generated from the exact `## [<version>]` changelog
+section and stop at the next level-two heading. Missing or duplicate exact
+sections fail the workflow. Reruns update the existing release description with
+that same section instead of appending or publishing the full changelog.
