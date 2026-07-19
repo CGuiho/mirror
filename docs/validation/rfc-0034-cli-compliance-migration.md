@@ -65,9 +65,10 @@ Public release availability was checked independently after the local gate:
 | --- | --- |
 | Local `main`, `origin/main`, and `@guiho/mirror@3.5.2` tag immediately after version apply | Passed: all resolved to `9132782d84de12416c3c605243800df16f68052b` |
 | GitHub publish workflow for `@guiho/mirror@3.5.2` | Failed: run [29663073275](https://github.com/CGuiho/mirror/actions/runs/29663073275), job `88128892604`, exposed the invalid two-argument `gh --jq` call after the environment gate |
-| Latest public GitHub Release | `@guiho/mirror@3.4.2`, with the legacy twelve binary assets |
-| Live `mirror upgrade --dry-run --format json` | Correctly routes to upgrade resolution, then reports `UPGRADE_ASSET_UNAVAILABLE` because public `3.4.2` has no RFC-named compatible asset |
-| Live `mirror upgrade --version 3.5.2 --dry-run --format json` | Correctly preserves the nested exact-version value, then reports `UPGRADE_RESOLUTION_FAILED` with GitHub `404 Not Found` because no public `3.5.2` release exists |
+| Corrective tag `@guiho/mirror@3.5.3` | Passed: local and GitHub tag dereference to `d8513748fb8d41f3118f94309e19c3fbca4ada2f` |
+| Corrective publish workflow | Waiting: run [29668661444](https://github.com/CGuiho/mirror/actions/runs/29668661444) requires protected `production` approval |
+| Public GitHub Release left by failed `3.5.2` run | Exists with 12 correct native binaries, extensionless `guiho-s-mirror` and `guiho-i-mirror`, and a null description |
+| Earlier pre-release live dry-runs | Correctly proved nested upgrade routing before the `3.5.2` Release existed; they are point-in-time evidence, not the current public state |
 
 These are external publication results, not source-test failures. They prevent
 calling `3.5.2` publicly installable or upgradeable until the environment gate
