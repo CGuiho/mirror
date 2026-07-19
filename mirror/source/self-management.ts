@@ -463,7 +463,7 @@ async function listAvailableVersions(options: SelfManagementOptions = {}): Promi
       compatible: Boolean(compatibleAsset),
       ...(compatibleAsset ? { compatibleAsset } : {}),
     }
-  }).filter((release) => options.preReleases === true || !release.prerelease)
+  })
 
   return {
     schemaVersion: 1,
