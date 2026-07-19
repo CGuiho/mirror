@@ -57,11 +57,13 @@ describe('Mirror RFC 0034 CLI', () => {
     const arch = detectNativeArch()
     const asset = buildAssetCandidates(platform, arch, 'baseline')[0]!
     const nextVersion = resolveNextVersion(packageJson.version, 'patch')
+    let serverUrl = ''
     const server = Bun.serve({
       port: 0,
       fetch(request) {
-        const exact = new URL(request.url).pathname.includes('/releases/tags/')
-        const version = exact ? packageJson.version : nextVersion
+        const path = decodeURIComponent(new URL(request.url).pathname)
+        const requested = /\/releases\/tags\/@guiho\/mirror@(.+)$/.exec(path)?.[1]
+        const version = requested ?? nextVersion
         return Response.json({
           tag_name: `@guiho/mirror@${version}`,
           html_url: `https://example.invalid/releases/${version}`,
@@ -70,26 +72,50 @@ describe('Mirror RFC 0034 CLI', () => {
           published_at: '2026-07-18T00:00:00Z',
           assets: [{
             name: asset,
-            browser_download_url: `https://example.invalid/assets/${asset}`,
+            browser_download_url: `${serverUrl}/assets/${asset}`,
           }],
         })
       },
     })
+    serverUrl = server.url.origin
     try {
       const env = {
         MIRROR_GITHUB_API_URL: server.url.origin,
-        MIRROR_SELF_PATH: joinPath(await createTemp(), 'mirror.exe'),
+        MIRROR_SELF_PATH: process.execPath,
       }
       const latest = await runCli(['upgrade', '--dry-run', '--format', 'json'], { env })
       expect(latest.exitCode).toBe(0)
-      expect(JSON.parse(latest.stdout).outcome).toBe('dry-run')
-      expect(JSON.parse(latest.stdout).plan.targetVersion).toBe(nextVersion)
+      const latestEnvelope = JSON.parse(latest.stdout)
+      expect(latestEnvelope.outcome).toBe('dry-run')
+      expect(latestEnvelope.plan.targetVersion).toBe(nextVersion)
+      expect(latestEnvelope.events).toBeArray()
+      expect(latestEnvelope.recovery.targetVersion).toBe(nextVersion)
+      expect(latestEnvelope.recovery.installCommand).toContain(nextVersion)
+      expect(latestEnvelope.error).toBeNull()
 
       const exact = await runCli(['upgrade', '--version', packageJson.version, '--dry-run', '--format', 'json'], { env })
       expect(exact.exitCode).toBe(0)
-      expect(JSON.parse(exact.stdout).outcome).toBe('up-to-date')
-      expect(JSON.parse(exact.stdout).plan.targetVersion).toBe(packageJson.version)
+      const exactEnvelope = JSON.parse(exact.stdout)
+      expect(exactEnvelope.outcome).toBe('up-to-date')
+      expect(exactEnvelope.plan.targetVersion).toBe(packageJson.version)
+      expect(exactEnvelope.recovery.targetVersion).toBe(packageJson.version)
+      expect(exactEnvelope.recovery.stopProcessCommand).toContain('mirror')
       expect(exact.stdout.trim()).not.toBe(packageJson.version)
+
+      const failed = await runCli(['upgrade', '--version', nextVersion, '--format', 'json'], { env })
+      expect(failed.exitCode).toBe(1)
+      const failedEnvelope = JSON.parse(failed.stdout)
+      expect(failedEnvelope.outcome).toBe('failed')
+      expect(failedEnvelope.plan.targetVersion).toBe(nextVersion)
+      expect(failedEnvelope.events.some((event: { status: string }) => event.status === 'failed')).toBe(true)
+      expect(failedEnvelope.recovery.targetVersion).toBe(nextVersion)
+      expect(failedEnvelope.error.code).toBe('UPGRADE_DOWNLOAD_INVALID')
+
+      const failedText = await runCli(['upgrade', '--version', nextVersion], { env })
+      expect(failedText.exitCode).toBe(1)
+      expect(failedText.stdout).toContain(`install Mirror ${nextVersion} directly`)
+      expect(failedText.stdout).toContain('If a running Mirror process blocks installation')
+      expect(failedText.stdout).toContain(failedEnvelope.recovery.installCommand)
     } finally {
       server.stop(true)
     }
