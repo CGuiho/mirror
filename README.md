@@ -43,7 +43,7 @@ mirror agent prompt list
 
 Ordinary config and version commands do not install skills or edit instruction
 files. Native releases contain exactly 12 platform binaries plus
-`guiho-s-mirror` and `guiho-i-mirror`.
+`guiho-s-mirror.md` and `guiho-i-mirror.md`.
 
 ## Development
 
