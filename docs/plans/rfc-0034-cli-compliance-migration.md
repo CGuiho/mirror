@@ -405,8 +405,11 @@ new execution session rather than assumed active.
   3. Display real-time progress; remove silent curl/download behavior.
   4. Validate architecture/integrity and transactionally verify the binary.
   5. configure PATH when missing.
-  6. download/install `guiho-s-mirror` to both global skill paths.
-  7. download `guiho-i-mirror`, discover AGENTS/CLAUDE, and reconcile.
+  6. download/validate/install the `guiho-s-mirror.md` release asset to both
+     global skill paths.
+  7. download/validate `guiho-i-mirror.md`, discover AGENTS/CLAUDE, and
+     reconcile. Reject empty, binary/PE, or identity-mismatched payloads before
+     any agent resource is written.
   8. print every mutation and final version verification.
 - Acceptance:
   - Windows and POSIX isolated tests prove binary, PATH, both skills,
@@ -448,13 +451,17 @@ new execution session rather than assumed active.
   - `mirror-windows-x64-baseline.exe`
   - `mirror-windows-x64-modern.exe`
 - Required agent assets:
-  - `guiho-s-mirror`
-  - `guiho-i-mirror`
+  - `guiho-s-mirror.md`
+  - `guiho-i-mirror.md`
 - Actions:
   - Remove `guiho-mirror-*` and `macos` naming everywhere.
   - Build through Bun-only tooling.
   - package both agent artifacts reproducibly.
   - upload exactly fourteen and fail CI on extras/legacy names/duplicates.
+  - derive build and workflow expectations from one authoritative manifest.
+  - use the GitHub CLI `--jq` option with exactly one filter argument.
+  - create or idempotently edit release notes from only the exact version's
+    changelog section, bounded by level-two headings.
 - Acceptance:
   - Build and workflow tests assert the exact set.
 
