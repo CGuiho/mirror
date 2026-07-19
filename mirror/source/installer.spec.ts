@@ -171,6 +171,24 @@ describe('Mirror canonical installers', () => {
       fixture.server.stop(true)
     }
   }, 60_000)
+
+  test('rejects executable payloads masquerading as Markdown agent assets', async () => {
+    const fixture = await createInstallerFixture(
+      '3.4.1',
+      '3.4.2',
+      { kind: 'version', version: '3.4.2' },
+      { binarySkillAsset: true },
+    )
+    try {
+      const result = await runInstaller(fixture, '3.4.2')
+      expect(result.exitCode).not.toBe(0)
+      expect(`${result.stdout}\n${result.stderr}`).toContain('Windows executable, not Markdown')
+      expect(await Bun.file(joinPath(fixture.root, '.agents', 'skills', 'guiho-s-mirror', 'SKILL.md')).exists()).toBe(false)
+      expect(await Bun.file(joinPath(fixture.root, 'AGENTS.md')).exists()).toBe(false)
+    } finally {
+      fixture.server.stop(true)
+    }
+  }, 60_000)
 })
 
 type InstallerFixture = {
@@ -191,7 +209,7 @@ async function createInstallerFixture(
   currentVersion: string,
   targetVersion: string,
   targetProgram: FixtureProgram,
-  options: { firstCandidateMissing?: boolean, returnedVersion?: string } = {},
+  options: { firstCandidateMissing?: boolean, returnedVersion?: string, binarySkillAsset?: boolean } = {},
 ): Promise<InstallerFixture> {
   const root = joinPath(process.env['TEMP'] ?? process.env['TMP'] ?? '/tmp', `mirror-installer-${crypto.randomUUID()}`)
   const installDir = joinPath(root, 'bin')
@@ -219,8 +237,8 @@ async function createInstallerFixture(
           ? [asset, fallbackAsset].map((name) => ({ name, browser_download_url: `${serverUrl}/assets/${name}` }))
           : [{ name: asset, browser_download_url: `${serverUrl}/assets/${asset}` }]
         releaseAssets.push(
-          { name: 'guiho-s-mirror', browser_download_url: `${serverUrl}/assets/guiho-s-mirror` },
-          { name: 'guiho-i-mirror', browser_download_url: `${serverUrl}/assets/guiho-i-mirror` },
+          { name: 'guiho-s-mirror.md', browser_download_url: `${serverUrl}/assets/guiho-s-mirror.md` },
+          { name: 'guiho-i-mirror.md', browser_download_url: `${serverUrl}/assets/guiho-i-mirror.md` },
         )
         return Response.json({
           tag_name: `@guiho/mirror@${options.returnedVersion ?? targetVersion}`,
@@ -229,8 +247,10 @@ async function createInstallerFixture(
         })
       }
       if (options.firstCandidateMissing && url.pathname.endsWith(`/${asset}`)) return new Response('missing', { status: 404 })
-      if (url.pathname.endsWith('/guiho-s-mirror')) return new Response('---\nname: guiho-s-mirror\n---\n# Mirror\n')
-      if (url.pathname.endsWith('/guiho-i-mirror')) return new Response('# Mirror Release\n')
+      if (url.pathname.endsWith('/guiho-s-mirror.md')) {
+        return new Response(options.binarySkillAsset ? new Uint8Array([0x4d, 0x5a, 0x00, 0x00]) : '---\nname: guiho-s-mirror\n---\n# Mirror\n')
+      }
+      if (url.pathname.endsWith('/guiho-i-mirror.md')) return new Response('---\nname: guiho-i-mirror\n---\n# Mirror Release\n')
       if (url.pathname.endsWith(`/${fallbackAsset}`)) return new Response(Bun.file(candidate))
       return new Response(Bun.file(candidate))
     },
