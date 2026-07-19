@@ -31,9 +31,9 @@ Add an option for Python version propagation from a source project to a target p
 
 ## Mirror Upgrade Reliability
 
-- Status: completed
+- Status: testing
 - Created: `2026-07-15`
-- Updated: `2026-07-15`
+- Updated: `2026-07-19`
 - Outcome: Make self-upgrade an observable, verified installation transaction; provide exact-version recovery after every bare upgrade; and list every published release newest first with channel and asset metadata.
 - Spec: [docs/todo/upgrade-reliability.md](docs/todo/upgrade-reliability.md)
 - Implementation: [docs/todo/upgrade-reliability-implementation.md](docs/todo/upgrade-reliability-implementation.md)
@@ -46,10 +46,10 @@ Add an option for Python version propagation from a source project to a target p
 
 ## RFC 0034 CLI Compliance Migration
 
-- Status: completed
+- Status: testing
 - Created: `2026-07-18T18:48:11+02:00`
-- Updated: `2026-07-19T00:08:22+02:00`
-- Outcome: Mirror fully implements the approved breaking GUIHO RFC 0034 CLI contract and is release-workflow ready; public `3.5.2` availability remains gated by the GitHub `production` environment outside this implementation task.
+- Updated: `2026-07-19`
+- Outcome: Mirror implements the breaking RFC 0034 source contract; the corrected `.md` asset, exact-set, release-note, and Markdown-validation workflow is awaiting a new tag run and protected-production approval.
 - Spec: [docs/todo/rfc-0034-cli-compliance-migration.md](docs/todo/rfc-0034-cli-compliance-migration.md)
 - Related files:
   - [docs/plans/rfc-0034-cli-compliance-migration.md](docs/plans/rfc-0034-cli-compliance-migration.md) - Approved step-by-step migration plan.
