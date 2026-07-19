@@ -35,24 +35,27 @@ and reject executable/binary payloads before agent-resource writes.
 
 The implementation task is completed because its approved scope ends at
 release readiness and explicitly excludes publication and live installation.
-The public distribution state is not complete:
+The corrected public distribution state is not complete:
 
 - GitHub Actions run
   [29663073275](https://github.com/CGuiho/mirror/actions/runs/29663073275)
   for `@guiho/mirror@3.5.2` passed the environment gate and then failed in job
   `88128892604` because its verifier passed both `-r` and a filter to the
   single-argument `gh --jq` option.
-- The latest public GitHub Release remains `@guiho/mirror@3.4.2`.
-- A live `mirror upgrade --dry-run --format json` resolves that public release
-  and reports `UPGRADE_ASSET_UNAVAILABLE` because it predates the RFC asset
-  names.
-- A live `mirror upgrade --version 3.5.2 --dry-run --format json` reaches the
-  exact-version route correctly and reports `UPGRADE_RESOLUTION_FAILED` with
-  GitHub `404 Not Found` because the `3.5.2` GitHub Release does not yet exist.
+- The failed verifier left a public `@guiho/mirror@3.5.2` release with the
+  twelve correct native binaries, extensionless `guiho-s-mirror` and
+  `guiho-i-mirror` assets, and no release description.
+- That release is evidence of the defect, not the corrected `.md` asset and
+  exact-version-notes contract.
 
-Do not describe `3.5.2` as publicly installable or upgradeable until the
-production-environment gate completes and the release exposes the exact
-fourteen assets.
+Do not describe `3.5.2` as satisfying the corrected release contract. The
+public release exists, but its two agent filenames and empty notes are wrong.
+
+The corrective `@guiho/mirror@3.5.3` tag points to
+`d8513748fb8d41f3118f94309e19c3fbca4ada2f`. Publish run
+[29668661444](https://github.com/CGuiho/mirror/actions/runs/29668661444)
+is waiting for the protected `production` environment. After approval, the
+workflow must prove the exact assets and notes before live issue checks begin.
 
 ## Implemented Units
 
