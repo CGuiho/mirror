@@ -34,15 +34,24 @@ owner: mirror-docs-validation
 | Final-review static gates | passed | TypeScript, PowerShell parser, Git Bash syntax, `git diff --check`, strict source metadata, and XDocs tree passed after rollback-safe POSIX verification, canonical tag matching, and explicit HTTP fixture isolation. |
 | Plan/docs metadata | passed | Focused strict metadata and tree checks passed for the implementation plan, review, and TODO spec before implementation. |
 
-## Pending Final Rerun
+## Final Source And CI Rerun
 
-- `bun test source/self-management.spec.ts source/installer.spec.ts source/guiho-mirror.spec.ts` after adding Windows `Unblock-File` and the independent-review regressions (including actual printed recovery-command execution, PowerShell/POSIX 404 fallback, post-mutation timeout rollback, preserved artifacts, and rollback fields in JSON). The current sandbox returned `EPERM` while reading all three test files and `tsconfig.json`, before any test or assertion ran.
-- `bun run typecheck` and full `bun test` after installer/CI/docs changes.
-- `bun run build` and `bun run binary` (the single binary script emits the configured matrix; no separate `binaries` script exists).
-- `xdocs meta . --documents --strict --format json`, `xdocs doctor --warnings-as-errors`, and `xdocs tree`.
-- `git diff --check` and final scoped status.
+- `bun run typecheck`: passed.
+- `bun test --timeout 15000`: 43 tests, 0 failures, 241 assertions.
+- `bun run build`: passed; 12 native binaries and 14 total release assets.
+- PowerShell installer parser and `bash -n mirror/install.sh`: passed.
+- Strict metadata for source, TODO, implementation review, and validation scopes:
+  passed.
+- `xdocs tree` and `git diff --check`: passed.
+- CI run [29668516605](https://github.com/CGuiho/mirror/actions/runs/29668516605):
+  both `test` and `windows-self-upgrade` passed.
 
-The task remains `testing`; no version, tag, publication, push, or issue closure is claimed.
+## Pending Published-Binary Gate
+
+The task remains `testing`. The approved design requires a public release before
+issue closure: upgrade an isolated older Windows binary, launch the canonical
+path again, verify the release in `upgrade list`, and execute the printed pinned
+installer command. No issue closure is claimed before those checks.
 
 ## References
 
