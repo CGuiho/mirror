@@ -220,6 +220,48 @@ describe('Mirror self-management', () => {
     expect((await runCommand([executable, '--version'])).stdout.trim()).toBe(currentVersion)
   }, 30_000)
 
+  test('fails without mutation when Windows sharing permissions deny the canonical rename', async () => {
+    if (detectNativePlatform() !== 'windows') return
+    const root = await createTempDirectory()
+    const executable = joinPath(root, 'mirror.exe')
+    const download = joinPath(root, 'download.exe')
+    const currentVersion = '3.4.1'
+    const targetVersion = '3.4.2'
+    await compileVersionFixture(root, 'old.ts', executable, `console.log('${currentVersion}')`)
+    await compileVersionFixture(root, 'target.ts', download, `console.log('${targetVersion}')`)
+    const asset = buildAssetCandidates('windows', detectNativeArch(), 'baseline')[0]!
+    const plan = await resolveUpgradePlan({
+      version: targetVersion,
+      executablePath: executable,
+      currentVersion,
+      platform: 'windows',
+      arch: detectNativeArch(),
+      fetch: releaseFetch(targetVersion, asset),
+    })
+    const escapedExecutable = executable.replaceAll("'", "''")
+    const locker = Bun.spawn([
+      'powershell.exe',
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      `$stream=[IO.File]::Open('${escapedExecutable}',[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read); [Console]::Out.WriteLine('locked'); [Console]::Out.Flush(); Start-Sleep -Seconds 30; $stream.Dispose()`,
+    ], { stdout: 'pipe', stderr: 'pipe' })
+    try {
+      const ready = await locker.stdout.getReader().read()
+      expect(new TextDecoder().decode(ready.value)).toContain('locked')
+      const result = await executeUpgrade(plan, {
+        fetch: (async () => new Response(Bun.file(download))) as unknown as typeof fetch,
+      })
+      expect(result.outcome).toBe('failed')
+      expect(result.failure?.code).toBe('UPGRADE_RENAME_CURRENT_FAILED')
+      expect(result.failure?.rollbackAttempted).toBe(false)
+      expect((await runCommand([executable, '--version'])).stdout.trim()).toBe(currentVersion)
+    } finally {
+      locker.kill()
+      await locker.exited
+    }
+  }, 30_000)
+
   test('prints the resolved plan and Downloading before a delayed asset body arrives', async () => {
     const root = await createTempDirectory()
     const platform = detectNativePlatform()
