@@ -49,7 +49,7 @@ Add an option for Python version propagation from a source project to a target p
 - Status: testing
 - Created: `2026-07-18T18:48:11+02:00`
 - Updated: `2026-07-19`
-- Outcome: Mirror implements the breaking RFC 0034 source contract; the corrected `.md` asset, exact-set, release-note, and Markdown-validation workflow is awaiting a new tag run and protected-production approval.
+- Outcome: Mirror implements the breaking RFC 0034 source contract; `@guiho/mirror@3.5.3` contains the corrected `.md` asset, exact-set, release-note, and Markdown-validation workflow and is waiting on protected-production approval before live release validation.
 - Spec: [docs/todo/rfc-0034-cli-compliance-migration.md](docs/todo/rfc-0034-cli-compliance-migration.md)
 - Related files:
   - [docs/plans/rfc-0034-cli-compliance-migration.md](docs/plans/rfc-0034-cli-compliance-migration.md) - Approved step-by-step migration plan.
