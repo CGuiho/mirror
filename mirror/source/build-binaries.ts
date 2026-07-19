@@ -4,6 +4,7 @@
  */
 
 import { runCommand, runCommandChecked } from './runtime.js'
+import { agentReleaseAssetNames, assertExactReleaseAssetManifest, nativeReleaseAssetNames } from './release-assets.js'
 
 const targets = [
   ['bun-linux-arm64', 'bin/mirror-linux-arm64'],
@@ -20,8 +21,10 @@ const targets = [
   ['bun-windows-x64-modern', 'bin/mirror-windows-x64-modern.exe'],
 ] as const
 
-const expectedAssetCount = 12
-const agentAssets = ['guiho-s-mirror', 'guiho-i-mirror'] as const
+const expectedAssetCount = nativeReleaseAssetNames.length
+const agentAssets = agentReleaseAssetNames
+
+assertExactReleaseAssetManifest()
 
 if (targets.length !== expectedAssetCount) {
   throw new Error(`Expected ${expectedAssetCount} release binary targets, found ${targets.length}`)
@@ -29,6 +32,10 @@ if (targets.length !== expectedAssetCount) {
 
 if (new Set(targets.map(([, outfile]) => outfile)).size !== targets.length) {
   throw new Error('Release binary target matrix contains duplicate output paths')
+}
+
+if (targets.some(([, outfile], index) => outfile !== `bin/${nativeReleaseAssetNames[index]}`)) {
+  throw new Error('Release binary targets do not match the authoritative asset manifest')
 }
 
 const main = async () => {
