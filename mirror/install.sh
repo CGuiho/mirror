@@ -208,15 +208,17 @@ ensure_path() {
 install_agent_assets() {
   local agent_root="${HOME}/.agents/skills/guiho-s-mirror"
   local claude_root="${HOME}/.claude/skills/guiho-s-mirror"
-  local skill_tmp="$install_dir/.guiho-s-mirror-$$"
-  local prompt_tmp="$install_dir/.guiho-i-mirror-$$"
+  local skill_tmp="$install_dir/.guiho-s-mirror.md-$$"
+  local prompt_tmp="$install_dir/.guiho-i-mirror.md-$$"
   local skill_url prompt_url
-  skill_url="$(build_url 'guiho-s-mirror')"
-  prompt_url="$(build_url 'guiho-i-mirror')"
+  skill_url="$(build_url 'guiho-s-mirror.md')"
+  prompt_url="$(build_url 'guiho-i-mirror.md')"
   printf 'Downloading skill asset: %s\n' "$skill_url"
   curl --fail --location --progress-bar "${curl_security_args[@]}" --output "$skill_tmp" "$skill_url"
   printf 'Downloading instruction asset: %s\n' "$prompt_url"
   curl --fail --location --progress-bar "${curl_security_args[@]}" --output "$prompt_tmp" "$prompt_url"
+  validate_markdown_asset "$skill_tmp" 'guiho-s-mirror'
+  validate_markdown_asset "$prompt_tmp" 'guiho-i-mirror'
   mkdir -p "$agent_root" "$claude_root"
   cp -- "$skill_tmp" "$agent_root/SKILL.md"
   cp -- "$skill_tmp" "$claude_root/SKILL.md"
@@ -244,6 +246,18 @@ install_agent_assets() {
     printf 'Reconciled instruction block: %s\n' "$target"
   done
   rm -f -- "$skill_tmp" "$prompt_tmp"
+}
+
+validate_markdown_asset() {
+  local path="$1" expected_name="$2" magic2 first_line
+  [[ -s "$path" ]] || fail "$expected_name release asset is empty"
+  magic2="$(LC_ALL=C head -c 2 "$path" 2>/dev/null || true)"
+  [[ "$magic2" != 'MZ' ]] || fail "$expected_name release asset is a Windows executable, not Markdown"
+  LC_ALL=C grep -Iq . "$path" || fail "$expected_name release asset is binary, not UTF-8 Markdown"
+  IFS= read -r first_line < "$path" || true
+  [[ "${first_line%$'\r'}" == '---' ]] || fail "$expected_name release asset is missing YAML frontmatter"
+  LC_ALL=C grep -Eq "^name:[[:space:]]*${expected_name}[[:space:]]*\r?$" "$path" \
+    || fail "$expected_name release asset has incorrect or missing frontmatter identity"
 }
 
 main() {
