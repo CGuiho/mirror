@@ -39,8 +39,8 @@ jobs:
       - name: Stage exact release assets
         working-directory: mirror
         run: |
-          cp skills/guiho-s-mirror/SKILL.md bin/guiho-s-mirror
-          cp prompts/guiho-i-mirror.md bin/guiho-i-mirror
+          cp skills/guiho-s-mirror/SKILL.md bin/guiho-s-mirror.md
+          cp prompts/guiho-i-mirror.md bin/guiho-i-mirror.md
 
       - name: Publish exact RFC 0034 assets to GitHub release
         env:
@@ -48,6 +48,15 @@ jobs:
         working-directory: mirror
         run: |
           VERSION=$(bun -e "const p = await Bun.file('./package.json').json(); console.log(p.version)")
+          EXPECTED_ASSETS="${RUNNER_TEMP}/mirror-expected-assets.txt"
+          RELEASE_NOTES="${RUNNER_TEMP}/mirror-release-notes.md"
+          bun run source/release-assets.ts > "$EXPECTED_ASSETS"
+          bun run source/release-notes.ts ../CHANGELOG.md "$VERSION" > "$RELEASE_NOTES"
+          mapfile -t ASSET_NAMES < "$EXPECTED_ASSETS"
+          ASSET_PATHS=()
+          for ASSET_NAME in "${ASSET_NAMES[@]}"; do
+            ASSET_PATHS+=("bin/${ASSET_NAME}")
+          done
           RELEASE_FLAGS=()
 
           if [[ "$VERSION" == *-* ]]; then
@@ -57,9 +66,15 @@ jobs:
           fi
 
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
-            gh release upload "${GITHUB_REF_NAME}" bin/mirror-* bin/guiho-s-mirror bin/guiho-i-mirror --clobber
+            while IFS= read -r CURRENT_ASSET; do
+              if ! grep -Fxq "$CURRENT_ASSET" "$EXPECTED_ASSETS"; then
+                gh release delete-asset "${GITHUB_REF_NAME}" "$CURRENT_ASSET" --yes
+              fi
+            done < <(gh release view "${GITHUB_REF_NAME}" --json assets --jq '.assets[].name')
+            gh release upload "${GITHUB_REF_NAME}" "${ASSET_PATHS[@]}" --clobber
+            gh release edit "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file "$RELEASE_NOTES" "${RELEASE_FLAGS[@]}"
           else
-            gh release create "${GITHUB_REF_NAME}" bin/mirror-* bin/guiho-s-mirror bin/guiho-i-mirror --title "${GITHUB_REF_NAME}" --verify-tag "${RELEASE_FLAGS[@]}"
+            gh release create "${GITHUB_REF_NAME}" "${ASSET_PATHS[@]}" --title "${GITHUB_REF_NAME}" --notes-file "$RELEASE_NOTES" --verify-tag "${RELEASE_FLAGS[@]}"
           fi
 
       - name: Verify exact fourteen GitHub release assets
@@ -67,26 +82,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         working-directory: mirror
         run: |
-          EXPECTED=$(cat <<'EOF'
-          guiho-i-mirror
-          guiho-s-mirror
-          mirror-darwin-arm64
-          mirror-darwin-x64
-          mirror-darwin-x64-baseline
-          mirror-darwin-x64-modern
-          mirror-linux-arm64
-          mirror-linux-x64
-          mirror-linux-x64-baseline
-          mirror-linux-x64-modern
-          mirror-windows-arm64.exe
-          mirror-windows-x64-baseline.exe
-          mirror-windows-x64-modern.exe
-          mirror-windows-x64.exe
-          EOF
-          )
-          ACTUAL=$(gh release view "${GITHUB_REF_NAME}" --json assets --jq -r '.assets[].name' | sort)
-          if [ "$ACTUAL" != "$EXPECTED" ]; then
+          EXPECTED_ASSETS="${RUNNER_TEMP}/mirror-expected-assets.txt"
+          ACTUAL_ASSETS="${RUNNER_TEMP}/mirror-actual-assets.txt"
+          bun run source/release-assets.ts > "$EXPECTED_ASSETS"
+          gh release view "${GITHUB_REF_NAME}" --json assets --jq '.assets[].name' | sort > "$ACTUAL_ASSETS"
+          EXPECTED_COUNT=$(wc -l < "$EXPECTED_ASSETS" | tr -d '[:space:]')
+          ACTUAL_COUNT=$(wc -l < "$ACTUAL_ASSETS" | tr -d '[:space:]')
+          UNIQUE_COUNT=$(sort -u "$ACTUAL_ASSETS" | wc -l | tr -d '[:space:]')
+          if [ "$EXPECTED_COUNT" -ne 14 ] || [ "$ACTUAL_COUNT" -ne 14 ] || [ "$UNIQUE_COUNT" -ne 14 ] || ! cmp -s "$EXPECTED_ASSETS" "$ACTUAL_ASSETS"; then
             echo "Mirror release does not contain the exact fourteen RFC 0034 assets." >&2
-            gh release view "${GITHUB_REF_NAME}" --json assets --jq '.assets[].name' >&2
+            echo "Expected (${EXPECTED_COUNT}):" >&2
+            cat "$EXPECTED_ASSETS" >&2
+            echo "Actual (${ACTUAL_COUNT}, ${UNIQUE_COUNT} unique):" >&2
+            cat "$ACTUAL_ASSETS" >&2
             exit 1
           fi
