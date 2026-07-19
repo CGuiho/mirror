@@ -84,7 +84,6 @@ describe('Mirror self-management', () => {
       platform: 'windows',
       arch: 'x64',
       fetch: fetcher,
-      preReleases: true,
     })
 
     expect(catalog.complete).toBe(true)
