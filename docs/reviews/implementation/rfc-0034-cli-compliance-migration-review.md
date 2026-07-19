@@ -35,7 +35,8 @@ surfaces approved by the plan.
 - Live-definition help, Unicode tree, validated depth, Markdown: satisfied.
 - Complete explicit singular agent namespace: satisfied.
 - Upgrade/list/install/npm distribution contract: satisfied.
-- Exact 12 binaries plus two agent artifacts: satisfied.
+- Exact 12 binaries plus `guiho-s-mirror.md` and `guiho-i-mirror.md`: satisfied
+  in source and regression coverage.
 - Canonical docs, TODO, downstream handoff, and xdocs: satisfied.
 
 ## Verification Evidence
@@ -50,8 +51,13 @@ descriptors are aligned.
 
 ## Residual Risk
 
-The GitHub release workflow has been statically validated and its current
-`@guiho/mirror@3.5.2` run is waiting on the protected `production` environment.
+The original `@guiho/mirror@3.5.2` workflow reached the asset verifier and
+failed because `gh release view --jq` received the unsupported extra `-r`
+argument. The corrective workflow now uses one jq filter, an authoritative
+fourteen-name manifest, explicit count/uniqueness/exact-set checks, `.md` agent
+assets, exact-version release notes, and idempotent existing-release repair.
+These corrections are locally validated but require a later tag workflow run.
+The protected `production` environment remains an external gate.
 The latest public release remains `3.4.2`; live latest-version dry-run
 resolution therefore reports `UPGRADE_ASSET_UNAVAILABLE`, and live exact
 `3.5.2` resolution reports GitHub `404 Not Found`. These results confirm that
