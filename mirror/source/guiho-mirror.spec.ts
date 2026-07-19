@@ -9,6 +9,7 @@ import { resolveNextVersion } from './version.js'
 import { joinPath } from './path.js'
 import { fileExists, makeTempDirectory, readTextFile, removePath, runCommand, writeTextFile } from './runtime.js'
 import { buildAssetCandidates, detectNativeArch, detectNativePlatform } from './self-management.js'
+import { assertExactReleaseAssetManifest, releaseAssetNames } from './release-assets.js'
 import packageJson from '../package.json' with { type: 'json' }
 
 const temporaryDirectories: string[] = []
@@ -235,22 +236,23 @@ describe('Mirror RFC 0034 CLI', () => {
 
   test('declares the exact fourteen release asset names', async () => {
     const build = await readTextFile(joinPath(import.meta.dir, 'build-binaries.ts'))
-    const binaries = [
-      'mirror-linux-arm64',
-      'mirror-linux-x64',
-      'mirror-linux-x64-baseline',
-      'mirror-linux-x64-modern',
-      'mirror-darwin-arm64',
-      'mirror-darwin-x64',
-      'mirror-darwin-x64-baseline',
-      'mirror-darwin-x64-modern',
-      'mirror-windows-arm64.exe',
-      'mirror-windows-x64.exe',
-      'mirror-windows-x64-baseline.exe',
-      'mirror-windows-x64-modern.exe',
-    ]
-    for (const asset of [...binaries, 'guiho-s-mirror', 'guiho-i-mirror']) expect(build).toContain(asset)
-    expect(new Set(binaries).size + 2).toBe(14)
+    assertExactReleaseAssetManifest()
+    expect(releaseAssetNames).toHaveLength(14)
+    expect(new Set(releaseAssetNames).size).toBe(14)
+    expect(releaseAssetNames).toContain('guiho-s-mirror.md')
+    expect(releaseAssetNames).toContain('guiho-i-mirror.md')
+    expect(build).toContain('nativeReleaseAssetNames')
+    expect(build).toContain('agentReleaseAssetNames')
+  })
+
+  test('keeps the publish workflow exact, unique, and compatible with gh jq syntax', async () => {
+    const workflow = await readTextFile(joinPath(import.meta.dir, '..', '..', '.github', 'workflows', 'publish.yml'))
+    expect(workflow).not.toContain("--jq -r")
+    expect(workflow).toContain("--jq '.assets[].name'")
+    expect(workflow).toContain('UNIQUE_COUNT')
+    expect(workflow).toContain('cmp -s')
+    expect(workflow).toContain('gh release edit')
+    expect(workflow).toContain('--notes-file')
   })
 })
 
