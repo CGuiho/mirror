@@ -24,7 +24,12 @@ Completed. Source, tests, distribution, canonical docs, downstream inventory,
 review, and the full MR-16 gate are complete. The authorized Mirror-managed
 `3.5.2` correction patch aligns the durable status and release-gate evidence
 and is the final Git implementation handoff, not an open implementation unit.
-Public release publication remains a separate external gate.
+Public release publication remains a separate external gate. A corrective
+workflow unit now uses `guiho-s-mirror.md` and `guiho-i-mirror.md`, one exact
+fourteen-name manifest, the supported one-argument GitHub CLI `--jq` form,
+explicit uniqueness/no-extra verification, and idempotent exact-version
+changelog release notes. Installers validate the downloaded Markdown identity
+and reject executable/binary payloads before agent-resource writes.
 
 ## Public Release Gate
 
@@ -34,8 +39,9 @@ The public distribution state is not complete:
 
 - GitHub Actions run
   [29663073275](https://github.com/CGuiho/mirror/actions/runs/29663073275)
-  for `@guiho/mirror@3.5.2` is waiting on the protected `production`
-  environment.
+  for `@guiho/mirror@3.5.2` passed the environment gate and then failed in job
+  `88128892604` because its verifier passed both `-r` and a filter to the
+  single-argument `gh --jq` option.
 - The latest public GitHub Release remains `@guiho/mirror@3.4.2`.
 - A live `mirror upgrade --dry-run --format json` resolves that public release
   and reports `UPGRADE_ASSET_UNAVAILABLE` because it predates the RFC asset
