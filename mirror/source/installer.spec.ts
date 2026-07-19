@@ -30,6 +30,37 @@ describe('Mirror canonical installers', () => {
     }
   })
 
+  test('supports the documented irm pipe under a Restricted execution policy', async () => {
+    if (detectNativePlatform() !== 'windows') return
+    const targetVersion = '3.4.2'
+    const fixture = await createInstallerFixture('3.4.1', targetVersion, { kind: 'version', version: targetVersion })
+    try {
+      const scriptUrl = `${fixture.server.url.toString().replace(/\/$/, '')}/devops/install.ps1`
+      const result = await runCommand([
+        'powershell.exe',
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Restricted',
+        '-Command',
+        `irm '${scriptUrl}' | iex`,
+      ], {
+        cwd: fixture.root,
+        env: installerEnvironment(fixture, {
+          MIRROR_VERSION: targetVersion,
+          MIRROR_DOWNLOAD_BASE_URL: fixture.server.url.toString().replace(/\/$/, ''),
+          MIRROR_SKIP_PATH_UPDATE: '1',
+        }),
+      })
+      if (result.exitCode !== 0) throw new Error(`${result.stdout}\n${result.stderr}`)
+      expect(result.exitCode).toBe(0)
+      expect(`${result.stdout}\n${result.stderr}`).not.toContain('Cannot bind argument to parameter')
+      expect(result.stdout).toContain(`Installed and verified Mirror ${targetVersion}`)
+      expect((await runCommand([fixture.destination, '--version'])).stdout.trim()).toBe(targetVersion)
+    } finally {
+      fixture.server.stop(true)
+    }
+  }, 60_000)
+
   test('installs and verifies an exact published version transactionally', async () => {
     const fixture = await createInstallerFixture('3.4.1', '3.4.2', { kind: 'version', version: '3.4.2' })
     try {
@@ -230,6 +261,7 @@ async function createInstallerFixture(
     idleTimeout: 120,
     fetch(request) {
       const url = new URL(request.url)
+      if (url.pathname === '/devops/install.ps1') return new Response(Bun.file(joinPath(import.meta.dir, '..', '..', 'devops', 'install.ps1')))
       if (url.pathname === '/install.ps1') return new Response(Bun.file(joinPath(import.meta.dir, '..', 'install.ps1')))
       if (url.pathname === '/install.sh') return new Response(Bun.file(joinPath(import.meta.dir, '..', 'install.sh')))
       if (url.pathname.startsWith('/repos/')) {
