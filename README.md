@@ -23,6 +23,20 @@ Mirror uses Bun, strict ESM TypeScript, raw Citty, TypeBox, and YAML. The curren
 breaking CLI contract is documented in
 [`mirror/DOCS.md`](mirror/DOCS.md). Start with:
 
+## Install
+
+PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.ps1 | iex
+```
+
+The installer selects and verifies a native asset, installs `mirror` on PATH,
+installs `guiho-s-mirror` into both global agent-tool directories, and
+reconciles Mirror instructions in the current project.
+
+## Quick Start
+
 ```text
 mirror init
 mirror config check
