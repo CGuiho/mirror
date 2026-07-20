@@ -37,6 +37,7 @@ import {
 import {
   checkForLatestVersion,
   createUpgradeResolutionFailure,
+  detectNativePlatform,
   executeUpgrade,
   listAvailableVersions,
   readUpdateCache,
@@ -74,6 +75,13 @@ type CliState = {
 class CliHandled extends Error {}
 
 const mirrorVersion = typeof packageJson.version === 'string' ? packageJson.version : '0.0.0'
+const mirrorPlatformName = (() => {
+  switch (detectNativePlatform()) {
+    case 'windows': return 'Windows'
+    case 'linux': return 'Linux'
+    case 'darwin': return 'macOS'
+  }
+})()
 
 const commonArgs = {
   cwd: { type: 'string', description: 'Run as if Mirror started in this directory.', valueHint: 'path' },
@@ -569,7 +577,7 @@ function createMirrorCommandTree(rawArgs: string[]): { command: CommandDef<any>,
     meta: { name: 'mirror', description: 'Show the Mirror home page.', hidden: true },
     args: rootArgs,
     run: async () => {
-      write(`Hello Windows - mirror v${mirrorVersion}\n`, state)
+      write(`Hello ${mirrorPlatformName} - mirror v${mirrorVersion}\n`, state)
     },
   })
 
