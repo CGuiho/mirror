@@ -31,6 +31,12 @@ PowerShell:
 irm https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.ps1 | iex
 ```
 
+Linux and macOS:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.sh | bash
+```
+
 The installer selects and verifies a native asset, installs `mirror` on PATH,
 installs `guiho-s-mirror` into both global agent-tool directories, and
 reconciles Mirror instructions in the current project.
