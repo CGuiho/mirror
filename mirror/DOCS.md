@@ -23,11 +23,15 @@ use Bun APIs and do not import Node filesystem, path, OS, or child-process
 built-ins. The Node-only npm bootstrap is isolated at
 `scripts/mirror-bin.mjs`.
 
-With no arguments:
+With no arguments, Mirror identifies the running platform:
 
 ```text
 Hello Windows - mirror v<version>
+Hello Linux - mirror v<version>
+Hello macOS - mirror v<version>
 ```
+
+Only the one line matching the current platform is printed.
 
 Only `-h` and root `-v` are short aliases. Every command scope supports
 `--help`, `--help-tree`, `--help-tree-depth <positive-integer>`, and
@@ -182,6 +186,17 @@ instructions. Downloaded `guiho-s-mirror.md` and `guiho-i-mirror.md` payloads
 must be nonempty text with YAML frontmatter naming the expected resource.
 Installers reject PE, NUL-containing, invalid UTF-8 on Windows, binary, or
 identity-mismatched content before writing skills or instruction blocks.
+
+The public installers are directly pipeable and do not depend on neighboring
+checkout files:
+
+```powershell
+irm https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.ps1 | iex
+```
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.sh | bash
+```
 
 The npm `bin` points to `scripts/mirror-bin.mjs`. The Node ESM bootstrap detects
 platform/architecture, defaults x64 to baseline, caches the package-version
