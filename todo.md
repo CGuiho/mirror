@@ -58,3 +58,14 @@ Add an option for Python version propagation from a source project to a target p
   - [docs/reviews/implementation/rfc-0034-cli-compliance-migration-review.md](docs/reviews/implementation/rfc-0034-cli-compliance-migration-review.md) - Delivery-readiness implementation review.
   - [docs/validation/rfc-0034-cli-compliance-migration.md](docs/validation/rfc-0034-cli-compliance-migration.md) - Full verification evidence.
   - [docs/validation/rfc-0034-downstream-handoff.md](docs/validation/rfc-0034-downstream-handoff.md) - Consumer migration inventory.
+
+## Mirror Public Installers And Platform Greeting
+
+- Status: testing
+- Created: `2026-07-20`
+- Updated: `2026-07-20`
+- Outcome: Make both public installer pipes standalone and reliable, and report the current platform in Mirror's deterministic no-argument greeting.
+- Spec: [docs/todo/public-installers-and-platform-greeting.md](docs/todo/public-installers-and-platform-greeting.md)
+- Related files:
+  - [docs/validation/public-installers-and-platform-greeting.md](docs/validation/public-installers-and-platform-greeting.md) - Local, CI, release, and public installation evidence.
+- External: GitHub issue [#12](https://github.com/CGuiho/mirror/issues/12); GitHub issue [#13](https://github.com/CGuiho/mirror/issues/13)
