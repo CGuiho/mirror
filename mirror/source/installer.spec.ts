@@ -61,6 +61,26 @@ describe('Mirror canonical installers', () => {
     }
   }, 60_000)
 
+  test('keeps the public POSIX installer directly executable through curl and bash', async () => {
+    const publicInstaller = joinPath(import.meta.dir, '..', '..', 'devops', 'install.sh')
+    const script = await readTextFile(publicInstaller)
+    expect(script).toContain('main "$@"')
+    expect(script).not.toContain('BASH_SOURCE[0]')
+
+    if (detectNativePlatform() === 'windows') return
+    const server = Bun.serve({
+      port: 0,
+      fetch: () => new Response(Bun.file(publicInstaller)),
+    })
+    try {
+      const result = await runShellCommand(`curl -fsSL ${server.url} | bash -s -- --help`)
+      if (result.exitCode !== 0) throw new Error(`${result.stdout}\n${result.stderr}`)
+      expect(result.stdout).toContain('Install GUIHO Mirror as a native CLI binary')
+    } finally {
+      server.stop(true)
+    }
+  }, 30_000)
+
   test('installs and verifies an exact published version transactionally', async () => {
     const fixture = await createInstallerFixture('3.4.1', '3.4.2', { kind: 'version', version: '3.4.2' })
     try {
