@@ -247,7 +247,7 @@ try {
   if (Test-Path -LiteralPath (Join-Path (Get-Location) 'AGENTS.md')) { $instructionTargets += (Join-Path (Get-Location) 'AGENTS.md') }
   if (Test-Path -LiteralPath (Join-Path (Get-Location) 'CLAUDE.md')) { $instructionTargets += (Join-Path (Get-Location) 'CLAUDE.md') }
   if ($instructionTargets.Count -eq 0) { $instructionTargets += (Join-Path (Get-Location) 'AGENTS.md') }
-  $startMarker = '<!-- BEGIN MIRROR â€” DO NOT EDIT THIS SECTION -->'
+  $startMarker = '<!-- BEGIN MIRROR — DO NOT EDIT THIS SECTION -->'
   $endMarker = '<!-- END MIRROR -->'
   $prompt = Get-Content -Raw -LiteralPath $promptAsset
   foreach ($instructionPath in $instructionTargets) {
