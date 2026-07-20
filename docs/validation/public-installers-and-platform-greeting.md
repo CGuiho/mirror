@@ -50,5 +50,16 @@ keywords:
 
 ### Release Gate
 
-Mirror planned patch release `3.5.6`. CI, publication, public Linux/POSIX
-installation, release assets, and issue closure remain release gates.
+Mirror applied and pushed patch tag `@guiho/mirror@3.5.6` at commit
+`71fe617ecd9592d4941da8d02ba3ce15acd35ff3`.
+
+- [CI run 29774270006](https://github.com/CGuiho/mirror/actions/runs/29774270006):
+  passed on Ubuntu and Windows. The Ubuntu job exercised the public
+  curl-to-bash regression; the Windows job exercised installer and live
+  replacement coverage.
+- [Publish run 29774276072](https://github.com/CGuiho/mirror/actions/runs/29774276072):
+  waiting for the required `production` environment reviewer. The current
+  automation identity cannot approve that deployment.
+
+Publication, exact release-asset inspection, public binary installation, and
+issue closure remain release gates.
