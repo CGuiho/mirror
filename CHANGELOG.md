@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.6] - 2026-07-20
+
+### Changed
+
+- Made the no-argument greeting identify the native platform as Windows, Linux,
+  or macOS while preserving one deterministic version line.
+
+### Fixed
+
+- Replaced the checkout-only public POSIX wrapper with the proven standalone
+  installer so `curl -fsSL .../devops/install.sh | bash` works without a
+  repository clone.
+- Realigned the public PowerShell installer with RunX and preserved the exact
+  Mirror instruction marker when using `irm .../devops/install.ps1 | iex`.
+- Added Linux CI coverage for the public curl-to-bash entrypoint and
+  cross-platform greeting coverage.
+
 ## [3.5.5] - 2026-07-19
 
 ### Fixed
