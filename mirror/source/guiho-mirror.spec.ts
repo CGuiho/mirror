@@ -20,10 +20,11 @@ afterEach(async () => {
 })
 
 describe('Mirror RFC 0034 CLI', () => {
-  test('prints the exact no-argument banner', async () => {
+  test('prints the exact platform-aware no-argument banner', async () => {
     const result = await runCli([])
+    const platformName = process.platform === 'win32' ? 'Windows' : process.platform === 'darwin' ? 'macOS' : 'Linux'
     expect(result.exitCode).toBe(0)
-    expect(result.stdout).toBe(`Hello Windows - mirror v${packageJson.version}\n`)
+    expect(result.stdout).toBe(`Hello ${platformName} - mirror v${packageJson.version}\n`)
     expect(result.stderr).toBe('')
   })
 
@@ -46,9 +47,10 @@ describe('Mirror RFC 0034 CLI', () => {
       lastCheck: new Date().toISOString(),
     })}\n`)
     const result = await runCli([], { home })
+    const platformName = process.platform === 'win32' ? 'Windows' : process.platform === 'darwin' ? 'macOS' : 'Linux'
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toBe(
-      `New version available. Run this command to upgrade: mirror upgrade\nHello Windows - mirror v${packageJson.version}\n`,
+      `New version available. Run this command to upgrade: mirror upgrade\nHello ${platformName} - mirror v${packageJson.version}\n`,
     )
   })
 
