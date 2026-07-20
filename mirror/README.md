@@ -25,7 +25,8 @@ mirror config show
 mirror version plan patch
 ```
 
-With no arguments Mirror prints `Hello Windows - mirror v<version>`.
+With no arguments Mirror prints `Hello <platform> - mirror v<version>`, where
+the platform is `Windows`, `Linux`, or `macOS`.
 
 See [`DOCS.md`](DOCS.md) for the complete command, configuration, agent,
 upgrade, installer, npm bootstrap, exit-code, and release-asset contracts.
