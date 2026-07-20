@@ -5,8 +5,8 @@ parent: "mirror"
 children: []
 files:
   "compile.sh": "File in devops."
-  "install.ps1": "Thin checkout wrapper that delegates all Windows installation behavior to mirror/install.ps1."
-  "install.sh": "Thin checkout wrapper that delegates all POSIX installation behavior to mirror/install.sh."
+  "install.ps1": "Standalone public Windows installer mechanically aligned with RunX and safe for irm piped to Invoke-Expression."
+  "install.sh": "Standalone public Linux/macOS installer mechanically aligned with the proven XDocs flow and safe for curl piped to bash."
 documents:
   "xdocs-overview.md": "Generated companion overview that links back to this directory xdocs descriptor."
 tags:
