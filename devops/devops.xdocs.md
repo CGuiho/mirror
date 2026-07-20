@@ -6,7 +6,7 @@ children: []
 files:
   "compile.sh": "File in devops."
   "install.ps1": "Standalone public Windows installer mechanically aligned with RunX and safe for irm piped to Invoke-Expression."
-  "install.sh": "Standalone public Linux/macOS installer mechanically aligned with the proven XDocs flow and safe for curl piped to bash."
+  "install.sh": "Standalone public Linux/macOS installer mechanically aligned with the proven XDocs flow, safe for curl piped to bash, and continuously verified from its public GitHub URL on Ubuntu CI."
 documents:
   "xdocs-overview.md": "Generated companion overview that links back to this directory xdocs descriptor."
 tags:
