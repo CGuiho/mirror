@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.8] - 2026-07-21
+
+### Fixed
+
+- Moved public Linux installer verification from main-branch CI to the Publish
+  workflow after release creation, eliminating the race where CI expected the
+  new package version while GitHub still served the previous latest release.
+
 ## [3.5.7] - 2026-07-21
 
 ### Fixed
