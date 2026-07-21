@@ -8,11 +8,12 @@ param(
 
 $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$UserHome = if ($env:HOME) { $env:HOME } elseif ($env:USERPROFILE) { $env:USERPROFILE } else { $HOME }
 
 if ([string]::IsNullOrWhiteSpace($Version)) { $Version = if ($env:MIRROR_VERSION) { $env:MIRROR_VERSION } else { 'latest' } }
 $Repo = if ($env:MIRROR_REPO) { $env:MIRROR_REPO } else { 'CGuiho/mirror' }
 $DownloadBaseUrl = if ($env:MIRROR_DOWNLOAD_BASE_URL) { $env:MIRROR_DOWNLOAD_BASE_URL.TrimEnd('/') } else { $null }
-if ([string]::IsNullOrWhiteSpace($InstallDir)) { $InstallDir = if ($env:MIRROR_INSTALL_DIR) { $env:MIRROR_INSTALL_DIR } else { Join-Path $HOME '.local\bin' } }
+if ([string]::IsNullOrWhiteSpace($InstallDir)) { $InstallDir = if ($env:MIRROR_INSTALL_DIR) { $env:MIRROR_INSTALL_DIR } else { Join-Path $UserHome '.local\bin' } }
 
 if ($Help -or $Version -eq '--help' -or $Version -eq '-h') {
   @"
@@ -95,6 +96,29 @@ function Test-MarkdownAsset {
   if ($text -notmatch "(?m)^name:\s*$([Regex]::Escape($ExpectedName))\s*$") {
     throw "Downloaded Markdown asset identity does not match $ExpectedName`: $Path"
   }
+}
+
+function Read-Utf8TextFile {
+  param([string]$Path)
+  $bytes = [System.IO.File]::ReadAllBytes($Path)
+  try { $text = ([System.Text.UTF8Encoding]::new($false, $true)).GetString($bytes) }
+  catch { throw "Instruction file is not valid UTF-8 text: $Path" }
+  if ($text.Length -gt 0 -and $text[0] -eq [char]0xFEFF) { return $text.Substring(1) }
+  return $text
+}
+
+function Set-MirrorManagedBlock {
+  param([string]$Path, [string]$Prompt)
+  $startMarker = '<!-- BEGIN MIRROR ' + [char]0x2014 + ' DO NOT EDIT THIS SECTION -->'
+  $legacyStartMarker = '<!-- BEGIN MIRROR ' + [char]0x00E2 + [char]0x20AC + [char]0x201D + ' DO NOT EDIT THIS SECTION -->'
+  $endMarker = '<!-- END MIRROR -->'
+  $existing = if (Test-Path -LiteralPath $Path) { Read-Utf8TextFile -Path $Path } else { '' }
+  $starts = '(?:' + [Regex]::Escape($startMarker) + '|' + [Regex]::Escape($legacyStartMarker) + ')'
+  $pattern = $starts + '[\s\S]*?' + [Regex]::Escape($endMarker) + '\s*'
+  $clean = ([Regex]::Replace($existing, $pattern, '')).TrimEnd()
+  $prefix = if ($clean) { "$clean`r`n`r`n" } else { '' }
+  $content = "$prefix$startMarker`r`n$($Prompt.Trim())`r`n$endMarker`r`n"
+  [System.IO.File]::WriteAllText($Path, $content, [System.Text.UTF8Encoding]::new($false))
 }
 
 function Test-InstalledVersion {
@@ -238,7 +262,7 @@ try {
   Write-Host "Downloading instruction asset: $assetBase/guiho-i-mirror.md"
   Invoke-WebRequest -Uri "$assetBase/guiho-i-mirror.md" -OutFile $promptAsset -UseBasicParsing
   Test-MarkdownAsset -Path $promptAsset -ExpectedName 'guiho-i-mirror'
-  foreach ($skillRoot in @((Join-Path $HOME '.agents\skills\guiho-s-mirror'), (Join-Path $HOME '.claude\skills\guiho-s-mirror'))) {
+  foreach ($skillRoot in @((Join-Path $UserHome '.agents\skills\guiho-s-mirror'), (Join-Path $UserHome '.claude\skills\guiho-s-mirror'))) {
     New-Item -ItemType Directory -Force -Path $skillRoot | Out-Null
     Copy-Item -LiteralPath $skillAsset -Destination (Join-Path $skillRoot 'SKILL.md') -Force
     Write-Host "Installed skill: $(Join-Path $skillRoot 'SKILL.md')"
@@ -247,16 +271,10 @@ try {
   if (Test-Path -LiteralPath (Join-Path (Get-Location) 'AGENTS.md')) { $instructionTargets += (Join-Path (Get-Location) 'AGENTS.md') }
   if (Test-Path -LiteralPath (Join-Path (Get-Location) 'CLAUDE.md')) { $instructionTargets += (Join-Path (Get-Location) 'CLAUDE.md') }
   if ($instructionTargets.Count -eq 0) { $instructionTargets += (Join-Path (Get-Location) 'AGENTS.md') }
-  $startMarker = '<!-- BEGIN MIRROR — DO NOT EDIT THIS SECTION -->'
-  $endMarker = '<!-- END MIRROR -->'
-  $prompt = Get-Content -Raw -LiteralPath $promptAsset
+  $prompt = Read-Utf8TextFile -Path $promptAsset
   foreach ($instructionPath in $instructionTargets) {
     Write-Host "Reconciling instruction file: $instructionPath"
-    $existing = if (Test-Path -LiteralPath $instructionPath) { Get-Content -Raw -LiteralPath $instructionPath } else { '' }
-    $pattern = [Regex]::Escape($startMarker) + '[\s\S]*?' + [Regex]::Escape($endMarker) + '\s*'
-    $clean = ([Regex]::Replace($existing, $pattern, '')).TrimEnd()
-    $prefix = if ($clean) { "$clean`r`n`r`n" } else { '' }
-    Set-Content -LiteralPath $instructionPath -Value "$prefix$startMarker`r`n$($prompt.Trim())`r`n$endMarker`r`n" -Encoding utf8
+    Set-MirrorManagedBlock -Path $instructionPath -Prompt $prompt
   }
   if ($env:MIRROR_SKIP_PATH_UPDATE -ne '1') {
     Add-InstallDirToPath -Directory $InstallDir
