@@ -2,6 +2,7 @@
  * @copyright Copyright (c) 2026 GUIHO Technologies as represented by CristÃ³vÃ£o GUIHO. All Rights Reserved.
  */
 
+import { Type } from '@sinclair/typebox'
 import { compare, gt, parse, rcompare, valid } from 'semver'
 import packageJson from '../package.json' with { type: 'json' }
 
@@ -33,6 +34,7 @@ import {
 
 export {
   buildAssetCandidates,
+  acquireBackgroundUpdateLease,
   checkForLatestVersion,
   createUpgradeRecovery,
   createUpgradeResolutionFailure,
@@ -42,6 +44,7 @@ export {
   listAvailableVersions,
   normalizeMirrorVersion,
   readUpdateCache,
+  releaseBackgroundUpdateLease,
   resolveCachePath,
   resolveExecutablePath,
   resolveUpgradePlan,
@@ -54,7 +57,15 @@ export {
 const defaultRepo = 'CGuiho/mirror'
 const defaultApiBaseUrl = 'https://api.github.com'
 const cacheTtlMilliseconds = 4 * 60 * 60 * 1000
+const backgroundUpdateTimeoutMilliseconds = 15_000
+const backgroundUpdateLockStaleMilliseconds = 30_000
 const currentMirrorVersion = typeof packageJson.version === 'string' ? packageJson.version : '0.0.0'
+
+const backgroundUpdateLeaseSchema = Type.Object({
+  token: Type.RegExp(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i),
+  pid: Type.Integer({ minimum: 1 }),
+  createdAt: Type.String(),
+})
 
 type GitHubReleaseAsset = {
   name?: string
@@ -83,6 +94,17 @@ type SelfManagementOptions = {
   perPage?: number
   preReleases?: boolean
   fetch?: typeof fetch
+  signal?: AbortSignal
+  sourceCheckout?: boolean
+  now?: () => number
+  updateTimeoutMilliseconds?: number
+  lockStaleMilliseconds?: number
+}
+
+type BackgroundUpdateLease = {
+  token: string
+  pid: number
+  createdAt: string
 }
 
 type UpgradeOptions = SelfManagementOptions & {
@@ -155,27 +177,208 @@ async function checkForLatestVersion(options: SelfManagementOptions = {}) {
 
 async function runBackgroundUpdateCheck(options: SelfManagementOptions = {}) {
   if (process.env['MIRROR_DISABLE_UPDATE_CHECK'] === '1') return
-  await checkForLatestVersion(options)
+  const inheritedToken = process.env['MIRROR_UPDATE_CHECK_LOCK_TOKEN']
+  const lease = inheritedToken
+    ? await readBackgroundUpdateLease(options).then((current) => current?.token === inheritedToken ? current : null)
+    : await acquireBackgroundUpdateLease(options)
+  if (!lease) return
+
+  const timeoutMilliseconds = resolvePositiveMilliseconds(
+    options.updateTimeoutMilliseconds,
+    backgroundUpdateTimeoutMilliseconds,
+  )
+  const controller = new AbortController()
+  let timeout: ReturnType<typeof setTimeout> | null = null
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeout = setTimeout(() => {
+      controller.abort()
+      reject(new MirrorError(`Mirror background update check timed out after ${timeoutMilliseconds}ms.`))
+    }, timeoutMilliseconds)
+  })
+
+  try {
+    await Promise.race([
+      checkForLatestVersion({ ...options, signal: controller.signal }),
+      timeoutPromise,
+    ])
+  } finally {
+    if (timeout) clearTimeout(timeout)
+    await releaseBackgroundUpdateLease(lease, options)
+  }
 }
 
 async function scheduleBackgroundUpdateCheck(options: SelfManagementOptions = {}) {
-  if (process.env['MIRROR_DISABLE_UPDATE_CHECK'] === '1') return false
-  const cache = await readUpdateCache(options)
-  if (cache && Date.now() - Date.parse(cache.lastCheck) < cacheTtlMilliseconds) return false
-  if (await isSourceCheckout()) return false
-
+  let lease: BackgroundUpdateLease | null = null
   try {
+    if (process.env['MIRROR_DISABLE_UPDATE_CHECK'] === '1') return false
+    if (process.env['MIRROR_BACKGROUND_UPDATE_CHECK'] === '1') return false
+    const cache = await readUpdateCache(options)
+    if (cache && (options.now?.() ?? Date.now()) - Date.parse(cache.lastCheck) < cacheTtlMilliseconds) return false
+    if (options.sourceCheckout ?? await isSourceCheckout()) return false
+
+    lease = await acquireBackgroundUpdateLease(options)
+    if (!lease) return false
     const proc = Bun.spawn([resolveExecutablePath(options), '--mirror-update-check-worker'], {
+      detached: true,
       stdin: 'ignore',
       stdout: 'ignore',
       stderr: 'ignore',
-      env: { ...process.env, MIRROR_BACKGROUND_UPDATE_CHECK: '1' },
+      windowsHide: true,
+      env: {
+        ...process.env,
+        MIRROR_BACKGROUND_UPDATE_CHECK: '1',
+        MIRROR_UPDATE_CHECK_LOCK_TOKEN: lease.token,
+      },
     })
-    ;(proc as unknown as { unref?: () => void }).unref?.()
+    proc.unref()
+    return true
+  } catch {
+    if (lease) await releaseBackgroundUpdateLease(lease, options)
+    return false
+  }
+}
+
+async function acquireBackgroundUpdateLease(options: SelfManagementOptions = {}): Promise<BackgroundUpdateLease | null> {
+  const lockPath = resolveBackgroundUpdateLockPath(options)
+  await ensureDirectory(dirnamePath(lockPath))
+  const lease = createBackgroundUpdateLease(options)
+  if (await createDirectoryExclusively(lockPath)) {
+    return writeAcquiredBackgroundUpdateLease(lease, options)
+  }
+
+  const reclaimPath = resolveBackgroundUpdateReclaimPath(options)
+  if (!(await acquireBackgroundUpdateReclaimLock(reclaimPath, options))) return null
+  try {
+    const current = await readBackgroundUpdateLease(options)
+    const now = options.now?.() ?? Date.now()
+    const staleMilliseconds = resolvePositiveMilliseconds(
+      options.lockStaleMilliseconds,
+      backgroundUpdateLockStaleMilliseconds,
+    )
+    if (current) {
+      if (now - Date.parse(current.createdAt) < staleMilliseconds) return null
+      if (!(await releaseBackgroundUpdateLease(current, options))) return null
+    } else {
+      const modifiedAt = await readBackgroundUpdateLockModifiedAt(options)
+      if (modifiedAt === null || now - modifiedAt < staleMilliseconds) return null
+      if (!(await removeDirectoryOnce(lockPath))) return null
+    }
+
+    const replacement = createBackgroundUpdateLease(options)
+    if (!(await createDirectoryExclusively(lockPath))) return null
+    return writeAcquiredBackgroundUpdateLease(replacement, options)
+  } finally {
+    await removeDirectoryOnce(reclaimPath)
+  }
+}
+
+async function acquireBackgroundUpdateReclaimLock(path: string, options: SelfManagementOptions) {
+  if (await createDirectoryExclusively(path)) return true
+  const now = options.now?.() ?? Date.now()
+  const staleMilliseconds = resolvePositiveMilliseconds(
+    options.lockStaleMilliseconds,
+    backgroundUpdateLockStaleMilliseconds,
+  )
+  const observedModifiedAt = await readPathModifiedAt(path)
+  if (observedModifiedAt === null || now - observedModifiedAt < staleMilliseconds) return false
+  const confirmedModifiedAt = await readPathModifiedAt(path)
+  if (confirmedModifiedAt !== observedModifiedAt) return false
+  if (!(await removeDirectoryOnce(path))) return false
+  return createDirectoryExclusively(path)
+}
+
+async function writeAcquiredBackgroundUpdateLease(lease: BackgroundUpdateLease, options: SelfManagementOptions) {
+  const lockPath = resolveBackgroundUpdateLockPath(options)
+  try {
+    await writeBackgroundUpdateLease(lease, options)
+    return lease
+  } catch (error) {
+    await removeDirectoryOnce(lockPath)
+    throw error
+  }
+}
+
+async function releaseBackgroundUpdateLease(lease: BackgroundUpdateLease, options: SelfManagementOptions = {}) {
+  const lockPath = resolveBackgroundUpdateLockPath(options)
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const current = await readBackgroundUpdateLease(options)
+    if (!current || current.token !== lease.token) return false
+    if (await removeDirectoryOnce(lockPath)) return true
+    await Bun.sleep(10)
+  }
+  return false
+}
+
+async function removeDirectoryOnce(path: string) {
+  try {
+    await removePath(path)
+    return true
+  } catch {
+    return !(await pathExistsForLock(path))
+  }
+}
+
+async function pathExistsForLock(path: string) {
+  try {
+    await Bun.file(path).stat()
     return true
   } catch {
     return false
   }
+}
+
+function createBackgroundUpdateLease(options: SelfManagementOptions): BackgroundUpdateLease {
+  return {
+    token: crypto.randomUUID(),
+    pid: process.pid,
+    createdAt: new Date(options.now?.() ?? Date.now()).toISOString(),
+  }
+}
+
+async function readBackgroundUpdateLease(options: SelfManagementOptions): Promise<BackgroundUpdateLease | null> {
+  try {
+    const lease = decodeWithSchema<typeof backgroundUpdateLeaseSchema, BackgroundUpdateLease>(
+      backgroundUpdateLeaseSchema,
+      await Bun.file(resolveBackgroundUpdateLeasePath(options)).json(),
+      'Mirror background update lease',
+    )
+    return Number.isFinite(Date.parse(lease.createdAt)) ? lease : null
+  } catch {
+    return null
+  }
+}
+
+async function writeBackgroundUpdateLease(lease: BackgroundUpdateLease, options: SelfManagementOptions) {
+  await writeTextFile(resolveBackgroundUpdateLeasePath(options), `${JSON.stringify(lease)}\n`)
+}
+
+async function readBackgroundUpdateLockModifiedAt(options: SelfManagementOptions) {
+  return readPathModifiedAt(resolveBackgroundUpdateLockPath(options))
+}
+
+async function readPathModifiedAt(path: string) {
+  try {
+    return (await Bun.file(path).stat()).mtimeMs
+  } catch {
+    return null
+  }
+}
+
+async function createDirectoryExclusively(path: string) {
+  const result = await Bun.$`mkdir ${path}`.quiet().nothrow()
+  return result.exitCode === 0
+}
+
+function resolveBackgroundUpdateLockPath(options: SelfManagementOptions) {
+  return joinPath(dirnamePath(resolveCachePath(options)), '.update-check.lock')
+}
+
+function resolveBackgroundUpdateLeasePath(options: SelfManagementOptions) {
+  return joinPath(resolveBackgroundUpdateLockPath(options), 'lease.json')
+}
+
+function resolveBackgroundUpdateReclaimPath(options: SelfManagementOptions) {
+  return joinPath(dirnamePath(resolveCachePath(options)), '.update-check-reclaim.lock')
 }
 
 async function resolveUpgradePlan(options: UpgradeOptions = {}): Promise<MirrorUpgradePlan> {
@@ -576,6 +779,7 @@ function createUpgradeResolutionFailure(error: unknown, options: SelfManagementO
 async function fetchLatestRelease(options: SelfManagementOptions) {
   const response = await (options.fetch ?? fetch)(`${apiBaseUrl(options)}/repos/${resolveRepo(options)}/releases/latest`, {
     headers: { 'User-Agent': 'mirror-cli' },
+    signal: options.signal,
   })
   if (!response.ok) throw new MirrorUpgradeError('UPGRADE_RESOLUTION_FAILED', `Failed to fetch latest Mirror release: ${response.status} ${response.statusText}`)
   return decodeWithSchema<typeof GitHubReleaseSchema, GitHubRelease>(
@@ -758,6 +962,10 @@ function quotePowerShell(value: string) {
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error)
+}
+
+function resolvePositiveMilliseconds(value: number | undefined, fallback: number) {
+  return Number.isFinite(value) && value !== undefined && value > 0 ? value : fallback
 }
 
 function defaultCacheDirectory() {
