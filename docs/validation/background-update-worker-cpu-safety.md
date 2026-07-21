@@ -78,10 +78,21 @@ keywords:
   Publish completed.
 - Corrective `3.5.8` moves the public Linux installer check after release
   creation in the Publish workflow.
+- Corrected CI run `29864740860`: passed.
+- Corrected Publish run `29864743740`: passed typecheck, full tests, build,
+  exact fourteen-asset verification, and the post-publication Linux installer
+  smoke test.
+- Public Windows `3.5.8` baseline binary: reported exact version `3.5.8` and
+  `Hello Windows - mirror v3.5.8`; a 32-command burst observed zero workers
+  after the foreground commands and zero workers after 20 seconds.
+- Cross-repository installer auditing then exposed a PowerShell UTF-8 managed
+  marker defect. Corrective `3.5.9` uses strict UTF-8 without a BOM, repairs the
+  legacy mojibaked marker, honors environment home overrides, and adds a
+  twice-run Restricted-policy idempotence regression.
 
 ### Remaining Release Gates
 
-- Mirror `3.5.8` patch apply, push, CI, Publish, and public binary/process
+- Mirror `3.5.9` patch apply, push, CI, Publish, and repeated public installer
   checks.
 
 ## Readiness
