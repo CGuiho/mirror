@@ -1,0 +1,79 @@
+---
+name: Mirror Background Update Worker CPU Safety Validation
+purpose: Record verification evidence for Mirror's bounded background update worker.
+description: Tracks concurrency, process-count, timeout, stale-lock, foreground-isolation, repository, CI, and release evidence.
+created: 2026-07-21
+owner: mirror-docs-validation
+flags:
+  - testing
+tags:
+  - mirror
+  - validation
+  - reliability
+keywords:
+  - CPU usage
+  - worker process
+  - lock coalescing
+  - stale lease
+---
+
+# Mirror Background Update Worker CPU Safety Validation
+
+## Scope
+
+- [Task specification](../todo/background-update-worker-cpu-safety.md)
+- Cross-repository incident reference: [XDocs issue #14](https://github.com/CGuiho/xdocs/issues/14)
+
+## Implementation Evidence
+
+- `source/self-management.ts` acquires an atomic `.update-check.lock` before
+  spawning and passes its UUID lease token to the hidden worker.
+- Lease state is TypeBox-decoded and records the token, owner PID, and creation
+  time.
+- A separate reclaim lock serializes stale recovery; both locks recover after
+  the 30-second stale interval.
+- Release checks the current stored token before every bounded removal attempt,
+  so a resumed old owner cannot remove a newer lease.
+- The worker aborts and rejects the entire network check after 15 seconds,
+  releases its lease in `finally`, and does not enter ordinary command routing.
+- The scheduler catches cache, source-checkout, lock, spawn, and cleanup errors
+  and returns without changing foreground output or exit status.
+- `source/runtime.ts` uses unique directory marker files, removing the shared
+  `.keep` race found by the new concurrency tests.
+
+## Verification
+
+### Local
+
+- `bun run typecheck`: passed.
+- `bun test source/self-management.spec.ts`: passed, 16 tests and 67
+  expectations.
+- Real burst measurement: 32 concurrent foreground schedulers produced one
+  compiled worker PID; that PID was present during its 750 ms task and absent
+  after 1 second.
+- Lock stress: 32 concurrent worker checks made one fetch; 32 concurrent stale
+  reclaimers produced one replacement lease.
+- Timeout regression: an abort-aware hanging fetch failed at the injected 25 ms
+  bound and the next lease acquisition succeeded.
+- `bun test`: passed, 50 tests and 265 expectations.
+- `bun run build:native`: passed for all twelve native binaries and the exact
+  fourteen RFC 0034 release assets.
+- `xdocs meta docs/todo --strict`, `xdocs meta docs/validation --strict`, and
+  `xdocs meta mirror/source --strict`: passed.
+- `xdocs tree`: passed.
+- `xdocs doctor`: valid with zero errors and seven pre-existing documentation
+  warnings unrelated to this change.
+- `mirror config check`: passed.
+- `mirror version plan patch --format json`: selected `3.5.6` to `3.5.7` with
+  tag `@guiho/mirror@3.5.7`.
+- `git diff --check`: passed.
+
+### Remaining Release Gates
+
+- Mirror patch apply, push, CI, public release, and public binary checks.
+
+## Readiness
+
+The implementation, native distribution, and structured documentation are
+locally verified. Final completion remains contingent on the public release
+gates above.
