@@ -12,6 +12,7 @@ documents:
   upgrade-reliability.md: Defines the required observable, verified self-upgrade, recovery, catalog, installer, and Windows regression outcomes.
   upgrade-reliability-implementation.md: Records upgrade reliability implementation decisions, progress, verification evidence, and handoff.
   public-installers-and-platform-greeting.md: Defines standalone public installer and platform-aware greeting outcomes for GitHub issues 12 and 13.
+  background-update-worker-cpu-safety.md: Defines bounded, coalesced, stale-recoverable background update worker behavior for Mirror.
 tags:
   - todo
   - planning
