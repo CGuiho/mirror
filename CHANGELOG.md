@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.7] - 2026-07-21
+
+### Fixed
+
+- Coalesced concurrent background release checks behind one atomic per-cache
+  lease acquired before worker creation, preventing persistent process
+  accumulation and sustained CPU use.
+- Bounded the complete hidden-worker network check to 15 seconds, guaranteed
+  token-owned lease cleanup, and added serialized 30-second stale recovery.
+- Isolated all background scheduling failures from foreground commands and made
+  concurrent directory creation safe with unique marker files.
+- Added 32-way lock and real-process stress coverage proving one worker at peak
+  and no worker remaining after bounded completion.
+
 ## [3.5.6] - 2026-07-20
 
 ### Changed
