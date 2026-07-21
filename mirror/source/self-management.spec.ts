@@ -5,6 +5,7 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 
 import {
+  acquireBackgroundUpdateLease,
   buildAssetCandidates,
   createUpgradeRecovery,
   createUpgradeResolutionFailure,
@@ -13,7 +14,10 @@ import {
   executeUpgrade,
   listAvailableVersions,
   readUpdateCache,
+  releaseBackgroundUpdateLease,
   resolveUpgradePlan,
+  runBackgroundUpdateCheck,
+  scheduleBackgroundUpdateCheck,
 } from './self-management.js'
 import { joinPath } from './path.js'
 import { ensureDirectory, removePath, runCommand, writeTextFile } from './runtime.js'
@@ -25,6 +29,111 @@ afterEach(async () => {
 })
 
 describe('Mirror self-management', () => {
+  test.serial('coalesces concurrent background checks into one bounded worker lease', async () => {
+    const root = await createTempDirectory()
+    let fetchCount = 0
+    let releaseFetch: () => void = () => undefined
+    const fetchGate = new Promise<void>((resolve) => { releaseFetch = resolve })
+    const fetcher = (async () => {
+      fetchCount += 1
+      await fetchGate
+      return Response.json(release('@guiho/mirror@3.5.6', '2026-07-20T00:00:00Z'))
+    }) as unknown as typeof fetch
+
+    const checks = Array.from({ length: 32 }, () => runBackgroundUpdateCheck({
+      cacheDir: root,
+      currentVersion: '3.5.6',
+      fetch: fetcher,
+      updateTimeoutMilliseconds: 10_000,
+    }))
+    await waitFor(() => fetchCount === 1)
+    releaseFetch()
+    await Promise.all(checks)
+
+    expect(fetchCount).toBe(1)
+    expect((await readUpdateCache({ cacheDir: root }))?.latestVersion).toBe('3.5.6')
+    const nextLease = await acquireBackgroundUpdateLease({ cacheDir: root })
+    expect(nextLease).not.toBeNull()
+    if (nextLease) expect(await releaseBackgroundUpdateLease(nextLease, { cacheDir: root })).toBe(true)
+  })
+
+  test.serial('serializes stale-lock reclaimers and prevents an old owner from deleting the replacement', async () => {
+    const root = await createTempDirectory()
+    const oldNow = Date.parse('2026-07-20T00:00:00Z')
+    const currentNow = oldNow + 31_000
+    const oldLease = await acquireBackgroundUpdateLease({ cacheDir: root, now: () => oldNow })
+    expect(oldLease).not.toBeNull()
+
+    const contenders = await Promise.all(Array.from({ length: 32 }, () => acquireBackgroundUpdateLease({
+      cacheDir: root,
+      now: () => currentNow,
+      lockStaleMilliseconds: 30_000,
+    })))
+    const replacements = contenders.filter((lease) => lease !== null)
+    expect(replacements).toHaveLength(1)
+    expect(replacements[0]?.token).not.toBe(oldLease?.token)
+    if (oldLease) expect(await releaseBackgroundUpdateLease(oldLease, { cacheDir: root })).toBe(false)
+    if (replacements[0]) expect(await releaseBackgroundUpdateLease(replacements[0], { cacheDir: root })).toBe(true)
+  })
+
+  test.serial('aborts a hanging background request and always releases its lease', async () => {
+    const root = await createTempDirectory()
+    const fetcher = (async (_input: string | URL | Request, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener('abort', () => reject(init.signal?.reason ?? new Error('aborted')), { once: true })
+    })) as typeof fetch
+
+    await expect(runBackgroundUpdateCheck({
+      cacheDir: root,
+      currentVersion: '3.5.6',
+      fetch: fetcher,
+      updateTimeoutMilliseconds: 25,
+    })).rejects.toThrow('timed out after 25ms')
+    const nextLease = await acquireBackgroundUpdateLease({ cacheDir: root })
+    expect(nextLease).not.toBeNull()
+    if (nextLease) expect(await releaseBackgroundUpdateLease(nextLease, { cacheDir: root })).toBe(true)
+  })
+
+  test.serial('isolates scheduler failures from foreground commands and never recurses from a worker', async () => {
+    const root = await createTempDirectory()
+    const obstructedCache = joinPath(root, 'not-a-directory')
+    await writeTextFile(obstructedCache, 'occupied')
+    expect(await scheduleBackgroundUpdateCheck({ cacheDir: obstructedCache, sourceCheckout: false })).toBe(false)
+
+    const previousWorker = process.env['MIRROR_BACKGROUND_UPDATE_CHECK']
+    process.env['MIRROR_BACKGROUND_UPDATE_CHECK'] = '1'
+    try {
+      expect(await scheduleBackgroundUpdateCheck({ cacheDir: root, sourceCheckout: false })).toBe(false)
+    } finally {
+      if (previousWorker === undefined) delete process.env['MIRROR_BACKGROUND_UPDATE_CHECK']
+      else process.env['MIRROR_BACKGROUND_UPDATE_CHECK'] = previousWorker
+    }
+  })
+
+  test.serial('spawns only one real worker process during a concurrent foreground burst', async () => {
+    const root = await createTempDirectory()
+    const executable = joinPath(root, detectNativePlatform() === 'windows' ? 'mirror-worker-fixture.exe' : 'mirror-worker-fixture')
+    await compileVersionFixture(root, 'worker-fixture.ts', executable, `
+if (process.argv.includes('--mirror-update-check-worker')) {
+  await Bun.write(${JSON.stringify(joinPath(root, 'worker-'))} + process.pid + '.marker', '')
+  await Bun.sleep(750)
+}
+`)
+
+    const scheduled = await Promise.all(Array.from({ length: 32 }, () => scheduleBackgroundUpdateCheck({
+      cacheDir: root,
+      executablePath: executable,
+      sourceCheckout: false,
+    })))
+    expect(scheduled.filter(Boolean)).toHaveLength(1)
+    await waitFor(() => [...new Bun.Glob('worker-*.marker').scanSync({ cwd: root })].length === 1)
+    const marker = [...new Bun.Glob('worker-*.marker').scanSync({ cwd: root })][0]
+    const pid = marker ? Number.parseInt(marker.slice('worker-'.length, -'.marker'.length), 10) : 0
+    expect(pid).toBeGreaterThan(0)
+    expect(isProcessRunning(pid)).toBe(true)
+    await Bun.sleep(1_000)
+    expect(isProcessRunning(pid)).toBe(false)
+  }, 30_000)
+
   test('builds recovery commands pinned to stable and prerelease versions', () => {
     const windows = createUpgradeRecovery('3.4.2', 'resolved', 'windows')
     const posix = createUpgradeRecovery('3.5.0-alpha.1', 'resolved', 'linux')
@@ -443,5 +552,22 @@ async function readRemaining(reader: { read(): Promise<{ done: boolean, value?: 
     const chunk = await reader.read()
     if (chunk.done) return `${output}${decoder.decode()}`
     output += decoder.decode(chunk.value, { stream: true })
+  }
+}
+
+async function waitFor(predicate: () => boolean, timeoutMilliseconds = 2_000) {
+  const startedAt = Date.now()
+  while (!predicate()) {
+    if (Date.now() - startedAt >= timeoutMilliseconds) throw new Error('Timed out waiting for condition')
+    await Bun.sleep(10)
+  }
+}
+
+function isProcessRunning(pid: number) {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch {
+    return false
   }
 }
