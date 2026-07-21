@@ -33,8 +33,9 @@ export const makeTempDirectory = async (prefix = 'mirror-temp-') => {
 }
 
 export const ensureDirectory = async (path: string) => {
-  await Bun.write(`${path.replaceAll('\\', '/')}/.keep`, '')
-  await removePath(`${path.replaceAll('\\', '/')}/.keep`)
+  const marker = `${path.replaceAll('\\', '/')}/.mirror-directory-${crypto.randomUUID()}.keep`
+  await Bun.write(marker, '')
+  await Bun.file(marker).delete()
 }
 
 export const ensureParentDirectory = async (path: string) => {
