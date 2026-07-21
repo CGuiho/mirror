@@ -20,7 +20,7 @@ files:
   "tsconfig.build.json": "TypeScript compiler configuration."
   "tsconfig.json": "TypeScript compiler configuration."
 documents:
-  "DOCS.md": "Full package documentation, including verified transactional self-upgrades, exact-version recovery, complete release catalogs, and canonical installer behavior."
+  "DOCS.md": "Full package documentation, including coalesced bounded update workers, verified transactional self-upgrades, exact-version recovery, complete release catalogs, and canonical installer behavior."
   "LICENSE.md": "Markdown companion document in mirror."
   "README.md": "Published package README covering installation, Citty CLI behavior, verified self-upgrade/recovery, complete release listing, safety, and development."
   "xdocs-overview.md": "Generated companion overview that links back to this directory xdocs descriptor."
