@@ -68,9 +68,21 @@ keywords:
   tag `@guiho/mirror@3.5.7`.
 - `git diff --check`: passed.
 
+### Release Evidence
+
+- `@guiho/mirror@3.5.7` Publish run `29864298845`: passed, including exact
+  fourteen-asset verification.
+- Main CI run `29864295877`: code, typecheck, tests, build, binary, and Windows
+  installer/self-upgrade jobs passed; the public Linux installer step exposed
+  a release-order race by receiving the previous `3.5.6` latest release before
+  Publish completed.
+- Corrective `3.5.8` moves the public Linux installer check after release
+  creation in the Publish workflow.
+
 ### Remaining Release Gates
 
-- Mirror patch apply, push, CI, public release, and public binary checks.
+- Mirror `3.5.8` patch apply, push, CI, Publish, and public binary/process
+  checks.
 
 ## Readiness
 
