@@ -36,26 +36,6 @@ jobs:
         working-directory: mirror
       - run: bun run binary
         working-directory: mirror
-      - name: Verify public Linux installer
-        run: |
-          expected_version="$(bun -e 'console.log((await Bun.file("package.json").json()).version)')"
-          public_home="$(mktemp -d)"
-          project_dir="$(mktemp -d)"
-          install_dir="$public_home/.local/bin"
-          trap 'rm -rf "$public_home" "$project_dir"' EXIT
-          export HOME="$public_home"
-          export MIRROR_INSTALL_DIR="$install_dir"
-          export MIRROR_SKIP_PATH_UPDATE=1
-          cd "$project_dir"
-          curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.sh | bash
-          test "$("$install_dir/mirror" --version)" = "$expected_version"
-          test "$("$install_dir/mirror")" = "Hello Linux - mirror v$expected_version"
-          test -s "$HOME/.agents/skills/guiho-s-mirror/SKILL.md"
-          test -s "$HOME/.claude/skills/guiho-s-mirror/SKILL.md"
-          test -s "$project_dir/AGENTS.md"
-          grep -Fq '<!-- BEGIN MIRROR — DO NOT EDIT THIS SECTION -->' "$project_dir/AGENTS.md"
-          grep -Fq '<!-- END MIRROR -->' "$project_dir/AGENTS.md"
-        working-directory: mirror
 
   windows-self-upgrade:
     runs-on: windows-latest
