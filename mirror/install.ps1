@@ -11,6 +11,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$UserHome = if ($env:HOME) { $env:HOME } elseif ($env:USERPROFILE) { $env:USERPROFILE } else { $HOME }
 
 if ($Help) {
   @"
@@ -29,7 +30,7 @@ Parameters:
 
 if ([string]::IsNullOrWhiteSpace($Version)) { $Version = if ($env:MIRROR_VERSION) { $env:MIRROR_VERSION } else { 'latest' } }
 if ([string]::IsNullOrWhiteSpace($Repo)) { $Repo = if ($env:MIRROR_REPO) { $env:MIRROR_REPO } else { 'CGuiho/mirror' } }
-if ([string]::IsNullOrWhiteSpace($InstallDir)) { $InstallDir = if ($env:MIRROR_INSTALL_DIR) { $env:MIRROR_INSTALL_DIR } else { Join-Path $HOME '.local\bin' } }
+if ([string]::IsNullOrWhiteSpace($InstallDir)) { $InstallDir = if ($env:MIRROR_INSTALL_DIR) { $env:MIRROR_INSTALL_DIR } else { Join-Path $UserHome '.local\bin' } }
 if ([string]::IsNullOrWhiteSpace($ApiBaseUrl)) { $ApiBaseUrl = if ($env:MIRROR_GITHUB_API_URL) { $env:MIRROR_GITHUB_API_URL.TrimEnd('/') } else { 'https://api.github.com' } }
 
 function Assert-SecureUri { param([string]$Uri)
@@ -106,6 +107,29 @@ function Add-InstallDirToPath { param([string]$Directory)
   if (-not (Test-PathContains -PathValue $env:Path -Directory $Directory)) { $env:Path = "$Directory;$env:Path" }
 }
 
+function Read-Utf8TextFile {
+  param([string]$Path)
+  $bytes = [System.IO.File]::ReadAllBytes($Path)
+  try { $text = ([System.Text.UTF8Encoding]::new($false, $true)).GetString($bytes) }
+  catch { throw "Instruction file is not valid UTF-8 text: $Path" }
+  if ($text.Length -gt 0 -and $text[0] -eq [char]0xFEFF) { return $text.Substring(1) }
+  return $text
+}
+
+function Set-MirrorManagedBlock {
+  param([string]$Path, [string]$Prompt)
+  $startMarker = '<!-- BEGIN MIRROR ' + [char]0x2014 + ' DO NOT EDIT THIS SECTION -->'
+  $legacyStartMarker = '<!-- BEGIN MIRROR ' + [char]0x00E2 + [char]0x20AC + [char]0x201D + ' DO NOT EDIT THIS SECTION -->'
+  $endMarker = '<!-- END MIRROR -->'
+  $existing = if (Test-Path -LiteralPath $Path) { Read-Utf8TextFile -Path $Path } else { '' }
+  $starts = '(?:' + [Regex]::Escape($startMarker) + '|' + [Regex]::Escape($legacyStartMarker) + ')'
+  $pattern = $starts + '[\s\S]*?' + [Regex]::Escape($endMarker) + '\s*'
+  $clean = ([Regex]::Replace($existing, $pattern, '')).TrimEnd()
+  $prefix = if ($clean) { "$clean`r`n`r`n" } else { '' }
+  $content = "$prefix$startMarker`r`n$($Prompt.Trim())`r`n$endMarker`r`n"
+  [System.IO.File]::WriteAllText($Path, $content, [System.Text.UTF8Encoding]::new($false))
+}
+
 function Install-MirrorAgentAssets {
   param([object]$Release, [string]$TemporaryDirectory)
   $skillAsset = @($Release.assets) | Where-Object { $_.name -eq 'guiho-s-mirror.md' -and $_.browser_download_url } | Select-Object -First 1
@@ -119,8 +143,8 @@ function Install-MirrorAgentAssets {
   Invoke-WebRequest -Uri $promptAsset.browser_download_url -OutFile $promptTemp -UseBasicParsing
   Assert-MirrorMarkdownAsset -Path $skillTemp -ExpectedName 'guiho-s-mirror'
   Assert-MirrorMarkdownAsset -Path $promptTemp -ExpectedName 'guiho-i-mirror'
-  $agentSkill = Join-Path $HOME '.agents\skills\guiho-s-mirror'
-  $claudeSkill = Join-Path $HOME '.claude\skills\guiho-s-mirror'
+  $agentSkill = Join-Path $UserHome '.agents\skills\guiho-s-mirror'
+  $claudeSkill = Join-Path $UserHome '.claude\skills\guiho-s-mirror'
   foreach ($directory in @($agentSkill, $claudeSkill)) {
     New-Item -ItemType Directory -Force -Path $directory | Out-Null
     Copy-Item -LiteralPath $skillTemp -Destination (Join-Path $directory 'SKILL.md') -Force
@@ -131,17 +155,11 @@ function Install-MirrorAgentAssets {
   if (-not (Test-Path -LiteralPath $agents) -and -not (Test-Path -LiteralPath $claude)) {
     New-Item -ItemType File -Force -Path $agents | Out-Null
   }
-  $start = '<!-- BEGIN MIRROR — DO NOT EDIT THIS SECTION -->'
-  $end = '<!-- END MIRROR -->'
-  $body = Get-Content -Raw -LiteralPath $promptTemp
+  $body = Read-Utf8TextFile -Path $promptTemp
   foreach ($target in @($agents, $claude)) {
     if (-not (Test-Path -LiteralPath $target)) { continue }
     Write-Host "Discovered instruction file: $target"
-    $content = Get-Content -Raw -LiteralPath $target
-    if ($null -eq $content) { $content = '' }
-    $pattern = "(?s)\s*$([regex]::Escape($start)).*?$([regex]::Escape($end))\s*"
-    $clean = [regex]::Replace($content, $pattern, "`r`n").TrimEnd()
-    Set-Content -LiteralPath $target -Value "$clean`r`n`r`n$start`r`n$($body.TrimEnd())`r`n$end`r`n" -NoNewline
+    Set-MirrorManagedBlock -Path $target -Prompt $body
     Write-Host "Reconciled instruction block: $target"
   }
 }
