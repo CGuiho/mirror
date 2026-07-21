@@ -69,3 +69,13 @@ Add an option for Python version propagation from a source project to a target p
 - Related files:
   - [docs/validation/public-installers-and-platform-greeting.md](docs/validation/public-installers-and-platform-greeting.md) - Local, CI, release, and public installation evidence.
 - External: GitHub issue [#12](https://github.com/CGuiho/mirror/issues/12); GitHub issue [#13](https://github.com/CGuiho/mirror/issues/13)
+
+## Mirror Background Update Worker CPU Safety
+
+- Status: testing
+- Created: `2026-07-21T21:58:07+02:00`
+- Updated: `2026-07-21T21:58:07+02:00`
+- Outcome: Preserve Mirror's nonblocking release check while guaranteeing one bounded worker per cache, stale recovery, deterministic exit, and foreground failure isolation.
+- Spec: [docs/todo/background-update-worker-cpu-safety.md](docs/todo/background-update-worker-cpu-safety.md)
+- Related files:
+  - [docs/validation/background-update-worker-cpu-safety.md](docs/validation/background-update-worker-cpu-safety.md) - Concurrency, process-count, timeout, stale-lock, CI, and release evidence.
