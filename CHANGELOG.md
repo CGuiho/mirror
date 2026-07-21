@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.9] - 2026-07-21
+
+### Fixed
+
+- Made both PowerShell installers read and write instruction files as strict
+  UTF-8 without a BOM, preserve Unicode content, repair legacy mojibaked Mirror
+  markers, and reconcile exactly one managed block across repeated installs.
+- Made installer home overrides honor `HOME` or `USERPROFILE`, keeping skill
+  installation isolated in automated and temporary environments.
+
 ## [3.5.8] - 2026-07-21
 
 ### Fixed
