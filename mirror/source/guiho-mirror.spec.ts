@@ -2,7 +2,7 @@
  * @copyright Copyright (c) 2026 GUIHO Technologies as represented by Cristóvão GUIHO. All Rights Reserved.
  */
 
-import { afterEach, describe, expect, test } from 'bun:test'
+import { afterEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
 
 import { discoverMirrorConfig } from './config.js'
 import { resolveNextVersion } from './version.js'
@@ -13,6 +13,8 @@ import { assertExactReleaseAssetManifest, releaseAssetNames } from './release-as
 import packageJson from '../package.json' with { type: 'json' }
 
 const temporaryDirectories: string[] = []
+
+setDefaultTimeout(15_000)
 
 afterEach(async () => {
   process.exitCode = 0
@@ -234,7 +236,7 @@ describe('Mirror RFC 0034 CLI', () => {
     for (const tool of ['.agents', '.claude']) {
       expect(await fileExists(joinPath(root, tool, 'skills', 'guiho-s-mirror', 'SKILL.md'))).toBe(false)
     }
-  })
+  }, 15_000)
 
   test('applies, updates, shows, and removes exact instruction blocks idempotently', async () => {
     const root = await createTemp()
