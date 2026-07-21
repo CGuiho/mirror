@@ -131,8 +131,15 @@ Global data is stored under `~/.guiho/mirror/`. The foreground reads
 New version available. Run this command to upgrade: mirror upgrade
 ```
 
-Network checks run in a hidden detached worker. Help and version requests remain
-free of configuration, agent, update-network, Git, and filesystem mutations.
+Network checks run in a hidden detached worker. Before spawning, Mirror acquires
+one atomic lease under `~/.guiho/mirror/.update-check.lock`; simultaneous
+foreground invocations coalesce behind that lease instead of creating more
+workers. A worker performs exactly one check, aborts after 15 seconds, releases
+its owned lease in `finally`, and exits. A serialized recovery path reclaims
+leases older than 30 seconds without allowing an old token to delete a newer
+owner. Scheduling failures are isolated from the foreground command. Help and
+version requests remain free of configuration, agent, update-network, Git, and
+filesystem mutations.
 
 ## Agent Resources
 
