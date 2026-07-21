@@ -12,7 +12,7 @@ keywords:
   - semantic versioning
   - mirror.yaml
 metadata:
-  version: "3.5.6"
+  version: "3.5.7"
 ---
 
 # GUIHO Mirror
