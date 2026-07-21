@@ -11,6 +11,7 @@ documents:
   "rfc-0034-cli-compliance-migration.md": "Full RFC 0034 implementation and release-readiness evidence."
   "rfc-0034-downstream-handoff.md": "Point-in-time inventory of downstream Mirror TOML consumers requiring YAML migration."
   "public-installers-and-platform-greeting.md": "Verification evidence for standalone public installer and platform-aware greeting fixes."
+  "background-update-worker-cpu-safety.md": "Concurrency, process-count, timeout, stale-lock, foreground-isolation, CI, and release evidence for Mirror's update worker."
 tags:
   - "validation"
   - documentation
