@@ -5,7 +5,7 @@ description: Requires coalesced update checks, deterministic worker exit, stale-
 created: 2026-07-21
 owner: mirror-docs-todo
 flags:
-  - testing
+  - completed
 tags:
   - mirror
   - cli
@@ -22,7 +22,7 @@ keywords:
 ## Todo Index
 
 - Task: `Mirror Background Update Worker CPU Safety`
-- Status: testing
+- Status: completed
 - Index: [todo.md](../../todo.md)
 - Validation: [background-update-worker-cpu-safety.md](../validation/background-update-worker-cpu-safety.md)
 
