@@ -72,10 +72,10 @@ Add an option for Python version propagation from a source project to a target p
 
 ## Mirror Background Update Worker CPU Safety
 
-- Status: testing
+- Status: completed
 - Created: `2026-07-21T21:58:07+02:00`
-- Updated: `2026-07-21T21:58:07+02:00`
-- Outcome: Preserve Mirror's nonblocking release check while guaranteeing one bounded worker per cache, stale recovery, deterministic exit, and foreground failure isolation.
+- Updated: `2026-07-21`
+- Outcome: Mirror `3.5.9` preserves its nonblocking release check while guaranteeing one bounded worker per cache, stale recovery, deterministic exit, foreground failure isolation, and idempotent UTF-8 PowerShell installation.
 - Spec: [docs/todo/background-update-worker-cpu-safety.md](docs/todo/background-update-worker-cpu-safety.md)
 - Related files:
   - [docs/validation/background-update-worker-cpu-safety.md](docs/validation/background-update-worker-cpu-safety.md) - Concurrency, process-count, timeout, stale-lock, CI, and release evidence.
