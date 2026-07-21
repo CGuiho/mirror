@@ -35,27 +35,38 @@ describe('Mirror canonical installers', () => {
     const targetVersion = '3.4.2'
     const fixture = await createInstallerFixture('3.4.1', targetVersion, { kind: 'version', version: targetVersion })
     try {
+      const agentsPath = joinPath(fixture.root, 'AGENTS.md')
+      await writeTextFile(agentsPath, '# Café — Existing\n\n<!-- BEGIN MIRROR — DO NOT EDIT THIS SECTION -->\nold block\n<!-- END MIRROR -->\n')
       const scriptUrl = `${fixture.server.url.toString().replace(/\/$/, '')}/devops/install.ps1`
-      const result = await runCommand([
+      const command = [
         'powershell.exe',
         '-NoProfile',
         '-ExecutionPolicy',
         'Restricted',
         '-Command',
         `irm '${scriptUrl}' | iex`,
-      ], {
-        cwd: fixture.root,
-        env: installerEnvironment(fixture, {
-          MIRROR_VERSION: targetVersion,
-          MIRROR_DOWNLOAD_BASE_URL: fixture.server.url.toString().replace(/\/$/, ''),
-          MIRROR_SKIP_PATH_UPDATE: '1',
-        }),
+      ]
+      const environment = installerEnvironment(fixture, {
+        MIRROR_VERSION: targetVersion,
+        MIRROR_DOWNLOAD_BASE_URL: fixture.server.url.toString().replace(/\/$/, ''),
+        MIRROR_SKIP_PATH_UPDATE: '1',
       })
-      if (result.exitCode !== 0) throw new Error(`${result.stdout}\n${result.stderr}`)
-      expect(result.exitCode).toBe(0)
-      expect(`${result.stdout}\n${result.stderr}`).not.toContain('Cannot bind argument to parameter')
-      expect(result.stdout).toContain(`Installed and verified Mirror ${targetVersion}`)
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const result = await runCommand(command, { cwd: fixture.root, env: environment })
+        if (result.exitCode !== 0) throw new Error(`${result.stdout}\n${result.stderr}`)
+        expect(result.exitCode).toBe(0)
+        expect(`${result.stdout}\n${result.stderr}`).not.toContain('Cannot bind argument to parameter')
+        expect(result.stdout).toContain(`Installed and verified Mirror ${targetVersion}`)
+      }
       expect((await runCommand([fixture.destination, '--version'])).stdout.trim()).toBe(targetVersion)
+      const agents = await readTextFile(agentsPath)
+      expect(agents).toContain('# Café — Existing')
+      expect(agents.match(/<!-- BEGIN MIRROR — DO NOT EDIT THIS SECTION -->/g)).toHaveLength(1)
+      expect(agents.match(/<!-- END MIRROR -->/g)).toHaveLength(1)
+      expect(agents).not.toContain('â€”')
+      expect(new Uint8Array(await Bun.file(agentsPath).arrayBuffer()).slice(0, 3)).not.toEqual(new Uint8Array([0xef, 0xbb, 0xbf]))
+      expect(await Bun.file(joinPath(fixture.root, '.agents', 'skills', 'guiho-s-mirror', 'SKILL.md')).exists()).toBe(true)
+      expect(await Bun.file(joinPath(fixture.root, '.claude', 'skills', 'guiho-s-mirror', 'SKILL.md')).exists()).toBe(true)
     } finally {
       fixture.server.stop(true)
     }
