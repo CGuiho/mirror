@@ -32,8 +32,10 @@ Configuration lookup is:
 3. `~/.guiho/mirror/mirror.yaml`.
 
 The update cache is `~/.guiho/mirror/cache.json`. Foreground startup reads it
-synchronously and detached update work performs network access. A loaded
-configuration path is always reported.
+synchronously and detached update work performs network access. One atomic
+per-cache lease coalesces concurrent starts, the worker network lifetime is
+bounded to 15 seconds, and 30-second stale recovery is token-owned and
+serialized. A loaded configuration path is always reported.
 
 Release automation builds the exact twelve `mirror-<platform>-<arch>` native
 assets, using `darwin` for macOS, then adds `guiho-s-mirror.md` and
