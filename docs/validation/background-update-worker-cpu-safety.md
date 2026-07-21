@@ -5,7 +5,7 @@ description: Tracks concurrency, process-count, timeout, stale-lock, foreground-
 created: 2026-07-21
 owner: mirror-docs-validation
 flags:
-  - testing
+  - completed
 tags:
   - mirror
   - validation
@@ -90,13 +90,22 @@ keywords:
   legacy mojibaked marker, honors environment home overrides, and adds a
   twice-run Restricted-policy idempotence regression.
 
-### Remaining Release Gates
+### Completed Release Gates
 
-- Mirror `3.5.9` patch apply, push, CI, Publish, and repeated public installer
-  checks.
+- Mirror `3.5.9` commit/tag `e7af65e`: pushed to `main` and origin.
+- CI run `29865566934`: passed Linux typecheck, full tests, build, binary checks,
+  and Windows typecheck, replacement, and installer tests.
+- Publish run `29865570846`: passed typecheck, full tests, build, exact
+  fourteen-asset verification, and public Linux installer verification.
+- Public release: exact fourteen assets, including `guiho-s-mirror.md` and
+  `guiho-i-mirror.md`; release body equals only the `3.5.9` changelog section.
+- Public Windows installer: two consecutive `irm .../devops/install.ps1 | iex`
+  runs installed and verified `3.5.9`, preserved `Café — Existing`, produced
+  exactly one correct managed block, emitted no BOM or mojibake, and installed
+  both skill copies under the isolated test home.
 
 ## Readiness
 
-The implementation, native distribution, and structured documentation are
-locally verified. Final completion remains contingent on the public release
-gates above.
+The bounded background worker, release ordering, exact release catalog, public
+installers, UTF-8 managed-block reconciliation, and public native binary are
+verified locally, in CI, and from the published `3.5.9` release.
