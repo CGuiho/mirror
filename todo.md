@@ -13,8 +13,9 @@ All Rights Reserved.
 
 ## Mirror 3.6.0 Global Schema And YAML Completion
 
-- Status: testing
+- Status: completed
 - Created: `2026-07-22`
+- Updated: `2026-07-23`
 - Outcome: Persist the TypeBox-derived schema globally, complete the YAML-only
   migration, standardize the welcome/update lifecycle, and release Mirror 3.6.0.
 - Specs:
@@ -25,6 +26,9 @@ All Rights Reserved.
 - Validation: [Validation Report](docs/validation/mirror-3.6.0-schema-and-yaml.md)
 - External: GitHub issues [#14](https://github.com/CGuiho/mirror/issues/14)
   and [#15](https://github.com/CGuiho/mirror/issues/15)
+- Release: [`@guiho/mirror@3.6.1`](https://github.com/CGuiho/mirror/releases/tag/%40guiho/mirror%403.6.1)
+- Result: Both issues are closed after exact-asset, public Linux installer, and
+  isolated Windows installer/schema acceptance.
 
 ## Python Versioning Support
 
