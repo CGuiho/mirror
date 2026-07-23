@@ -6,7 +6,7 @@ import { Type, type Static } from '@sinclair/typebox'
 import { Value } from '@sinclair/typebox/value'
 import { MirrorError } from './errors.js'
 
-export const mirrorConfigSchemaReference = './node_modules/@guiho/mirror/schema/mirror.schema.json'
+export const mirrorConfigSchemaReference = 'https://raw.githubusercontent.com/CGuiho/mirror/main/mirror/schema/mirror.schema.json'
 
 export const MirrorAdapterSchema = Type.Union([
   Type.Literal('package.json'),
