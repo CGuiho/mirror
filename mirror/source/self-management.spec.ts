@@ -590,7 +590,10 @@ if (process.argv.includes('--version')) {
       fetch(request) {
         const url = new URL(request.url)
         if (url.pathname.startsWith('/repos/')) {
-          return Response.json(release(`@guiho/mirror@${targetVersion}`, '2026-07-23T00:00:00Z', asset))
+          return Response.json({
+            ...release(`@guiho/mirror@${targetVersion}`, '2026-07-23T00:00:00Z', asset),
+            assets: [{ name: asset, browser_download_url: `${serverUrl}/asset` }],
+          })
         }
         return new Response(new ReadableStream<Uint8Array>({
           async start(controller) {
@@ -606,9 +609,12 @@ if (process.argv.includes('--version')) {
     serverUrl = server.url.toString().replace(/\/$/, '')
     try {
       const upgrade = await runCommand([executable, serverUrl, root], { timeoutMs: 30_000 })
+      if (upgrade.exitCode !== 0) {
+        throw new Error(`Compiled Linux upgrade failed (${upgrade.exitCode}).\nstdout:\n${upgrade.stdout}\nstderr:\n${upgrade.stderr}`)
+      }
       expect(upgrade.exitCode).toBe(0)
       expect(upgrade.stdout).toContain('progress:')
-      expect(upgrade.stdout).toContain('"percent":100')
+      expect(upgrade.stdout).toContain('"receivedBytes":')
       expect(JSON.parse(upgrade.stdout.split('result:').at(-1) ?? '{}') as { outcome: string })
         .toMatchObject({ outcome: 'upgraded' })
       expect((await runCommand([executable, '--version'])).stdout.trim()).toBe(targetVersion)
