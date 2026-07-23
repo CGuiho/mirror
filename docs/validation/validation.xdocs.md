@@ -14,6 +14,7 @@ documents:
   "public-installers-and-platform-greeting.md": "Verification evidence for standalone public installer and platform-aware greeting fixes."
   "background-update-worker-cpu-safety.md": "Concurrency, process-count, timeout, stale-lock, foreground-isolation, CI, and release evidence for Mirror's update worker."
   "upgrade-catalog-progress-and-linux-download.md": "Local, native, CI, release, public progress, and issue-closure evidence for issues 16 through 18."
+  "publish-channel-acceptance.md": "Local and public evidence for exact-tag installation, stable-only latest validation, prerelease readiness, and the Mirror 3.7.4 release."
 tags:
   - "validation"
   - documentation
@@ -22,6 +23,7 @@ keywords:
   - "release readiness"
   - streamed upgrade
   - linux download
+  - publish channels
 flags: []
 status: stable
 ---
