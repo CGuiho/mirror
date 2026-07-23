@@ -13,7 +13,7 @@ files:
   "errors.ts": "Mirror error types, including contextual CLI usage failures."
   "executor.ts": "TypeScript source module."
   "guiho-mirror-bin.ts": "TypeScript source module."
-  "guiho-mirror.spec.ts": "Colocated Bun test suite for platform-aware startup, concise and structured release catalogs, CLI planning, execution, agents, hooks, self-management behavior, and load-tolerant native-process lifecycle coverage."
+  "guiho-mirror.spec.ts": "Colocated Bun test suite for platform-aware startup, concise and structured release catalogs, channel-aware publish acceptance, CLI planning, execution, agents, hooks, self-management behavior, and load-tolerant native-process lifecycle coverage."
   "guiho-mirror.ts": "TypeScript source module."
   "help.ts": "Unicode command-tree and redirect-safe Markdown rendering derived from live Citty command definitions."
   "hooks.ts": "TypeScript source module."
