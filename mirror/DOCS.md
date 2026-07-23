@@ -23,15 +23,18 @@ use Bun APIs and do not import Node filesystem, path, OS, or child-process
 built-ins. The Node-only npm bootstrap is isolated at
 `scripts/mirror-bin.mjs`.
 
-With no arguments, Mirror identifies the running platform:
+With no arguments, Mirror prints a deterministic welcome page containing the
+product identity, purpose, platform, architecture, version, and help command:
 
 ```text
-Hello Windows - mirror v<version>
-Hello Linux - mirror v<version>
-Hello macOS - mirror v<version>
+╔════════════════════════════════════════════════════╗
+║  MIRROR                                            ║
+║  Semantic project versioning                       ║
+║  GUIHO                                             ║
+╚════════════════════════════════════════════════════╝
 ```
 
-Only the one line matching the current platform is printed.
+When a newer stable version is cached, the welcome ends with an upgrade notice.
 
 Only `-h` and root `-v` are short aliases. Every command scope supports
 `--help`, `--help-tree`, `--help-tree-depth <positive-integer>`, and
@@ -120,18 +123,26 @@ agents:
 
 `mirror init` creates or reconciles `mirror.yaml`. `config schema --format
 json` prints the JSON Schema generated from the same TypeBox source shipped as
-`schema/mirror.schema.json`.
+`schema/mirror.schema.json`. `mirror config schema --save` atomically and
+idempotently saves that schema to `~/.guiho/mirror/schema.json`. Install,
+upgrade, and init refresh this global copy. Generated configurations use the
+portable HTTPS schema modeline because YAML language servers do not guarantee
+shell-style `~` expansion and committed files must not contain a machine-local
+absolute home path.
 
 ## Startup And Cache
 
 Global data is stored under `~/.guiho/mirror/`. The foreground reads
-`cache.json` before ordinary output. When an update is cached it prints:
+`cache.json` before ordinary output. On the welcome page a cached update prints:
 
 ```text
-New version available. Run this command to upgrade: mirror upgrade
+⚠ New version available: v<version>
+  Run mirror upgrade to update.
 ```
 
-Network checks run in a hidden detached worker. Before spawning, Mirror acquires
+Network checks run in a hidden detached worker. The foreground awaits only the
+local cache, lease, and process-spawn handoff; it never awaits the network
+request. Before spawning, Mirror acquires
 one atomic lease under `~/.guiho/mirror/.update-check.lock`; simultaneous
 foreground invocations coalesce behind that lease instead of creating more
 workers. A worker performs exactly one check, aborts after 15 seconds, releases
@@ -180,7 +191,8 @@ The x64 default is `baseline`. `upgrade list` includes every stable and
 prerelease version by default and supports `--page` and `--per-page`; the
 legacy `--pre-releases` spelling remains accepted. Remote payloads and positive
 integers are TypeBox-validated. Upgrade downloads, validates,
-transactionally replaces, verifies, caches, refreshes both global skills, and
+transactionally replaces, verifies, saves the global schema with the newly
+installed binary, caches, refreshes both global skills, and
 reconciles local instruction blocks.
 
 ## Installers And Npm Bootstrap
@@ -188,7 +200,7 @@ reconciles local instruction blocks.
 `install.sh` and `install.ps1` print target version, architecture, variant,
 source URL, download progress, binary destination, both skill destinations,
 instruction files, and final verification. Each installs the binary, configures
-PATH when required, installs both global skill copies, and reconciles project
+PATH when required, saves `~/.guiho/mirror/schema.json`, installs both global skill copies, and reconciles project
 instructions. Downloaded `guiho-s-mirror.md` and `guiho-i-mirror.md` payloads
 must be nonempty text with YAML frontmatter naming the expected resource.
 Installers reject PE, NUL-containing, invalid UTF-8 on Windows, binary, or
