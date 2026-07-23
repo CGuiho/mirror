@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.7.4] - 2026-07-23
+
+### Fixed
+
+- Made every stable or prerelease publication validate the installer script
+  from its exact Git tag with the exact expected version.
+- Limited GitHub latest-pointer and canonical unpinned-installer acceptance to
+  stable releases, so prereleases remain publishable while stable releases
+  still prove the public latest contract.
+- Retained the independent previous-stable-to-exact-current command-upgrade
+  gate for both stable and prerelease publications.
+
 ## [3.7.3] - 2026-07-23
 
 ### Fixed
