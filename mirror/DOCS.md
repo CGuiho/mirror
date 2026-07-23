@@ -290,3 +290,12 @@ GitHub Release notes are generated from the exact `## [<version>]` changelog
 section and stop at the next level-two heading. Missing or duplicate exact
 sections fail the workflow. Reruns update the existing release description with
 that same section instead of appending or publishing the full changelog.
+
+Post-publication acceptance separates exact-version and channel semantics. Every
+stable or prerelease tag fetches `devops/install.sh` from that exact tag and
+installs `--version <published-version>`. A stable release additionally proves
+that GitHub's latest pointer names the current tag and that the canonical
+unpinned `main` installer resolves it. A prerelease deliberately skips those
+stable-latest assertions. Both channels retain the independent gate that
+installs the previous stable release and upgrades it to the exact published
+version through `mirror upgrade --version`.
