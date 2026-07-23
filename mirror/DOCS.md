@@ -189,11 +189,34 @@ Ordinary config/version commands never mutate agent resources.
 
 The x64 default is `baseline`. `upgrade list` includes every stable and
 prerelease version by default and supports `--page` and `--per-page`; the
-legacy `--pre-releases` spelling remains accepted. Remote payloads and positive
-integers are TypeBox-validated. Upgrade downloads, validates,
-transactionally replaces, verifies, saves the global schema with the newly
-installed binary, caches, refreshes both global skills, and
-reconciles local instruction blocks.
+legacy `--pre-releases` spelling remains accepted. Its human table is deliberately
+compact:
+
+```text
+VERSION  CHANNEL  PUBLISHED   CURRENT  LATEST  ASSET
+```
+
+Dates use `YYYY-MM-DD`; the final three columns use `yes` or blank. Use
+`--format json` for complete tags, release URLs, compatible asset names,
+pagination metadata, warnings, and boolean markers. Remote payloads and
+positive integers are TypeBox-validated.
+
+Upgrade reads the response body as explicit chunks and writes them to a
+temporary Bun file sink. A known `Content-Length` produces percentage and byte
+progress; an unknown length produces received-byte progress. Progress is
+throttled to five-percent or one-mebibyte boundaries and always includes the
+final byte count. Downloads have a ten-minute total deadline and a 30-second
+no-progress deadline. `MIRROR_UPGRADE_DOWNLOAD_TIMEOUT_MS` and
+`MIRROR_UPGRADE_DOWNLOAD_INACTIVITY_TIMEOUT_MS` may shorten or extend those
+positive millisecond limits for controlled environments.
+
+Missing, empty, interrupted, timed-out, or declared-length-mismatched responses
+fail before replacement and remove the temporary candidate. A successful
+download then validates the native format and candidate version,
+transactionally replaces and verifies the canonical executable, saves the
+global schema with the newly installed binary, commits cache state, refreshes
+both global skills, and reconciles local instruction blocks. Recovery remains
+pinned to the resolved exact version after every outcome.
 
 ## Installers And Npm Bootstrap
 
