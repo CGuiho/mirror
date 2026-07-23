@@ -12,7 +12,7 @@ keywords:
   - semantic versioning
   - mirror.yaml
 metadata:
-  version: "3.6.1"
+  version: "3.7.0"
 ---
 
 # GUIHO Mirror
@@ -53,6 +53,14 @@ portable HTTPS schema association instead of a `node_modules` path.
 Bare `mirror` renders the deterministic Mirror welcome page and appends a
 cached stable-update notice when the cached version is newer. Foreground startup
 awaits only the local worker-spawn handoff, never the remote release request.
+
+`mirror upgrade list` uses the concise human columns `VERSION`, `CHANNEL`,
+`PUBLISHED`, `CURRENT`, `LATEST`, and `ASSET`; JSON retains complete release
+metadata. Upgrade downloads stream known-length percentage progress or
+unknown-length byte progress. A ten-minute total deadline and 30-second
+no-progress deadline fail and clean the temporary candidate before executable
+replacement. Native and version validation, canonical verification, rollback,
+schema refresh, and exact-version recovery remain transactional.
 
 ## CLI Catalog
 
