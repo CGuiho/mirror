@@ -68,12 +68,12 @@ the local plan, tests, and existing implementation conventions.
    successful exit, target version, progress, schema persistence, and cleanup.
 9. **Strengthen public release acceptance.**
    In the publish workflow, discover the latest stable release other than the
-   current tag and install it into an isolated Linux home. Because already
-   published binaries cannot retroactively receive the fixed downloader, use
-   the canonical exact-version installer recovery to replace and verify that
-   old installation. Separately run the newly released binary against a real
-   previous public asset, require visible streamed progress and bounded
-   completion, then restore the current release through the installer.
+   current tag and install it into an isolated Linux home. The 3.7.2 staged
+   recovery first crossed the immutable legacy-updater boundary with the
+   canonical installer and proved the fixed binary against a real public asset.
+   The final 3.7.3 gate must now run the public 3.7.2 binary's own
+   `mirror upgrade --version 3.7.3`, require visible streamed progress and
+   bounded completion, and verify the new canonical version and global schema.
 10. **Document and review.**
     Update canonical docs, source descriptors, task indexes, the installed
     Mirror skill source, implementation review, and validation report.
