@@ -65,8 +65,9 @@ binary, pinned recovery command, and existing transactional rollback behavior.
   body tests pass.
 - Progress is monotonic and ends at 100 percent when length is known.
 - A compiled Linux-native old binary upgrades through a streamed local fixture.
-- The public release workflow installs the previous stable Linux release and
-  upgrades it to the released version.
+- The public release workflow replaces a previous stable Linux installation
+  through the exact-version installer recovery, then proves the released binary
+  can stream a real public asset with visible progress and bounded completion.
 - Typecheck, full tests, all native builds, XDocs checks, exact fourteen assets,
   scoped release notes, and public installer acceptance pass.
 - Issues 16, 17, and 18 close only after the public release evidence exists.
