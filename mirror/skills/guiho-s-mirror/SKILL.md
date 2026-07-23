@@ -12,7 +12,7 @@ keywords:
   - semantic versioning
   - mirror.yaml
 metadata:
-  version: "3.7.1"
+  version: "3.7.2"
 ---
 
 # GUIHO Mirror
@@ -61,6 +61,12 @@ unknown-length byte progress. A ten-minute total deadline and 30-second
 no-progress deadline fail and clean the temporary candidate before executable
 replacement. Native and version validation, canonical verification, rollback,
 schema refresh, and exact-version recovery remain transactional.
+
+Versions older than 3.7.1 cannot acquire the new streaming implementation
+before their old downloader runs. If such a binary remains at
+`Downloading...`, interrupt it and use the exact-version installer recovery
+command it prints. After the installer verifies the current binary, future
+upgrades use the bounded streaming path.
 
 ## CLI Catalog
 
