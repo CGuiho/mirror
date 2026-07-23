@@ -5,7 +5,7 @@ description: Requirements for persisting Mirror's TypeBox configuration schema f
 created: 2026-07-22
 owner: mirror-docs-todo
 flags:
-  - testing
+  - completed
 tags:
   - mirror
   - cli
@@ -38,3 +38,4 @@ source and the release remains exactly fourteen assets.
 ## External
 
 - [Mirror issue 14](https://github.com/CGuiho/mirror/issues/14)
+- [Mirror 3.6.1 release](https://github.com/CGuiho/mirror/releases/tag/%40guiho/mirror%403.6.1)
