@@ -5,6 +5,8 @@
 import { afterEach, describe, expect, setDefaultTimeout, test } from 'bun:test'
 
 import { discoverMirrorConfig } from './config.js'
+import { resolveMirrorSchemaPath, saveMirrorConfigSchema } from './config-schema.js'
+import { renderMirrorConfigJsonSchema } from './schema.js'
 import { resolveNextVersion } from './version.js'
 import { joinPath } from './path.js'
 import { fileExists, makeTempDirectory, readTextFile, removePath, runCommand, writeTextFile } from './runtime.js'
@@ -22,11 +24,16 @@ afterEach(async () => {
 })
 
 describe('Mirror RFC 0034 CLI', () => {
-  test('prints the exact platform-aware no-argument banner', async () => {
+  test('prints the deterministic platform-aware welcome page', async () => {
     const result = await runCli([])
     const platformName = process.platform === 'win32' ? 'Windows' : process.platform === 'darwin' ? 'macOS' : 'Linux'
     expect(result.exitCode).toBe(0)
-    expect(result.stdout).toBe(`Hello ${platformName} - mirror v${packageJson.version}\n`)
+    expect(result.stdout).toContain('╔════════════════════════════════════════════════════╗')
+    expect(result.stdout).toContain('║  MIRROR')
+    expect(result.stdout).toContain('Semantic project versioning')
+    expect(result.stdout).toContain(`platform      ${platformName} ${process.arch}`)
+    expect(result.stdout).toContain(`version       v${packageJson.version}`)
+    expect(result.stdout).toContain('Run `mirror --help`')
     expect(result.stderr).toBe('')
   })
 
@@ -40,7 +47,7 @@ describe('Mirror RFC 0034 CLI', () => {
     expect(help.stdout).not.toContain('configuration file loaded:')
   })
 
-  test('prints a cached update notice before the no-argument banner', async () => {
+  test('prints a cached update notice after the welcome page', async () => {
     const home = await createTemp()
     await writeTextFile(joinPath(home, '.guiho', 'mirror', 'cache.json'), `${JSON.stringify({
       newVersionAvailable: true,
@@ -49,11 +56,9 @@ describe('Mirror RFC 0034 CLI', () => {
       lastCheck: new Date().toISOString(),
     })}\n`)
     const result = await runCli([], { home })
-    const platformName = process.platform === 'win32' ? 'Windows' : process.platform === 'darwin' ? 'macOS' : 'Linux'
     expect(result.exitCode).toBe(0)
-    expect(result.stdout).toBe(
-      `New version available. Run this command to upgrade: mirror upgrade\nHello ${platformName} - mirror v${packageJson.version}\n`,
-    )
+    expect(result.stdout.indexOf('MIRROR')).toBeLessThan(result.stdout.indexOf('⚠ New version available: v999.0.0'))
+    expect(result.stdout).toContain('Run mirror upgrade to update.')
   })
 
   test('routes parent and nested upgrade version flags into dry-run JSON plans', async () => {
@@ -194,12 +199,32 @@ describe('Mirror RFC 0034 CLI', () => {
 
   test('creates and reconciles mirror.yaml only', async () => {
     const root = await createTemp()
+    const home = await createTemp()
     await writeTextFile(joinPath(root, 'package.json'), '{"name":"fixture","version":"1.0.0"}\n')
-    const init = await runCli(['init', '--cwd', root, '--non-interactive'])
+    const init = await runCli(['init', '--cwd', root, '--non-interactive'], { home })
     expect(init.exitCode).toBe(0)
     expect(await fileExists(joinPath(root, 'mirror.yaml'))).toBe(true)
-    expect(await fileExists(joinPath(root, 'mirror.config.toml'))).toBe(false)
+    expect([...new Bun.Glob('*.toml').scanSync({ cwd: root })]).toHaveLength(0)
     expect(await readTextFile(joinPath(root, 'mirror.yaml'))).toContain('schema: 1')
+    expect(await readTextFile(joinPath(root, 'mirror.yaml'))).toContain('https://raw.githubusercontent.com/CGuiho/mirror/main/mirror/schema/mirror.schema.json')
+    expect(await readTextFile(resolveMirrorSchemaPath(home))).toBe(renderMirrorConfigJsonSchema())
+  })
+
+  test('saves the global schema atomically and idempotently', async () => {
+    const home = await createTemp()
+    const created = await saveMirrorConfigSchema(home)
+    expect(created.status).toBe('created')
+    expect(created.path).toBe(resolveMirrorSchemaPath(home))
+    expect(JSON.parse(await readTextFile(created.path))).toEqual(JSON.parse(renderMirrorConfigJsonSchema()))
+    expect(JSON.parse(await readTextFile(joinPath(import.meta.dir, '..', 'schema', 'mirror.schema.json'))))
+      .toEqual(JSON.parse(renderMirrorConfigJsonSchema()))
+    expect((await saveMirrorConfigSchema(home)).status).toBe('current')
+    await writeTextFile(created.path, '{broken')
+    expect((await saveMirrorConfigSchema(home)).status).toBe('replaced')
+
+    const cli = await runCli(['config', 'schema', '--save', '--format', 'json'], { home })
+    expect(cli.exitCode).toBe(0)
+    expect(JSON.parse(cli.stdout)).toEqual({ path: created.path, schemaVersion: 1, status: 'current' })
   })
 
   test('preserves Mirror version domain behavior with YAML configuration', async () => {
