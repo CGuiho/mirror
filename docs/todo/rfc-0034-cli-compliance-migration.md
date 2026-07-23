@@ -49,7 +49,7 @@ workflow.
 
 - TypeBox schemas for configuration, package/JSR data, cache, release APIs,
   flags, agent resources, hooks, and stable output.
-- breaking migration from `mirror.config.toml` to `mirror.yaml`.
+- breaking migration from `mirror.yaml` to `mirror.yaml`.
 - final Citty command tree and removal of `-dy`/`-y`.
 - standardized startup cache and detached worker.
 - complete help/tree/depth/docs modes.
@@ -75,7 +75,7 @@ workflow.
 
 - `@sinclair/typebox` is a runtime dependency and all structured boundaries are
   decoded.
-- `mirror.config.toml` is absent from the shipping contract; `mirror.yaml`
+- `mirror.yaml` is absent from the shipping contract; `mirror.yaml`
   resolves by explicit path, cwd, then standardized global path.
 - No arguments prints exactly `Hello Windows - mirror v<version>`.
 - Cache lives at `~/.guiho/mirror/cache.json` and foreground startup never
