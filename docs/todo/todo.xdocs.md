@@ -5,6 +5,8 @@ parent: mirror-docs
 children: []
 files: {}
 documents:
+  global-mirror-schema.md: Tracks global TypeBox-derived schema persistence for GitHub issue 14.
+  complete-yaml-configuration-migration.md: Tracks completion of the YAML-only configuration migration for GitHub issue 15.
   citty-cli-migration.md: Defines the required full migration from Mirror's handwritten CLI parser and router to Citty.
   citty-cli-migration-implementation.md: Records the completed Citty migration decisions, changes, and handoff.
   rfc-0034-cli-compliance-migration.md: Defines the required breaking outcome, scope, constraints, and completion signals for full Mirror RFC 0034 compliance.
