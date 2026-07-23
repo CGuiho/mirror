@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.7.2] - 2026-07-23
+
+### Added
+
+- Added visible known-length percentage and unknown-length byte progress to the
+  Bun-compiled upgrade downloader, with total and no-progress deadlines.
+- Added the concise `VERSION`, `CHANNEL`, `PUBLISHED`, `CURRENT`, `LATEST`, and
+  `ASSET` human release table while preserving complete JSON metadata.
+- Added public acceptance that exercises a real released asset through the
+  fixed streaming downloader and verifies exact-version installer recovery from
+  an older installation.
+
+### Fixed
+
+- Prevented Mirror 3.7.1-and-newer Linux binaries from waiting indefinitely in
+  opaque whole-response persistence.
+- Documented the unavoidable bootstrap boundary for older binaries: use their
+  printed exact-version installer recovery once, after which streamed upgrades
+  and deadlines apply.
+- Replaced the impossible release assertion that expected already-published
+  3.6.1 updater code to change before it downloaded its replacement.
+
 ## [3.7.1] - 2026-07-23
 
 ### Added
