@@ -5,7 +5,7 @@ description: Requirements for making mirror.yaml the sole active and documented 
 created: 2026-07-22
 owner: mirror-docs-todo
 flags:
-  - testing
+  - completed
 tags:
   - mirror
   - yaml
@@ -36,3 +36,4 @@ from TOML notation to YAML, and requiring downstream consumers to use
 ## External
 
 - [Mirror issue 15](https://github.com/CGuiho/mirror/issues/15)
+- [Mirror 3.6.1 release](https://github.com/CGuiho/mirror/releases/tag/%40guiho/mirror%403.6.1)
