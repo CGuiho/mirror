@@ -273,7 +273,7 @@ if (process.argv.includes('--mirror-update-check-worker')) {
     const currentVersion = '3.4.1'
     const targetVersion = '3.4.2'
     await compileVersionFixture(root, 'old.ts', executable, `console.log('${currentVersion}')`)
-    await compileVersionFixture(root, 'target.ts', download, `console.log('${targetVersion}')`)
+    await compileVersionFixture(root, 'target.ts', download, versionAndSchemaFixture(targetVersion))
     const asset = buildAssetCandidates(platform, arch, 'baseline')[0]!
     const metadataFetch = releaseFetch(targetVersion, asset)
     const plan = await resolveUpgradePlan({
@@ -379,7 +379,7 @@ if (process.argv.includes('--mirror-update-check-worker')) {
     const executable = joinPath(root, platform === 'windows' ? 'mirror.exe' : 'mirror')
     const target = joinPath(root, platform === 'windows' ? 'target.exe' : 'target')
     await compileVersionFixture(root, 'current.ts', executable, `console.log('${currentVersion}')`)
-    await compileVersionFixture(root, 'target.ts', target, `console.log('${targetVersion}')`)
+    await compileVersionFixture(root, 'target.ts', target, versionAndSchemaFixture(targetVersion))
     const asset = buildAssetCandidates(platform, arch, 'baseline')[0]!
     let releaseDownload: () => void = () => undefined
     const downloadGate = new Promise<void>((resolve) => { releaseDownload = resolve })
@@ -451,7 +451,7 @@ if (process.argv.includes('--mirror-update-check-worker')) {
     const executable = joinPath(root, 'mirror.exe')
     const target = joinPath(root, 'target.exe')
     const modulePath = joinPath(import.meta.dir, 'self-management.ts').replaceAll('\\', '/')
-    await compileVersionFixture(root, 'target.ts', target, `console.log('${targetVersion}')`)
+    await compileVersionFixture(root, 'target.ts', target, versionAndSchemaFixture(targetVersion))
     await compileVersionFixture(root, 'running-upgrader.ts', executable, `
 import { executeUpgrade, resolveUpgradePlan } from ${JSON.stringify(modulePath)}
 if (process.argv.includes('--version')) {
@@ -519,6 +519,10 @@ async function compileVersionFixture(root: string, sourceName: string, outfile: 
 
 function releaseFetch(version: string, asset: string) {
   return (async () => Response.json(release(`@guiho/mirror@${version}`, '2026-07-15T00:00:00Z', asset))) as unknown as typeof fetch
+}
+
+function versionAndSchemaFixture(version: string) {
+  return `if (process.argv.includes('config') && process.argv.includes('--save')) console.log(JSON.stringify({ path: '/tmp/schema.json' })); else console.log('${version}')`
 }
 
 function release(tag: string, publishedAt: string, asset?: string) {
