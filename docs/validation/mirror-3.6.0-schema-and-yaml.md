@@ -5,7 +5,7 @@ description: Commands, results, blocked checks, and release readiness for the Mi
 created: 2026-07-22
 owner: mirror-docs-validation
 flags:
-  - validating
+  - validated
 tags:
   - mirror
   - validation
@@ -30,7 +30,11 @@ keywords:
 | Packaged-schema equivalence | Passed in the CLI test suite against the TypeBox renderer. |
 | XDocs strict metadata/tree/doctor | Passed: 10 docs descriptors, source descriptor, 0 doctor errors/warnings. |
 | Obsolete configuration filename scan | Passed: zero matches after migration. |
-| Public release/install acceptance | Pending the corrected `3.6.1` release. |
+| Publish workflow | Passed: [run 29968065755](https://github.com/CGuiho/mirror/actions/runs/29968065755). |
+| Public Linux installer | Passed in the publish workflow against `3.6.1`. |
+| Public Windows installer | Passed with Mirror `3.6.1`, global schema, and both skill targets verified. |
+| Public release | Passed: exactly 14 assets and only the `3.6.1` changelog section in release notes. |
+| GitHub issues | Issues 14 and 15 received evidence comments and are closed. |
 
 The `3.6.0` publish workflow failed before asset publication because the
 package POSIX installer referenced a function-local variable after its scope.
@@ -46,5 +50,6 @@ no indirect bypass was attempted.
 
 ## Readiness
 
-Source implementation is ready for the remaining full validation and release
-gates. Issues must remain open until the public release passes acceptance.
+Mirror `3.6.1` is publicly accepted and the two issues are complete. The
+protected production environment remains enabled; this release received a
+one-time deployment approval.
