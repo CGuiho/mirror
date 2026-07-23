@@ -543,6 +543,24 @@ async function executeUpgrade(plan: MirrorUpgradePlan, options: UpgradeExecution
   }
   emit('verify', 'succeeded', `Canonical binary reports ${plan.targetVersion}.`)
 
+  emit('verify', 'started', 'Saving the configuration schema with the installed binary.')
+  const schemaSave = await runCommand([plan.executablePath, 'config', 'schema', '--save', '--format', 'json'], {
+    timeoutMs: 10_000,
+  })
+  if (schemaSave.timedOut || schemaSave.exitCode !== 0) {
+    const detail = schemaSave.stderr.trim() || schemaSave.stdout.trim() || 'schema save failed'
+    emit('verify', 'failed', detail)
+    return rollbackResult(base(), plan, 'UPGRADE_CANONICAL_VERSION_MISMATCH', `Installed Mirror could not save its global schema: ${detail}`)
+  }
+  try {
+    const saved = JSON.parse(schemaSave.stdout) as { path?: unknown }
+    if (typeof saved.path !== 'string' || saved.path.length === 0) throw new Error('schema result omitted path')
+  } catch (error) {
+    emit('verify', 'failed', errorMessage(error))
+    return rollbackResult(base(), plan, 'UPGRADE_CANONICAL_VERSION_MISMATCH', `Installed Mirror returned an invalid schema result: ${errorMessage(error)}`)
+  }
+  emit('verify', 'succeeded', 'The installed binary saved ~/.guiho/mirror/schema.json.')
+
   emit('cache', 'started', 'Committing verified update metadata.')
   let cacheUpdated = false
   try {
