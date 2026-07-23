@@ -112,7 +112,9 @@ jobs:
           cd "$project_dir"
           curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.sh | bash
           test "$("$install_dir/mirror" --version)" = "$expected_version"
-          test "$("$install_dir/mirror")" = "Hello Linux - mirror v$expected_version"
+          "$install_dir/mirror" | grep -Fq '║  MIRROR'
+          "$install_dir/mirror" | grep -Fq "version       v$expected_version"
+          test -s "$HOME/.guiho/mirror/schema.json"
           test -s "$HOME/.agents/skills/guiho-s-mirror/SKILL.md"
           test -s "$HOME/.claude/skills/guiho-s-mirror/SKILL.md"
           test -s "$project_dir/AGENTS.md"
