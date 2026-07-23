@@ -1,3 +1,19 @@
+---
+name: Mirror v3 Open Source Readiness
+purpose: Define the historical open-source readiness contract for Mirror v3.
+description: Historical requirements for Mirror v3 commands, configuration, safety, testing, and publication.
+created: 2026-05-16
+owner: mirror-docs
+flags:
+  - historical
+tags:
+  - mirror
+  - readiness
+keywords:
+  - Mirror v3
+  - open source
+---
+
 # Mirror v3 Open Source Readiness
 
 ## Purpose
@@ -177,7 +193,7 @@ There are no root-level release aliases. Commands like `mirror patch`, `mirror m
 
 ### `mirror init package`
 
-Creates `mirror.config.toml` for a Bun/TypeScript package project.
+Creates `mirror.yaml` for a Bun/TypeScript package project.
 
 The generated config uses:
 
@@ -188,7 +204,7 @@ The generated config uses:
 
 ### `mirror init jsr`
 
-Creates `mirror.config.toml` for a JSR TypeScript package project.
+Creates `mirror.yaml` for a JSR TypeScript package project.
 
 The generated config uses:
 
@@ -199,7 +215,7 @@ The generated config uses:
 
 ### `mirror init git`
 
-Creates `mirror.config.toml` for a generic Git-tagged project.
+Creates `mirror.yaml` for a generic Git-tagged project.
 
 The generated config uses:
 
@@ -306,7 +322,7 @@ mirror version apply 1.2.3 --commit
 
 ## Operational Flags
 
-Mirror should keep normal release commands clean. Project policy belongs in `mirror.config.toml`; operational behavior belongs in flags.
+Mirror should keep normal release commands clean. Project policy belongs in `mirror.yaml`; operational behavior belongs in flags.
 
 Global operational flags:
 
@@ -359,8 +375,8 @@ mirror version apply patch --source package --output package --output git --comm
 Flag syntax must support both value forms:
 
 ```text
---config mirror.config.toml
---config=mirror.config.toml
+--config mirror.yaml
+--config=mirror.yaml
 --source package
 --source=package
 --preid alpha
@@ -424,8 +440,8 @@ Open source defaults should be safe:
 Mirror v3 should use TOML:
 
 ```text
-mirror.config.toml
-config/mirror.config.toml
+mirror.yaml
+config/mirror.yaml
 ```
 
 Reasons:
@@ -439,10 +455,10 @@ Reasons:
 Lookup order:
 
 1. Explicit `--config <path>`.
-2. `./mirror.config.toml`.
-3. `./config/mirror.config.toml`.
+2. `./mirror.yaml`.
+3. `./config/mirror.yaml`.
 
-The top-level configuration file takes precedence over the nested configuration file. If both `./mirror.config.toml` and `./config/mirror.config.toml` exist, Mirror uses `./mirror.config.toml`.
+The top-level configuration file takes precedence over the nested configuration file. If both `./mirror.yaml` and `./config/mirror.yaml` exist, Mirror uses `./mirror.yaml`.
 
 The nested configuration file is a fallback for projects that prefer to keep tool configuration under `config/`.
 
