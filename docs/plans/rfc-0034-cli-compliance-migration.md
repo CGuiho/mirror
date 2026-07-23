@@ -62,7 +62,7 @@ coordination.
 
 ## Approved Breaking-Change Boundary
 
-- Replace every `mirror.config.toml` input/output/reference with `mirror.yaml`.
+- Replace every `mirror.yaml` input/output/reference with `mirror.yaml`.
 - Do not implement a TOML fallback, conversion layer, deprecation period, or
   dual schema.
 - Remove `-dy` and `-y`; only `-h` and root `-v` remain.
@@ -145,7 +145,7 @@ new execution session rather than assumed active.
   3. Capture current help, command, config, agent, update, installer, wrapper,
      and asset behavior.
   4. Search this repository and the GUIHO root package map for documented
-     `mirror.config.toml` consumers; record them as downstream follow-up, not
+     `mirror.yaml` consumers; record them as downstream follow-up, not
      compatibility requirements.
   5. Decide the safe self-hosting sequence: use the currently installed Mirror
      only to release the final migration after the new implementation and
@@ -204,7 +204,7 @@ new execution session rather than assumed active.
   2. `<effective-cwd>/mirror.yaml`
   3. `~/.guiho/mirror/mirror.yaml`
 - Actions:
-  1. Remove root/nested `mirror.config.toml` discovery.
+  1. Remove root/nested `mirror.yaml` discovery.
   2. Parse with `Bun.YAML.parse`.
   3. Decode with TypeBox and reject invalid YAML/shape without coercion.
   4. Delete `agents.auto_agents_md`, `agents.auto_skill_install`, and
@@ -484,10 +484,10 @@ new execution session rather than assumed active.
      fourteen assets.
   3. Supersede earlier decisions that require compatibility or TOML.
   4. Update the bundled skill so it no longer instructs users to inspect
-     `mirror.config.toml` or use `mirror agents`.
+     `mirror.yaml` or use `mirror agents`.
   5. Keep XDocs tree and companion metadata valid.
 - Acceptance:
-  - Search finds no shipping/public `mirror.config.toml`, `mirror agents`,
+  - Search finds no shipping/public `mirror.yaml`, `mirror agents`,
     `-dy`, `-y`, `guiho-mirror-`, or `macos` contract.
 
 ### Unit MR-15 - Downstream Migration Handoff
