@@ -825,13 +825,12 @@ async function runUpgradeList(options: MirrorCliOptions, state: CliState): Promi
   }
   const versionWidth = Math.max('VERSION'.length, ...catalog.releases.map((release) => release.version.length))
   const channelWidth = Math.max('CHANNEL'.length, ...catalog.releases.map((release) => release.channel.length))
-  const markerValues = catalog.releases.map((release) => [release.current ? 'current' : '', release.latestStable ? 'latest-stable' : ''].filter(Boolean).join(','))
-  const markerWidth = Math.max('MARKERS'.length, ...markerValues.map((value) => value.length))
-  const tagWidth = Math.max('TAG'.length, ...catalog.releases.map((release) => release.tag.length))
-  write(`${'VERSION'.padEnd(versionWidth)}  ${'CHANNEL'.padEnd(channelWidth)}  PUBLISHED   ${'MARKERS'.padEnd(markerWidth)}  ASSET  ${'TAG'.padEnd(tagWidth)}  RELEASE\n`, state)
-  for (const [index, release] of catalog.releases.entries()) {
-    const asset = options.verbose ? release.compatibleAsset ?? 'no' : release.compatible ? 'yes' : 'no'
-    write(`${release.version.padEnd(versionWidth)}  ${release.channel.padEnd(channelWidth)}  ${(release.publishedAt.slice(0, 10) || '-').padEnd(10)}  ${markerValues[index]?.padEnd(markerWidth)}  ${asset.padEnd(5)}  ${release.tag.padEnd(tagWidth)}  ${release.releaseUrl}\n`, state)
+  write(`${'VERSION'.padEnd(versionWidth)}  ${'CHANNEL'.padEnd(channelWidth)}  PUBLISHED   CURRENT  LATEST  ASSET\n`, state)
+  for (const release of catalog.releases) {
+    const current = release.current ? 'yes' : ''
+    const latest = release.latestStable ? 'yes' : ''
+    const asset = release.compatible ? 'yes' : ''
+    write(`${release.version.padEnd(versionWidth)}  ${release.channel.padEnd(channelWidth)}  ${(release.publishedAt.slice(0, 10) || '-').padEnd(10)}  ${current.padEnd(7)}  ${latest.padEnd(6)}  ${asset}\n`, state)
   }
   for (const warning of catalog.warnings) writeError(`warning: ${warning}\n`, state)
 }
@@ -858,6 +857,10 @@ async function runUpgrade(options: MirrorCliOptions, state: CliState): Promise<v
     }
     result = await executeUpgrade(plan, {
       onEvent: text ? (event) => {
+        if (event.status === 'progress' && event.phase === 'download' && event.progress) {
+          write(`${renderDownloadProgress(event.progress)}\n`, state)
+          return
+        }
         if (event.status !== 'started') return
         if (event.phase === 'download') write('Downloading...\n', state)
         if (event.phase === 'validate') write('Validating...\n', state)
@@ -884,6 +887,22 @@ async function runUpgrade(options: MirrorCliOptions, state: CliState): Promise<v
   reportUpgradeOutcome(result, state)
   reportUpgradeRecovery(result.recovery, state)
   if (result.outcome === 'failed' || result.outcome === 'rolled-back') process.exitCode = 1
+}
+
+function renderDownloadProgress(progress: NonNullable<MirrorUpgradeResult['events'][number]['progress']>): string {
+  if (progress.percent === null || progress.totalBytes === null) {
+    return `Download progress: ${formatBytes(progress.receivedBytes)} received`
+  }
+  const width = 40
+  const filled = Math.min(width, Math.max(0, Math.round((progress.percent / 100) * width)))
+  const bar = '#'.repeat(filled) + '-'.repeat(width - filled)
+  return `[${bar}] ${progress.percent.toFixed(1)}% (${formatBytes(progress.receivedBytes)}/${formatBytes(progress.totalBytes)})`
+}
+
+function formatBytes(value: number): string {
+  if (value < 1024) return `${value} B`
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KiB`
+  return `${(value / (1024 * 1024)).toFixed(1)} MiB`
 }
 
 function reportUpgradeOutcome(result: MirrorUpgradeResult, state: CliState): void {
