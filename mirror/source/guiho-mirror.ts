@@ -25,6 +25,7 @@ export type {
   MirrorAvailableRelease,
   MirrorReleaseCatalog,
   MirrorUpgradeEvent,
+  MirrorUpgradeDownloadProgress,
   MirrorUpgradeFailure,
   MirrorUpgradeFailureCode,
   MirrorUpgradeOutcome,
