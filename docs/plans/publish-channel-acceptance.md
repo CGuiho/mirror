@@ -3,6 +3,7 @@ name: Mirror Publish Channel Acceptance Plan
 purpose: Correct the release workflow so stable and prerelease publications are validated against the right GitHub release pointers.
 description: Defines the minimal workflow, regression, documentation, release, and public-evidence steps for channel-aware publish acceptance.
 created: 2026-07-23
+owner: mirror-docs-plans
 flags:
   - approved
 tags:
