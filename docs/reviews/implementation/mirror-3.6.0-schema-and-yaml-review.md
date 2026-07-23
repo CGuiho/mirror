@@ -19,8 +19,8 @@ keywords:
 
 ## Verdict
 
-Source implementation is accepted. Public release evidence is
-still required before closing the issues.
+Implementation and public release evidence are accepted. Issues 14 and 15 are
+closed against Mirror `3.6.1`.
 
 ## Findings
 
