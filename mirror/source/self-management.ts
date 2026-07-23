@@ -15,6 +15,7 @@ import type {
   MirrorUninstallResult,
   MirrorUpdateCache,
   MirrorUpgradeEvent,
+  MirrorUpgradeDownloadProgress,
   MirrorUpgradeFailureCode,
   MirrorUpgradePhase,
   MirrorUpgradePlan,
@@ -59,6 +60,8 @@ const defaultApiBaseUrl = 'https://api.github.com'
 const cacheTtlMilliseconds = 4 * 60 * 60 * 1000
 const backgroundUpdateTimeoutMilliseconds = 15_000
 const backgroundUpdateLockStaleMilliseconds = 30_000
+const upgradeDownloadTimeoutMilliseconds = 10 * 60 * 1000
+const upgradeDownloadInactivityTimeoutMilliseconds = 30_000
 const currentMirrorVersion = typeof packageJson.version === 'string' ? packageJson.version : '0.0.0'
 
 const backgroundUpdateLeaseSchema = Type.Object({
@@ -116,6 +119,8 @@ type UpgradeExecutionOptions = {
   fetch?: typeof fetch
   cacheDir?: string
   onEvent?: (event: MirrorUpgradeEvent) => void
+  downloadTimeoutMilliseconds?: number
+  downloadInactivityTimeoutMilliseconds?: number
 }
 
 type UninstallOptions = SelfManagementOptions & {
@@ -442,8 +447,19 @@ async function resolveUpgradePlan(options: UpgradeOptions = {}): Promise<MirrorU
 async function executeUpgrade(plan: MirrorUpgradePlan, options: UpgradeExecutionOptions = {}): Promise<MirrorUpgradeResult> {
   const events: MirrorUpgradeEvent[] = []
   const warnings: MirrorUpgradeResult['warnings'] = []
-  const emit = (phase: MirrorUpgradePhase, status: MirrorUpgradeEvent['status'], message: string) => {
-    const event = { sequence: events.length + 1, phase, status, message }
+  const emit = (
+    phase: MirrorUpgradePhase,
+    status: MirrorUpgradeEvent['status'],
+    message: string,
+    progress?: MirrorUpgradeDownloadProgress,
+  ) => {
+    const event = {
+      sequence: events.length + 1,
+      phase,
+      status,
+      message,
+      ...(progress ? { progress } : {}),
+    } satisfies MirrorUpgradeEvent
     events.push(event)
     options.onEvent?.(event)
   }
@@ -473,22 +489,56 @@ async function executeUpgrade(plan: MirrorUpgradePlan, options: UpgradeExecution
   }
 
   const fetcher = options.fetch ?? fetch
+  const downloadController = new AbortController()
+  const downloadStartedAt = Date.now()
+  const totalTimeoutMilliseconds = resolveUpgradeDownloadTimeout(
+    options.downloadTimeoutMilliseconds,
+    'MIRROR_UPGRADE_DOWNLOAD_TIMEOUT_MS',
+    upgradeDownloadTimeoutMilliseconds,
+  )
+  const inactivityTimeoutMilliseconds = resolveUpgradeDownloadTimeout(
+    options.downloadInactivityTimeoutMilliseconds,
+    'MIRROR_UPGRADE_DOWNLOAD_INACTIVITY_TIMEOUT_MS',
+    upgradeDownloadInactivityTimeoutMilliseconds,
+  )
   emit('download', 'started', `Downloading ${plan.downloadUrl}`)
   let response: Response
   try {
-    response = await fetcher(plan.downloadUrl, { headers: { 'User-Agent': 'mirror-cli' } })
+    response = await waitForDownloadStep(
+      fetcher(plan.downloadUrl, {
+        headers: { 'User-Agent': 'mirror-cli' },
+        signal: downloadController.signal,
+      }),
+      downloadStartedAt,
+      totalTimeoutMilliseconds,
+      inactivityTimeoutMilliseconds,
+      downloadController,
+    )
   } catch (error) {
+    await removePath(plan.temporaryPath).catch(() => undefined)
     emit('download', 'failed', errorMessage(error))
     return failedResult(base(), plan, 'UPGRADE_DOWNLOAD_FAILED', `Failed to download ${plan.downloadUrl}: ${errorMessage(error)}`)
   }
   if (!response.ok) {
+    downloadController.abort()
+    await removePath(plan.temporaryPath).catch(() => undefined)
     emit('download', 'failed', `${response.status} ${response.statusText}`)
     return failedResult(base(), plan, 'UPGRADE_DOWNLOAD_FAILED', `Failed to download ${plan.downloadUrl}: ${response.status} ${response.statusText}`)
   }
 
   try {
-    await Bun.write(plan.temporaryPath, response)
+    await downloadUpgradeResponse(
+      response,
+      plan.temporaryPath,
+      downloadStartedAt,
+      totalTimeoutMilliseconds,
+      inactivityTimeoutMilliseconds,
+      downloadController,
+      (progress) => emit('download', 'progress', downloadProgressMessage(progress), progress),
+    )
   } catch (error) {
+    downloadController.abort()
+    await removePath(plan.temporaryPath).catch(() => undefined)
     emit('download', 'failed', errorMessage(error))
     return failedResult(base(), plan, 'UPGRADE_DOWNLOAD_FAILED', `Failed to save the downloaded binary: ${errorMessage(error)}`)
   }
@@ -599,6 +649,127 @@ async function executeUpgrade(plan: MirrorUpgradePlan, options: UpgradeExecution
     cacheUpdated,
     cleanupPending,
   }
+}
+
+async function downloadUpgradeResponse(
+  response: Response,
+  destination: string,
+  startedAt: number,
+  totalTimeoutMilliseconds: number,
+  inactivityTimeoutMilliseconds: number,
+  controller: AbortController,
+  onProgress: (progress: MirrorUpgradeDownloadProgress) => void,
+): Promise<void> {
+  if (!response.body) throw new MirrorError('Upgrade download response had no body.')
+  const totalBytes = parseContentLength(response.headers.get('content-length'))
+  const reader = response.body.getReader()
+  const writer = Bun.file(destination).writer()
+  let receivedBytes = 0
+  let lastPercentBucket = -1
+  let lastUnknownBucket = -1
+  let lastReportedReceived = -1
+
+  try {
+    while (true) {
+      const chunk = await waitForDownloadStep(
+        reader.read(),
+        startedAt,
+        totalTimeoutMilliseconds,
+        inactivityTimeoutMilliseconds,
+        controller,
+        () => { void reader.cancel().catch(() => undefined) },
+      )
+      if (chunk.done) break
+      if (chunk.value.byteLength === 0) continue
+      writer.write(chunk.value)
+      receivedBytes += chunk.value.byteLength
+
+      if (totalBytes !== null && totalBytes > 0) {
+        const percent = Math.min(100, (receivedBytes / totalBytes) * 100)
+        const bucket = Math.floor(percent / 5)
+        if (bucket > lastPercentBucket || percent === 100) {
+          lastPercentBucket = bucket
+          lastReportedReceived = receivedBytes
+          onProgress({ receivedBytes, totalBytes, percent })
+        }
+      } else {
+        const bucket = Math.floor(receivedBytes / (1024 * 1024))
+        if (bucket > lastUnknownBucket) {
+          lastUnknownBucket = bucket
+          lastReportedReceived = receivedBytes
+          onProgress({ receivedBytes, totalBytes: null, percent: null })
+        }
+      }
+    }
+  } finally {
+    await writer.end()
+    reader.releaseLock()
+  }
+
+  if (receivedBytes === 0) throw new MirrorError('Upgrade download was empty.')
+  if (totalBytes !== null && receivedBytes !== totalBytes) {
+    throw new MirrorError(`Upgrade download length mismatch: expected ${totalBytes} bytes, received ${receivedBytes}.`)
+  }
+  if (receivedBytes !== lastReportedReceived) {
+    onProgress({
+      receivedBytes,
+      totalBytes,
+      percent: totalBytes === null ? null : 100,
+    })
+  }
+}
+
+async function waitForDownloadStep<T>(
+  operation: Promise<T>,
+  startedAt: number,
+  totalTimeoutMilliseconds: number,
+  inactivityTimeoutMilliseconds: number,
+  controller: AbortController,
+  onTimeout?: () => void,
+): Promise<T> {
+  const remainingTotal = totalTimeoutMilliseconds - (Date.now() - startedAt)
+  if (remainingTotal <= 0) {
+    controller.abort()
+    onTimeout?.()
+    throw new MirrorError(`Mirror upgrade download timed out after ${totalTimeoutMilliseconds}ms.`)
+  }
+  const waitMilliseconds = Math.min(remainingTotal, inactivityTimeoutMilliseconds)
+  const totalDeadlineIsFirst = remainingTotal <= inactivityTimeoutMilliseconds
+  let timeout: ReturnType<typeof setTimeout> | null = null
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeout = setTimeout(() => {
+      const error = new MirrorError(totalDeadlineIsFirst
+        ? `Mirror upgrade download timed out after ${totalTimeoutMilliseconds}ms.`
+        : `Mirror upgrade download made no progress for ${inactivityTimeoutMilliseconds}ms.`)
+      reject(error)
+      controller.abort()
+      onTimeout?.()
+    }, waitMilliseconds)
+  })
+  try {
+    return await Promise.race([operation, timeoutPromise])
+  } finally {
+    if (timeout) clearTimeout(timeout)
+  }
+}
+
+function parseContentLength(value: string | null): number | null {
+  if (!value || !/^\d+$/.test(value)) return null
+  const parsed = Number(value)
+  return Number.isSafeInteger(parsed) ? parsed : null
+}
+
+function downloadProgressMessage(progress: MirrorUpgradeDownloadProgress): string {
+  if (progress.percent === null || progress.totalBytes === null) {
+    return `Downloaded ${progress.receivedBytes} bytes.`
+  }
+  return `Downloaded ${progress.receivedBytes} of ${progress.totalBytes} bytes (${progress.percent.toFixed(1)}%).`
+}
+
+function resolveUpgradeDownloadTimeout(value: number | undefined, environmentName: string, fallback: number): number {
+  if (value !== undefined) return resolvePositiveMilliseconds(value, fallback)
+  const environmentValue = Number.parseInt(process.env[environmentName] ?? '', 10)
+  return resolvePositiveMilliseconds(Number.isFinite(environmentValue) ? environmentValue : undefined, fallback)
 }
 
 async function upgradeSelf(options: UpgradeOptions = {}): Promise<MirrorUpgradeResult> {
