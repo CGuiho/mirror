@@ -366,7 +366,7 @@ describe('Mirror RFC 0034 CLI', () => {
     expect(build).toContain('agentReleaseAssetNames')
   })
 
-  test('keeps the publish workflow exact, unique, and compatible with gh jq syntax', async () => {
+  test('keeps publish assets exact and public acceptance channel-aware', async () => {
     const workflow = await readTextFile(joinPath(import.meta.dir, '..', '..', '.github', 'workflows', 'publish.yml'))
     expect(workflow).not.toContain("--jq -r")
     expect(workflow).toContain("--jq '.assets[].name'")
@@ -374,6 +374,21 @@ describe('Mirror RFC 0034 CLI', () => {
     expect(workflow).toContain('cmp -s')
     expect(workflow).toContain('gh release edit')
     expect(workflow).toContain('--notes-file')
+
+    const acceptance = workflow.slice(workflow.indexOf('- name: Verify tag-pinned installer and public upgrade'))
+    expect(acceptance).toContain('contents/devops/install.sh?ref=${GITHUB_REF_NAME}')
+    expect(acceptance).toContain('bash "$tagged_installer" --version "$expected_version"')
+    const stableStart = acceptance.indexOf('if [[ "$expected_version" != *-* ]]; then')
+    const stableEnd = acceptance.indexOf('\n          fi', stableStart)
+    expect(stableStart).toBeGreaterThan(0)
+    expect(stableEnd).toBeGreaterThan(stableStart)
+    const stableOnly = acceptance.slice(stableStart, stableEnd)
+    expect(stableOnly).toContain('gh release view --repo "$GITHUB_REPOSITORY"')
+    expect(stableOnly).toContain('test "$latest_tag" = "$GITHUB_REF_NAME"')
+    expect(stableOnly).toContain('raw.githubusercontent.com/CGuiho/mirror/main/devops/install.sh | bash')
+    expect(acceptance.slice(0, stableStart)).not.toContain('raw.githubusercontent.com/CGuiho/mirror/main/devops/install.sh')
+    expect(acceptance.slice(stableEnd)).toContain('--exclude-pre-releases')
+    expect(acceptance.slice(stableEnd)).toContain('upgrade --version "$expected_version"')
   })
 })
 
