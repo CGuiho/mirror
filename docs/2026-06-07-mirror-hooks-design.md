@@ -1,3 +1,19 @@
+---
+name: Mirror Hooks Design
+purpose: Define the historical architecture for Mirror release lifecycle hooks.
+description: Design contract for hook names, execution order, configuration, and failure behavior.
+created: 2026-06-07
+owner: mirror-docs
+flags:
+  - historical
+tags:
+  - mirror
+  - hooks
+keywords:
+  - Mirror hooks
+  - release lifecycle
+---
+
 # Mirror Hooks — Design Document
 
 **Date:** 2026-06-07
@@ -102,7 +118,7 @@ Every hook receives the following environment variables:
 | Variable               | Always | Description                                           |
 |------------------------|--------|-------------------------------------------------------|
 | `MIRROR_CWD`           | Yes    | Project root directory                                |
-| `MIRROR_CONFIG_PATH`   | Yes    | Path to resolved `mirror.config.toml`                 |
+| `MIRROR_CONFIG_PATH`   | Yes    | Path to resolved `mirror.yaml`                 |
 | `MIRROR_SOURCE`        | Yes    | Version source adapter (`package.json`/`jsr.json`/`git`) |
 | `MIRROR_OUTPUT`        | Yes    | Comma-separated output adapters                       |
 | `MIRROR_CURRENT`       | Plan+  | Current version string (e.g. `1.2.3`)                 |
@@ -136,7 +152,7 @@ Every hook receives the following environment variables:
 
 ## 4. Configuration Schema
 
-### 4.1 TOML Additions (`mirror.config.toml`)
+### 4.1 TOML Additions (`mirror.yaml`)
 
 ```toml
 [hooks]
@@ -363,7 +379,7 @@ for (const action of plan.actions) {
 
 ## 9. Migration & Back-Compat
 
-- `hooks` is a new optional top-level key in `mirror.config.toml`. Existing configs without `hooks` work unchanged.
+- `hooks` is a new optional top-level key in `mirror.yaml`. Existing configs without `hooks` work unchanged.
 - The config schema version remains `1` (optional fields are backward-compatible).
 - No breaking changes to the CLI interface or library API.
 - `MirrorExecutionResult` gains an optional `hookResults` field. Consumers that destructure won't break.
