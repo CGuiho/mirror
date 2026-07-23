@@ -17,7 +17,7 @@ export type MirrorNativePlatform = 'linux' | 'darwin' | 'windows'
 export type MirrorNativeArch = 'x64' | 'arm64'
 export type MirrorNativeVariant = 'baseline' | 'default' | 'modern'
 export type MirrorUpgradePhase = 'plan' | 'download' | 'validate' | 'replace' | 'verify' | 'cache' | 'cleanup'
-export type MirrorUpgradePhaseStatus = 'started' | 'succeeded' | 'skipped' | 'failed'
+export type MirrorUpgradePhaseStatus = 'started' | 'progress' | 'succeeded' | 'skipped' | 'failed'
 export type MirrorUpgradeOutcome = 'upgraded' | 'up-to-date' | 'dry-run' | 'rolled-back' | 'failed'
 export type MirrorUpgradeRecoverySource = 'resolved' | 'fallback-current'
 export type MirrorUpgradeFailureCode =
@@ -161,11 +161,18 @@ export type MirrorUpgradePlan = {
   recovery: MirrorUpgradeRecovery
 }
 
+export type MirrorUpgradeDownloadProgress = {
+  receivedBytes: number
+  totalBytes: number | null
+  percent: number | null
+}
+
 export type MirrorUpgradeEvent = {
   sequence: number
   phase: MirrorUpgradePhase
   status: MirrorUpgradePhaseStatus
   message: string
+  progress?: MirrorUpgradeDownloadProgress
 }
 
 export type MirrorUpgradeFailure = {
