@@ -24,21 +24,21 @@ Mirror does not retain a fallback for these consumers.
 
 | Repository | Current path |
 | --- | --- |
-| brain | `C:\GUIHO\brain\mirror.config.toml` |
-| guiho-admin-core | `C:\GUIHO\guiho-admin-core\core\mirror.config.toml` |
-| guiho-admin-ui | `C:\GUIHO\guiho-admin-ui\ui\mirror.config.toml` |
-| guiho-core | `C:\GUIHO\guiho-core\core\mirror.config.toml` |
-| guiho-main | `C:\GUIHO\guiho-main\mirror.config.toml` |
-| guiho-ui | `C:\GUIHO\guiho-ui\mirror.config.toml` |
-| liga40-core | `C:\GUIHO\liga40-core\mirror.config.toml` |
-| liga40-main | `C:\GUIHO\liga40-main\mirror.config.toml` |
-| liga40-redirect-core | `C:\GUIHO\liga40-redirect-core\mirror.config.toml` |
-| nante40-main | `C:\GUIHO\nante40-main\mirror.config.toml` |
-| runx | `C:\GUIHO\runx\mirror.config.toml` |
-| superiority | `C:\GUIHO\superiority\mirror.config.toml` |
-| suraia | `C:\GUIHO\suraia\suraia\mirror.config.toml` |
-| turmab40 | `C:\GUIHO\turmab40\turmab40\mirror.config.toml` |
-| xdocs | `C:\GUIHO\xdocs\mirror.config.toml` |
+| brain | `C:\GUIHO\brain\mirror.yaml` |
+| guiho-admin-core | `C:\GUIHO\guiho-admin-core\core\mirror.yaml` |
+| guiho-admin-ui | `C:\GUIHO\guiho-admin-ui\ui\mirror.yaml` |
+| guiho-core | `C:\GUIHO\guiho-core\core\mirror.yaml` |
+| guiho-main | `C:\GUIHO\guiho-main\mirror.yaml` |
+| guiho-ui | `C:\GUIHO\guiho-ui\mirror.yaml` |
+| liga40-core | `C:\GUIHO\liga40-core\mirror.yaml` |
+| liga40-main | `C:\GUIHO\liga40-main\mirror.yaml` |
+| liga40-redirect-core | `C:\GUIHO\liga40-redirect-core\mirror.yaml` |
+| nante40-main | `C:\GUIHO\nante40-main\mirror.yaml` |
+| runx | `C:\GUIHO\runx\mirror.yaml` |
+| superiority | `C:\GUIHO\superiority\mirror.yaml` |
+| suraia | `C:\GUIHO\suraia\suraia\mirror.yaml` |
+| turmab40 | `C:\GUIHO\turmab40\turmab40\mirror.yaml` |
+| xdocs | `C:\GUIHO\xdocs\mirror.yaml` |
 
 This is a point-in-time inventory captured on 2026-07-18. No consumer file was
 modified by the Mirror package migration.
