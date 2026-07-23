@@ -48,6 +48,10 @@ transaction unchanged.
 - Temporary artifacts are disposable until native and version validation pass.
 - The public event-status union gains `progress`; this is accepted as a pre-1.0
   compatible evolution within the approved breaking-change boundary.
+- An already published pre-3.7.1 binary cannot use code from its target before
+  downloading that target. Its supported transition is the printed
+  exact-version installer recovery; public acceptance tests that recovery and
+  tests streamed progress from the newly installed binary separately.
 
 ## Rejected Alternatives
 
