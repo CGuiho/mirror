@@ -12,7 +12,7 @@ keywords:
   - semantic versioning
   - mirror.yaml
 metadata:
-  version: "3.5.9"
+  version: "3.6.0"
 ---
 
 # GUIHO Mirror
@@ -44,6 +44,15 @@ Mirror accepts YAML only and resolves configuration in this order:
 Use `mirror init`, `mirror config show`, `mirror config check`, and
 `mirror config schema`. A loaded configuration is reported with its absolute
 path.
+
+`mirror config schema --save` atomically persists the TypeBox-derived schema at
+`~/.guiho/mirror/schema.json`. `mirror init`, the installers, and successful
+self-upgrades refresh that file. Generated configurations use the canonical
+portable HTTPS schema association instead of a `node_modules` path.
+
+Bare `mirror` renders the deterministic Mirror welcome page and appends a
+cached stable-update notice when the cached version is newer. Foreground startup
+awaits only the local worker-spawn handoff, never the remote release request.
 
 ## CLI Catalog
 
