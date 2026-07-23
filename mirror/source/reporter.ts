@@ -13,6 +13,29 @@ import type {
 } from './types.js'
 import { configPathForDisplay, relativeFromCwd } from './config.js'
 import { renderMirrorConfigJsonSchema } from './schema.js'
+import type { MirrorSchemaSaveResult } from './config-schema.js'
+
+export const renderMirrorWelcome = (
+  version: string,
+  platform: string,
+  architecture: string,
+  update?: { latestVersion: string, upgradeCommand?: string },
+) => {
+  const lines = [
+    '╔════════════════════════════════════════════════════╗',
+    '║  MIRROR                                            ║',
+    '║  Semantic project versioning                       ║',
+    '║  GUIHO                                             ║',
+    '╚════════════════════════════════════════════════════╝',
+    '',
+    `  platform      ${platform} ${architecture}`,
+    `  version       v${version}`,
+    '',
+    '  Run `mirror --help` to see available commands.',
+  ]
+  if (update) lines.push('', `  ⚠ New version available: v${update.latestVersion}`, `    Run ${update.upgradeCommand ?? 'mirror upgrade'} to update.`)
+  return `${lines.join('\n')}\n`
+}
 
 export const mirrorBanner = (configPath?: string) => {
   const noColor = process.env['NO_COLOR'] === '1'
@@ -72,41 +95,46 @@ export const reportConfigSchema = (format: MirrorFormat = 'text') => {
     '    output: [package.json, jsr.json, git]    Required. Adapters to write the next version to.',
     '    prerelease_id: "<string>"                Optional. Default prerelease identifier.',
     '',
-    '  [package]',
-    '  path = "<path>"                           Optional. Path to package.json. Default: "package.json".',
-    '  auxiliary_paths = ["<path>"]              Optional. Extra package.json files that mirror the main package version.',
+    '  package:',
+    '    path: "<path>"                          Optional. Path to package.json. Default: "package.json".',
+    '    auxiliary_paths: ["<path>"]             Optional. Extra package.json files that mirror the main package version.',
     '',
-    '  [jsr]',
-    '  path = "<path>"                           Optional. Path to jsr.json. Default: "jsr.json".',
+    '  jsr:',
+    '    path: "<path>"                          Optional. Path to jsr.json. Default: "jsr.json".',
     '',
-    '  [git]',
-    '  tag_template = "<template>"               Optional. Git tag format. Default: "v{version}".',
+    '  git:',
+    '    tag_template: "<template>"              Optional. Git tag format. Default: "v{version}".',
     '                                            Supported: "v{version}", "{name}@{version}", "{name}/v{version}".',
-    '  commit = true | false                     Optional. Create release commits. Default: false.',
-    '  push = true | false                       Optional. Push release refs. Default: false.',
-    '  allow_dirty = true | false                Optional. Allow dirty Git worktree. Default: false.',
+    '    commit: true | false                    Optional. Create release commits. Default: false.',
+    '    push: true | false                      Optional. Push release refs. Default: false.',
+    '    allow_dirty: true | false               Optional. Allow dirty Git worktree. Default: false.',
     '',
     '  agents:',
     '    write_changelog: true | false            Optional. Tell agents to write changelog entries. Default: true.',
     '    changelog_path: "<path>"                 Optional. Changelog file path for agents. Default: CHANGELOG.md.',
     '',
-    '  [hooks]',
-    '  before_everything = "<command>"           Optional. Shell command(s) before any release work.',
-    '  after_everything = "<command>"            Optional. Shell command(s) after all release work (always runs).',
-    '  before_plan = "<command>"                 Optional. Shell command(s) before building the release plan.',
-    '  after_plan = "<command>"                  Optional. Shell command(s) after the plan is built.',
-    '  before_apply = "<command>"                Optional. Shell command(s) before executing the plan.',
-    '  after_apply = "<command>"                 Optional. Shell command(s) after plan execution (always runs).',
-    '  before_write = "<command>"                Optional. Shell command(s) before writing version files.',
-    '  after_write = "<command>"                 Optional. Shell command(s) after writing version files.',
-    '  before_commit = "<command>"               Optional. Shell command(s) before creating a release commit.',
-    '  after_commit = "<command>"                Optional. Shell command(s) after creating a release commit.',
-    '  before_tag = "<command>"                  Optional. Shell command(s) before creating a release tag.',
-    '  after_tag = "<command>"                   Optional. Shell command(s) after creating a release tag.',
-    '  before_push = "<command>"                 Optional. Shell command(s) before pushing release refs.',
-    '  after_push = "<command>"                  Optional. Shell command(s) after pushing release refs.',
+    '  hooks:',
+    '    before_everything: "<command>"          Optional. Shell command(s) before any release work.',
+    '    after_everything: "<command>"           Optional. Shell command(s) after all release work (always runs).',
+    '    before_plan: "<command>"                Optional. Shell command(s) before building the release plan.',
+    '    after_plan: "<command>"                 Optional. Shell command(s) after the plan is built.',
+    '    before_apply: "<command>"               Optional. Shell command(s) before executing the plan.',
+    '    after_apply: "<command>"                Optional. Shell command(s) after plan execution (always runs).',
+    '    before_write: "<command>"               Optional. Shell command(s) before writing version files.',
+    '    after_write: "<command>"                Optional. Shell command(s) after writing version files.',
+    '    before_commit: "<command>"              Optional. Shell command(s) before creating a release commit.',
+    '    after_commit: "<command>"               Optional. Shell command(s) after creating a release commit.',
+    '    before_tag: "<command>"                 Optional. Shell command(s) before creating a release tag.',
+    '    after_tag: "<command>"                  Optional. Shell command(s) after creating a release tag.',
+    '    before_push: "<command>"                Optional. Shell command(s) before pushing release refs.',
+    '    after_push: "<command>"                 Optional. Shell command(s) after pushing release refs.',
     '',
   ].join('\n')
+}
+
+export const reportSavedConfigSchema = (result: MirrorSchemaSaveResult, format: MirrorFormat = 'text') => {
+  if (format === 'json') return `${JSON.stringify(result, null, 2)}\n`
+  return `schema: ${result.path}\nstatus: ${result.status}\n`
 }
 
 export const reportSkillInstall = (result: MirrorSkillInstallResult | MirrorSkillInstallResult[], format: MirrorFormat = 'text') => {
