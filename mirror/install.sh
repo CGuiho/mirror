@@ -285,7 +285,7 @@ main() {
   printf 'Validating...\n'
   install_candidate
   printf 'Saving Mirror schema: %s/.guiho/mirror/schema.json\n' "$HOME"
-  "$destination" config schema --save --format json >/dev/null
+  "${install_dir}/mirror" config schema --save --format json >/dev/null
   [[ "${MIRROR_NO_PATH_UPDATE:-0}" == '1' ]] || ensure_path
   install_agent_assets
   printf 'Run: mirror --version\n'
