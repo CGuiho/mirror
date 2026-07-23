@@ -141,19 +141,11 @@ jobs:
           curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.sh \
             | bash -s -- --version "$previous_version"
           test "$("$previous_install_dir/mirror" --version)" = "$previous_version"
-          curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.sh \
-            | bash -s -- --version "$expected_version"
+          timeout 180 "$previous_install_dir/mirror" upgrade --version "$expected_version" \
+            | tee "$RUNNER_TEMP/mirror-public-upgrade.txt"
           test "$("$previous_install_dir/mirror" --version)" = "$expected_version"
           test -s "$previous_home/.guiho/mirror/schema.json"
-
-          export HOME="$public_home"
-          export MIRROR_INSTALL_DIR="$install_dir"
-          cd "$project_dir"
-          timeout 180 "$install_dir/mirror" upgrade --version "$previous_version" \
-            | tee "$RUNNER_TEMP/mirror-public-progress.txt"
-          test "$("$install_dir/mirror" --version)" = "$previous_version"
           grep -Eq '^(\[[#-]{40}\]|Download progress:)' \
-            "$RUNNER_TEMP/mirror-public-progress.txt"
-          curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.sh \
-            | bash -s -- --version "$expected_version"
-          test "$("$install_dir/mirror" --version)" = "$expected_version"
+            "$RUNNER_TEMP/mirror-public-upgrade.txt"
+          grep -Fq "Upgrade complete: $previous_version -> $expected_version" \
+            "$RUNNER_TEMP/mirror-public-upgrade.txt"
