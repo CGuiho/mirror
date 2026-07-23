@@ -5,6 +5,7 @@ parent: mirror-docs
 children: []
 files: {}
 documents:
+  mirror-3.6.0-schema-and-yaml.md: Approved implementation and release plan for issues 14 and 15 and shared CLI startup behavior.
   rfc-0034-cli-compliance-migration.md: Approved breaking migration plan for TypeBox, YAML, startup, help, agents, upgrades, installers, npm bootstrap, fourteen assets, docs, and validation.
   upgrade-reliability-implementation.md: Executable implementation plan for verified self-upgrades, recovery, release catalog, installers, tests, and documentation.
 tags:
