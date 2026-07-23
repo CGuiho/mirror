@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.6.0] - 2026-07-22
+
+### Added
+
+- Added atomic, idempotent persistence of the TypeBox-derived configuration
+  schema at `~/.guiho/mirror/schema.json`, including structured
+  `mirror config schema --save` output.
+- Added automatic schema refresh during `mirror init`, public/package
+  installation, and transactional self-upgrade using the newly installed
+  binary.
+- Added the deterministic Mirror welcome page with product identity, platform,
+  architecture, version, help guidance, and a cached stable-update notice.
+
+### Changed
+
+- Replaced the npm-local YAML schema modeline with a portable canonical HTTPS
+  association while retaining the global schema for native and offline editor
+  mapping.
+- Completed the repository-wide `mirror.yaml` migration and converted the
+  remaining configuration-schema help from TOML notation to YAML.
+- Awaited only the local update-worker scheduling handoff while keeping the
+  bounded remote check detached from foreground execution.
+
+### Fixed
+
+- Kept native installations independent from `node_modules` when YAML editors
+  resolve the Mirror configuration schema.
+
 ## [3.5.9] - 2026-07-21
 
 ### Fixed
@@ -251,12 +279,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added auxiliary package outputs via `[package].auxiliary_paths` so extra `package.json` files mirror the main package version.
 - Added an interactive `mirror init` wizard (TTY-only) with defaults you accept by pressing Enter, plus flags for every answer and `--non-interactive` for automation.
 - Added new `mirror init` flags: `--output`, `--auxiliary`, `--tag-template`, `--name`, `--commit`, `--push`, `--non-interactive`.
-- Added a JSON Schema for `mirror.config.toml`, shipped at `schema/mirror.config.schema.json` and printable via `mirror config schema --format json`.
+- Added a JSON Schema for `mirror.yaml`, shipped at `schema/mirror.config.schema.json` and printable via `mirror config schema --format json`.
 - Generated config files now include a `#:schema` directive for editor autocomplete.
 
 ### Changed
 
-- `mirror init` now reconciles an existing `mirror.config.toml` (adds missing defaults) instead of failing, and `--yes` overwrites with generated defaults.
+- `mirror init` now reconciles an existing `mirror.yaml` (adds missing defaults) instead of failing, and `--yes` overwrites with generated defaults.
 
 ## [3.1.1] - 2026-06-07
 
@@ -288,7 +316,7 @@ This release marks a major milestone as we prepare for the **initial open-source
 
 ### ✨ Features
 
-- **TOML-Based Configuration**: Full support for `mirror.config.toml` for predictable, versionable configurations.
+- **TOML-Based Configuration**: Full support for `mirror.yaml` for predictable, versionable configurations.
 - **Semantic Versioning Engine**: Powerful integration with `semver` for accurate version calculations across major, minor, patch, and prerelease identifiers.
 - **Multi-Adapter Support**: Seamlessly reads and writes version updates to `package.json`, `jsr.json`, and Git tags in a single synchronized operation.
 - **Comprehensive CLI**: 
