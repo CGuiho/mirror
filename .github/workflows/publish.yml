@@ -98,35 +98,59 @@ jobs:
             exit 1
           fi
 
-      - name: Verify public Linux installer
+      - name: Verify tag-pinned installer and public upgrade
         env:
           GH_TOKEN: ${{ github.token }}
         working-directory: mirror
         run: |
           set -o pipefail
           expected_version="$(bun -e 'console.log((await Bun.file("package.json").json()).version)')"
-          public_home="$(mktemp -d)"
-          project_dir="$(mktemp -d)"
-          install_dir="$public_home/.local/bin"
+          tagged_home="$(mktemp -d)"
+          tagged_project_dir="$(mktemp -d)"
+          tagged_install_dir="$tagged_home/.local/bin"
+          tagged_installer="${RUNNER_TEMP}/mirror-tagged-install.sh"
+          latest_home="$(mktemp -d)"
+          latest_project_dir="$(mktemp -d)"
+          latest_install_dir="$latest_home/.local/bin"
           previous_home="$(mktemp -d)"
           previous_project_dir="$(mktemp -d)"
           previous_install_dir="$previous_home/.local/bin"
-          trap 'rm -rf "$public_home" "$project_dir" "$previous_home" "$previous_project_dir"' EXIT
-          export HOME="$public_home"
-          export MIRROR_INSTALL_DIR="$install_dir"
+          trap 'rm -rf "$tagged_home" "$tagged_project_dir" "$latest_home" "$latest_project_dir" "$previous_home" "$previous_project_dir"' EXIT
+
+          gh api \
+            -H 'Accept: application/vnd.github.raw+json' \
+            "repos/${GITHUB_REPOSITORY}/contents/devops/install.sh?ref=${GITHUB_REF_NAME}" \
+            > "$tagged_installer"
+          test -s "$tagged_installer"
+          export HOME="$tagged_home"
+          export MIRROR_INSTALL_DIR="$tagged_install_dir"
           export MIRROR_SKIP_PATH_UPDATE=1
           export MIRROR_DISABLE_UPDATE_CHECK=1
-          cd "$project_dir"
-          curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.sh | bash
-          test "$("$install_dir/mirror" --version)" = "$expected_version"
-          "$install_dir/mirror" | grep -Fq '║  MIRROR'
-          "$install_dir/mirror" | grep -Fq "version       v$expected_version"
+          cd "$tagged_project_dir"
+          bash "$tagged_installer" --version "$expected_version"
+          test "$("$tagged_install_dir/mirror" --version)" = "$expected_version"
+          "$tagged_install_dir/mirror" | grep -Fq '║  MIRROR'
+          "$tagged_install_dir/mirror" | grep -Fq "version       v$expected_version"
           test -s "$HOME/.guiho/mirror/schema.json"
           test -s "$HOME/.agents/skills/guiho-s-mirror/SKILL.md"
           test -s "$HOME/.claude/skills/guiho-s-mirror/SKILL.md"
-          test -s "$project_dir/AGENTS.md"
-          grep -Fq '<!-- BEGIN MIRROR — DO NOT EDIT THIS SECTION -->' "$project_dir/AGENTS.md"
-          grep -Fq '<!-- END MIRROR -->' "$project_dir/AGENTS.md"
+          test -s "$tagged_project_dir/AGENTS.md"
+          grep -Fq '<!-- BEGIN MIRROR — DO NOT EDIT THIS SECTION -->' "$tagged_project_dir/AGENTS.md"
+          grep -Fq '<!-- END MIRROR -->' "$tagged_project_dir/AGENTS.md"
+
+          if [[ "$expected_version" != *-* ]]; then
+            latest_tag="$(
+              gh release view --repo "$GITHUB_REPOSITORY" \
+                --json tagName --jq '.tagName'
+            )"
+            test "$latest_tag" = "$GITHUB_REF_NAME"
+            export HOME="$latest_home"
+            export MIRROR_INSTALL_DIR="$latest_install_dir"
+            cd "$latest_project_dir"
+            curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.sh | bash
+            test "$("$latest_install_dir/mirror" --version)" = "$expected_version"
+            test -s "$latest_home/.guiho/mirror/schema.json"
+          fi
 
           previous_tag="$(
             gh release list --repo "$GITHUB_REPOSITORY" --limit 100 \
