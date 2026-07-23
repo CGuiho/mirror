@@ -66,6 +66,19 @@ Ordinary config and version commands do not install skills or edit instruction
 files. Native releases contain exactly 12 platform binaries plus
 `guiho-s-mirror.md` and `guiho-i-mirror.md`.
 
+## Upgrade
+
+```text
+mirror upgrade list
+mirror upgrade
+```
+
+The release list uses the concise
+`VERSION CHANNEL PUBLISHED CURRENT LATEST ASSET` table. Downloads stream visible
+percentage or byte progress and are bounded by total and inactivity deadlines.
+Mirror validates the full native candidate before its transactional executable
+swap; JSON retains complete catalog and progress metadata.
+
 ## Development
 
 ```text
