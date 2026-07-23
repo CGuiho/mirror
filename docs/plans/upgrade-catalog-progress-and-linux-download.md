@@ -68,8 +68,12 @@ the local plan, tests, and existing implementation conventions.
    successful exit, target version, progress, schema persistence, and cleanup.
 9. **Strengthen public release acceptance.**
    In the publish workflow, discover the latest stable release other than the
-   current tag, install it into an isolated Linux home, run its public
-   `mirror upgrade --version <new>`, and verify the new binary and global schema.
+   current tag and install it into an isolated Linux home. Because already
+   published binaries cannot retroactively receive the fixed downloader, use
+   the canonical exact-version installer recovery to replace and verify that
+   old installation. Separately run the newly released binary against a real
+   previous public asset, require visible streamed progress and bounded
+   completion, then restore the current release through the installer.
 10. **Document and review.**
     Update canonical docs, source descriptors, task indexes, the installed
     Mirror skill source, implementation review, and validation report.
