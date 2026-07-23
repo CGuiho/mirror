@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.7.1] - 2026-07-23
+
+### Added
+
+- Added structured percentage or byte progress for streamed upgrade downloads,
+  with ten-minute total and 30-second inactivity deadlines.
+- Added the concise RunX-style `VERSION`, `CHANNEL`, `PUBLISHED`, `CURRENT`,
+  `LATEST`, and `ASSET` human release table while retaining complete JSON.
+- Added an actual compiled Linux old-to-new self-upgrade fixture and public
+  previous-stable-to-current release acceptance.
+
+### Fixed
+
+- Prevented Bun-compiled Linux upgrades from appearing frozen or waiting
+  indefinitely inside opaque whole-response persistence.
+- Rejected empty, interrupted, timed-out, and declared-length-mismatched
+  candidates before canonical replacement.
+- Corrected the Linux acceptance fixture to use its streamed local asset URL and
+  validate unknown-length byte progress when Bun applies chunked transfer
+  encoding. The 3.7.0 tag's failed workflow published no release or assets.
+
 ## [3.7.0] - 2026-07-23
 
 ### Added
