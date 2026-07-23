@@ -6,7 +6,7 @@ created: 2026-07-22
 owner: mirror-docs-plans
 flags:
   - approved
-  - executing
+  - completed
 tags:
   - mirror
   - planning
