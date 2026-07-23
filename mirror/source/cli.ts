@@ -16,6 +16,7 @@ import {
   uninstallMirrorSkills,
 } from './agents.js'
 import { configPathForDisplay, loadMirrorConfig, writeInitConfigFromAnswers } from './config.js'
+import { saveMirrorConfigSchema } from './config-schema.js'
 import { MirrorError, MirrorUsageError } from './errors.js'
 import { executeVersionPlan } from './executor.js'
 import { showMirrorCommandHelpDocs, showMirrorCommandHelpTree } from './help.js'
@@ -28,11 +29,13 @@ import {
   reportAgentsInstructions,
   reportConfig,
   reportConfigSchema,
+  reportSavedConfigSchema,
   reportExecution,
   reportExecutionSummary,
   reportPlan,
   reportSkillInstall,
   reportValue,
+  renderMirrorWelcome,
 } from './reporter.js'
 import {
   checkForLatestVersion,
@@ -191,6 +194,7 @@ const allKnownArgumentKeys = new Set([
   'packageFile',
   'preid',
   'push',
+  'save',
   'source',
   'tag-template',
   'tagTemplate',
@@ -263,14 +267,22 @@ function createMirrorCommandTree(rawArgs: string[]): { command: CommandDef<any>,
     },
   })
 
+  const configSchemaArgs = {
+    ...commonArgs,
+    save: { type: 'boolean', description: 'Save the schema to ~/.guiho/mirror/schema.json.' },
+  } as const
   const configSchemaCommand = defineCommand({
     meta: { name: 'mirror config schema', description: 'Print configuration schema and reference.' },
-    args: commonArgs,
-    setup: withLeafCommand(state, ['config', 'schema'], 0, commonArgs),
-    run: ({ args }) => {
+    args: configSchemaArgs,
+    setup: withLeafCommand(state, ['config', 'schema'], 0, configSchemaArgs),
+    run: async ({ args }) => {
       const options = resolveCliOptions(state, args)
       if (options.format !== 'json') write(mirrorBanner(), state)
-      write(reportConfigSchema(options.format), state)
+      if (booleanArg(args, 'save')) {
+        write(reportSavedConfigSchema(await saveMirrorConfigSchema(), options.format), state)
+      } else {
+        write(reportConfigSchema(options.format), state)
+      }
     },
   })
 
@@ -577,7 +589,11 @@ function createMirrorCommandTree(rawArgs: string[]): { command: CommandDef<any>,
     meta: { name: 'mirror', description: 'Show the Mirror home page.', hidden: true },
     args: rootArgs,
     run: async () => {
-      write(`Hello ${mirrorPlatformName} - mirror v${mirrorVersion}\n`, state)
+      const cache = await readUpdateCache()
+      const update = cache?.newVersionAvailable && compareVersions(cache.latestVersion, mirrorVersion) > 0
+        ? { latestVersion: cache.latestVersion, upgradeCommand: cache.upgradeCommand }
+        : undefined
+      write(renderMirrorWelcome(mirrorVersion, mirrorPlatformName, process.arch, update), state)
     },
   })
 
@@ -632,8 +648,8 @@ function createMirrorCommandTree(rawArgs: string[]): { command: CommandDef<any>,
         throw new CliHandled()
       }
 
-      await printCachedUpdateNotice(state)
-      void scheduleBackgroundUpdateCheck()
+      if (rawArgs.length > 0) await printCachedUpdateNotice(state)
+      await scheduleBackgroundUpdateCheck()
     },
   })
 
@@ -727,6 +743,7 @@ async function runInit(options: MirrorCliOptions, positionalSource: MirrorAdapte
 
   try {
     const answers = await resolveInitAnswers(flags, cwd, prompter)
+    await saveMirrorConfigSchema()
     const path = await writeInitConfigFromAnswers(answers, cwd, Boolean(options.yes))
     write(reportValue(`created ${path}`, options.format), state)
   } finally {
