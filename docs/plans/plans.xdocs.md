@@ -8,6 +8,7 @@ documents:
   mirror-3.6.0-schema-and-yaml.md: Approved implementation and release plan for issues 14 and 15 and shared CLI startup behavior.
   rfc-0034-cli-compliance-migration.md: Approved breaking migration plan for TypeBox, YAML, startup, help, agents, upgrades, installers, npm bootstrap, fourteen assets, docs, and validation.
   upgrade-reliability-implementation.md: Executable implementation plan for verified self-upgrades, recovery, release catalog, installers, tests, and documentation.
+  upgrade-catalog-progress-and-linux-download.md: Approved execution sequence for concise catalog text, streamed downloads, deadlines, native tests, release, and issue closure.
 tags:
   - planning
   - documentation
@@ -20,6 +21,8 @@ keywords:
   - fourteen release assets
   - mirror upgrade
   - execution units
+  - download progress
+  - linux upgrade
 flags: []
 status: stable
 ---
