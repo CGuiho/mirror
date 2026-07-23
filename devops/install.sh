@@ -408,6 +408,8 @@ install_binary() {
       fi
       rm -f -- "$backup"
       printf 'Installed mirror to %s\n' "$destination"
+      printf 'Saving Mirror schema: %s/.guiho/mirror/schema.json\n' "$HOME"
+      "$destination" config schema --save --format json >/dev/null
       local skill_url
       local prompt_url
       skill_url="$(build_url guiho-s-mirror.md)"
