@@ -25,8 +25,12 @@ mirror config show
 mirror version plan patch
 ```
 
-With no arguments Mirror prints `Hello <platform> - mirror v<version>`, where
-the platform is `Windows`, `Linux`, or `macOS`.
+With no arguments Mirror prints a deterministic welcome page with product,
+platform, architecture, version, help, and any cached stable-update notice.
+
+`mirror config schema --save` persists the editor schema at
+`~/.guiho/mirror/schema.json`; installers, upgrades, and `mirror init` refresh
+it automatically.
 
 See [`DOCS.md`](DOCS.md) for the complete command, configuration, agent,
 upgrade, installer, npm bootstrap, exit-code, and release-asset contracts.
