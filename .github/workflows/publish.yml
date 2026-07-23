@@ -12,7 +12,6 @@ jobs:
   publish:
     name: Publish
     runs-on: ubuntu-latest
-    environment: production
     steps:
       - name: Checkout
         run: |
