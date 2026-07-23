@@ -286,14 +286,118 @@ if (process.argv.includes('--mirror-update-check-worker')) {
     })
     const result = await executeUpgrade(plan, {
       cacheDir: root,
-      fetch: (async () => new Response(Bun.file(download))) as unknown as typeof fetch,
+      fetch: (async () => new Response(Bun.file(download), {
+        headers: { 'content-length': String((await Bun.file(download).stat()).size) },
+      })) as unknown as typeof fetch,
     })
 
     expect(result.outcome).toBe('upgraded')
     expect(result.events.map((event) => `${event.phase}:${event.status}`)).toContain('verify:succeeded')
+    const progress = result.events.filter((event) => event.phase === 'download' && event.status === 'progress')
+    expect(progress.length).toBeGreaterThan(0)
+    expect(progress.at(-1)?.progress).toMatchObject({ percent: 100 })
     expect((await runCommand([executable, '--version'])).stdout.trim()).toBe(targetVersion)
     expect((await readUpdateCache({ cacheDir: root }))?.latestVersion).toBe(targetVersion)
     expect((await readUpdateCache({ cacheDir: root }))?.newVersionAvailable).toBe(false)
+  }, 30_000)
+
+  test('reports unknown-length byte progress while streaming the candidate', async () => {
+    const root = await createTempDirectory()
+    const platform = detectNativePlatform()
+    const arch = detectNativeArch()
+    const executable = joinPath(root, platform === 'windows' ? 'mirror.exe' : 'mirror')
+    const download = joinPath(root, platform === 'windows' ? 'download.exe' : 'download')
+    const currentVersion = '3.4.1'
+    const targetVersion = '3.4.2'
+    await compileVersionFixture(root, 'old.ts', executable, `console.log('${currentVersion}')`)
+    await compileVersionFixture(root, 'target.ts', download, versionAndSchemaFixture(targetVersion))
+    const plan = await resolveUpgradePlan({
+      version: targetVersion,
+      executablePath: executable,
+      currentVersion,
+      platform,
+      arch,
+      fetch: releaseFetch(targetVersion, buildAssetCandidates(platform, arch, 'baseline')[0]!),
+    })
+    const bytes = await Bun.file(download).bytes()
+    const result = await executeUpgrade(plan, {
+      cacheDir: root,
+      fetch: (async () => new Response(new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(bytes.slice(0, Math.max(1, Math.floor(bytes.length / 2))))
+          controller.enqueue(bytes.slice(Math.max(1, Math.floor(bytes.length / 2))))
+          controller.close()
+        },
+      }))) as unknown as typeof fetch,
+    })
+
+    expect(result.outcome).toBe('upgraded')
+    const progress = result.events.filter((event) => event.phase === 'download' && event.status === 'progress')
+    expect(progress.at(-1)?.progress).toEqual({
+      receivedBytes: bytes.length,
+      totalBytes: null,
+      percent: null,
+    })
+  }, 30_000)
+
+  test('bounds a stalled response body and preserves the canonical executable', async () => {
+    const root = await createTempDirectory()
+    const platform = detectNativePlatform()
+    const arch = detectNativeArch()
+    const executable = joinPath(root, platform === 'windows' ? 'mirror.exe' : 'mirror')
+    const currentVersion = '3.4.1'
+    const targetVersion = '3.4.2'
+    await compileVersionFixture(root, 'old.ts', executable, `console.log('${currentVersion}')`)
+    const plan = await resolveUpgradePlan({
+      version: targetVersion,
+      executablePath: executable,
+      currentVersion,
+      platform,
+      arch,
+      fetch: releaseFetch(targetVersion, buildAssetCandidates(platform, arch, 'baseline')[0]!),
+    })
+    const result = await executeUpgrade(plan, {
+      downloadInactivityTimeoutMilliseconds: 25,
+      downloadTimeoutMilliseconds: 500,
+      fetch: (async () => new Response(new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array(platform === 'windows' ? [0x4d, 0x5a] : [0x7f, 0x45, 0x4c, 0x46]))
+        },
+      }))) as unknown as typeof fetch,
+    })
+
+    expect(result.outcome).toBe('failed')
+    expect(result.failure?.code).toBe('UPGRADE_DOWNLOAD_FAILED')
+    expect(result.failure?.message).toContain('made no progress for 25ms')
+    expect((await runCommand([executable, '--version'])).stdout.trim()).toBe(currentVersion)
+    expect(await Bun.file(plan.temporaryPath).exists()).toBe(false)
+    expect(await Bun.file(plan.backupPath).exists()).toBe(false)
+  }, 30_000)
+
+  test('rejects a mismatched declared length before replacing the canonical executable', async () => {
+    const root = await createTempDirectory()
+    const platform = detectNativePlatform()
+    const arch = detectNativeArch()
+    const executable = joinPath(root, platform === 'windows' ? 'mirror.exe' : 'mirror')
+    const currentVersion = '3.4.1'
+    const targetVersion = '3.4.2'
+    await compileVersionFixture(root, 'old.ts', executable, `console.log('${currentVersion}')`)
+    const plan = await resolveUpgradePlan({
+      version: targetVersion,
+      executablePath: executable,
+      currentVersion,
+      platform,
+      arch,
+      fetch: releaseFetch(targetVersion, buildAssetCandidates(platform, arch, 'baseline')[0]!),
+    })
+    const result = await executeUpgrade(plan, {
+      fetch: (async () => new Response('short', { headers: { 'content-length': '99' } })) as unknown as typeof fetch,
+    })
+
+    expect(result.outcome).toBe('failed')
+    expect(result.failure?.message).toContain('expected 99 bytes, received 5')
+    expect((await runCommand([executable, '--version'])).stdout.trim()).toBe(currentVersion)
+    expect(await Bun.file(plan.temporaryPath).exists()).toBe(false)
   }, 30_000)
 
   test('rolls back when the canonical executable does not report the target', async () => {
@@ -435,6 +539,7 @@ if (process.argv.includes('--mirror-update-check-worker')) {
       expect(exitCode).toBe(0)
       expect(stderr).toBe('')
       expect(output.indexOf('Downloading...')).toBeLessThan(output.indexOf('Replacing...'))
+      expect(output).toContain('Download progress:')
       expect(output.indexOf('Replacing...')).toBeLessThan(output.indexOf('Verifying...'))
       expect(output).toContain(`install Mirror ${targetVersion} directly`)
     } finally {
@@ -442,6 +547,78 @@ if (process.argv.includes('--mirror-update-check-worker')) {
       server.stop(true)
     }
   }, 30_000)
+
+  test('upgrades from an executing compiled Linux binary through a streamed response', async () => {
+    if (detectNativePlatform() !== 'linux') return
+    const root = await createTempDirectory()
+    const currentVersion = '3.6.1'
+    const targetVersion = '3.7.0'
+    const executable = joinPath(root, 'mirror')
+    const target = joinPath(root, 'target')
+    const modulePath = joinPath(import.meta.dir, 'self-management.ts').replaceAll('\\', '/')
+    await compileVersionFixture(root, 'target.ts', target, versionAndSchemaFixture(targetVersion))
+    await compileVersionFixture(root, 'running-linux-upgrader.ts', executable, `
+import { executeUpgrade, resolveUpgradePlan } from ${JSON.stringify(modulePath)}
+if (process.argv.includes('--version')) {
+  console.log('${currentVersion}')
+} else {
+  const apiBaseUrl = process.argv[2]
+  const cacheDir = process.argv[3]
+  const plan = await resolveUpgradePlan({
+    version: '${targetVersion}',
+    currentVersion: '${currentVersion}',
+    executablePath: process.execPath,
+    platform: 'linux',
+    arch: process.arch,
+    apiBaseUrl,
+  })
+  const result = await executeUpgrade(plan, {
+    cacheDir,
+    onEvent(event) {
+      if (event.status === 'progress') console.log('progress:' + JSON.stringify(event.progress))
+    },
+  })
+  console.log('result:' + JSON.stringify(result))
+  if (result.outcome !== 'upgraded') process.exitCode = 1
+}
+`)
+    const asset = buildAssetCandidates('linux', detectNativeArch(), 'baseline')[0]!
+    const targetBytes = await Bun.file(target).bytes()
+    let serverUrl = ''
+    const server = Bun.serve({
+      port: 0,
+      fetch(request) {
+        const url = new URL(request.url)
+        if (url.pathname.startsWith('/repos/')) {
+          return Response.json(release(`@guiho/mirror@${targetVersion}`, '2026-07-23T00:00:00Z', asset))
+        }
+        return new Response(new ReadableStream<Uint8Array>({
+          async start(controller) {
+            const midpoint = Math.floor(targetBytes.length / 2)
+            controller.enqueue(targetBytes.slice(0, midpoint))
+            await Bun.sleep(25)
+            controller.enqueue(targetBytes.slice(midpoint))
+            controller.close()
+          },
+        }), { headers: { 'content-length': String(targetBytes.length) } })
+      },
+    })
+    serverUrl = server.url.toString().replace(/\/$/, '')
+    try {
+      const upgrade = await runCommand([executable, serverUrl, root], { timeoutMs: 30_000 })
+      expect(upgrade.exitCode).toBe(0)
+      expect(upgrade.stdout).toContain('progress:')
+      expect(upgrade.stdout).toContain('"percent":100')
+      expect(JSON.parse(upgrade.stdout.split('result:').at(-1) ?? '{}') as { outcome: string })
+        .toMatchObject({ outcome: 'upgraded' })
+      expect((await runCommand([executable, '--version'])).stdout.trim()).toBe(targetVersion)
+      expect((await readUpdateCache({ cacheDir: root }))?.latestVersion).toBe(targetVersion)
+      expect(await Bun.file(joinPath(root, 'schema.json')).exists()).toBe(false)
+      expect(await Bun.file(joinPath(root, '.mirror-upgrade.json')).exists()).toBe(false)
+    } finally {
+      server.stop(true)
+    }
+  }, 90_000)
 
   test('replaces a running Windows canonical executable before the old process exits', async () => {
     if (detectNativePlatform() !== 'windows') return
