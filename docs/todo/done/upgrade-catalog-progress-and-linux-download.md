@@ -3,9 +3,9 @@ name: Mirror Upgrade Catalog Progress And Linux Download
 purpose: Define the required outcomes for GitHub issues 16, 17, and 18.
 description: Requires concise release-list text, visible streamed download progress, and a bounded Linux-native self-upgrade transaction.
 created: 2026-07-23
-owner: mirror-docs-todo
+owner: mirror-docs-todo-done
 flags:
-  - approved
+  - completed
 tags:
   - mirror
   - cli
@@ -21,12 +21,15 @@ keywords:
 
 ## Task
 
-- Status: in progress
+- Status: completed
 - Issues: [#16](https://github.com/CGuiho/mirror/issues/16),
   [#17](https://github.com/CGuiho/mirror/issues/17), and
   [#18](https://github.com/CGuiho/mirror/issues/18)
-- Plan: [upgrade-catalog-progress-and-linux-download.md](../plans/upgrade-catalog-progress-and-linux-download.md)
-- Decision: [streamed-upgrade-download.md](../decisions/streamed-upgrade-download.md)
+- Plan: [upgrade-catalog-progress-and-linux-download.md](../../plans/upgrade-catalog-progress-and-linux-download.md)
+- Decision: [streamed-upgrade-download.md](../../decisions/streamed-upgrade-download.md)
+- Review: [upgrade-catalog-progress-and-linux-download-review.md](../../reviews/implementation/upgrade-catalog-progress-and-linux-download-review.md)
+- Validation: [upgrade-catalog-progress-and-linux-download.md](../../validation/upgrade-catalog-progress-and-linux-download.md)
+- Release: [Mirror 3.7.3](https://github.com/CGuiho/mirror/releases/tag/%40guiho/mirror%403.7.3)
 
 ## Required Outcomes
 
@@ -73,3 +76,10 @@ binary, pinned recovery command, and existing transactional rollback behavior.
 - Typecheck, full tests, all native builds, XDocs checks, exact fourteen assets,
   scoped release notes, and public installer acceptance pass.
 - Issues 16, 17, and 18 close only after the public release evidence exists.
+
+## Completion
+
+All acceptance signals passed. Public Mirror 3.7.2 upgraded itself to 3.7.3
+with visible progress through 100 percent, canonical-version verification,
+schema persistence, exact fourteen assets, and scoped release notes. Issues 16,
+17, and 18 are closed.
