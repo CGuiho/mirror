@@ -11,6 +11,21 @@ All Rights Reserved.
 - Local context: Semantic project versioning and release workflow package for @guiho/mirror.
 
 
+## Mirror 3.6.0 Global Schema And YAML Completion
+
+- Status: testing
+- Created: `2026-07-22`
+- Outcome: Persist the TypeBox-derived schema globally, complete the YAML-only
+  migration, standardize the welcome/update lifecycle, and release Mirror 3.6.0.
+- Specs:
+  - [Global Mirror Schema](docs/todo/global-mirror-schema.md)
+  - [Complete YAML Configuration Migration](docs/todo/complete-yaml-configuration-migration.md)
+- Plan: [Mirror 3.6.0 Schema And YAML Plan](docs/plans/mirror-3.6.0-schema-and-yaml.md)
+- Review: [Implementation Review](docs/reviews/implementation/mirror-3.6.0-schema-and-yaml-review.md)
+- Validation: [Validation Report](docs/validation/mirror-3.6.0-schema-and-yaml.md)
+- External: GitHub issues [#14](https://github.com/CGuiho/mirror/issues/14)
+  and [#15](https://github.com/CGuiho/mirror/issues/15)
+
 ## Python Versioning Support
 
 Add support for reading and updating Python package versions in Mirror. Initial planning should clarify which Python metadata files are in scope, such as `pyproject.toml`, `setup.cfg`, `setup.py`, package `__init__.py`, or another project convention.
