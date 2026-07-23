@@ -15,6 +15,18 @@ afterEach(async () => {
 })
 
 describe('Mirror canonical installers', () => {
+  test('all installers save the global schema with the installed binary', async () => {
+    for (const path of [
+      joinPath(import.meta.dir, '..', 'install.sh'),
+      joinPath(import.meta.dir, '..', 'install.ps1'),
+      joinPath(import.meta.dir, '..', '..', 'devops', 'install.sh'),
+      joinPath(import.meta.dir, '..', '..', 'devops', 'install.ps1'),
+    ]) {
+      const script = await readTextFile(path)
+      expect(script).toContain('config schema --save --format json')
+    }
+  })
+
   test('keeps PowerShell and POSIX candidate order aligned with the upgrade domain', async () => {
     const powershell = await readTextFile(joinPath(import.meta.dir, '..', 'install.ps1'))
     const posix = await readTextFile(joinPath(import.meta.dir, '..', 'install.sh'))
