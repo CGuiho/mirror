@@ -253,6 +253,9 @@ try {
   if (-not $downloadedPath) { throw "No compatible Mirror $targetVersion binary found at https://github.com/$Repo/releases" }
   Write-Host 'Replacing...'
   Install-Transactional -DownloadedPath $downloadedPath -Destination $destination -ExpectedVersion $targetVersion
+  Write-Host "Saving Mirror schema: $(Join-Path $UserHome '.guiho\mirror\schema.json')"
+  & $destination config schema --save --format json | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw 'Installed Mirror could not save its global configuration schema.' }
   $skillAsset = Join-Path $temporaryDirectory 'guiho-s-mirror.md'
   $promptAsset = Join-Path $temporaryDirectory 'guiho-i-mirror.md'
   $assetBase = if ($DownloadBaseUrl) { "$DownloadBaseUrl/$encodedTag" } else { "https://github.com/$Repo/releases/download/$encodedTag" }
