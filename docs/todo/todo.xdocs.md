@@ -2,7 +2,8 @@
 subject: mirror-docs-todo
 description: Durable task specifications linked from the Mirror TODO index.
 parent: mirror-docs
-children: []
+children:
+  - mirror-docs-todo-done
 files: {}
 documents:
   global-mirror-schema.md: Tracks global TypeBox-derived schema persistence for GitHub issue 14.
@@ -15,7 +16,6 @@ documents:
   upgrade-reliability-implementation.md: Records upgrade reliability implementation decisions, progress, verification evidence, and handoff.
   public-installers-and-platform-greeting.md: Defines standalone public installer and platform-aware greeting outcomes for GitHub issues 12 and 13.
   background-update-worker-cpu-safety.md: Defines bounded, coalesced, stale-recoverable background update worker behavior for Mirror.
-  upgrade-catalog-progress-and-linux-download.md: Defines concise release-list text, streamed progress, and bounded compiled Linux self-upgrades for issues 16 through 18.
 tags:
   - todo
   - planning
