@@ -32,5 +32,11 @@ platform, architecture, version, help, and any cached stable-update notice.
 `~/.guiho/mirror/schema.json`; installers, upgrades, and `mirror init` refresh
 it automatically.
 
+`mirror upgrade list` prints the concise
+`VERSION CHANNEL PUBLISHED CURRENT LATEST ASSET` table. `mirror upgrade`
+streams visible percentage or byte progress, bounds both total and stalled
+downloads, and validates the complete candidate before transactional
+replacement. JSON output retains the complete release and progress metadata.
+
 See [`DOCS.md`](DOCS.md) for the complete command, configuration, agent,
 upgrade, installer, npm bootstrap, exit-code, and release-asset contracts.
