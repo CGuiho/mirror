@@ -288,6 +288,9 @@ try {
     try { Remove-Item -LiteralPath $backupFile -Force } catch { Write-Warning "Installed Mirror is verified, but the old backup remains at $backupFile" }
   }
   if (-not $NoPathUpdate -and $env:MIRROR_NO_PATH_UPDATE -ne '1') { Add-InstallDirToPath -Directory $InstallDir }
+  Write-Host "Saving Mirror schema: $(Join-Path $UserHome '.guiho\mirror\schema.json')"
+  & $destination config schema --save --format json | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw 'Installed Mirror could not save its global configuration schema.' }
   Install-MirrorAgentAssets -Release $release -TemporaryDirectory $InstallDir
   Write-Host "Installed Mirror $targetVersion to $destination"
   Write-Host 'Run: mirror --version'
