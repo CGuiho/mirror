@@ -38,19 +38,26 @@ Add support for reading and updating Python package versions in Mirror. Initial 
 
 Add an option for Python version propagation from a source project to a target project. Initial planning should define what "source" and "target" mean for Python projects, how the target version is selected or derived, and whether this should be a CLI option, configuration field, or both.
 
-## Mirror 3.7.0 Upgrade Catalog And Linux Download
+## Mirror 3.7.3 Upgrade Catalog And Linux Download
 
-- Status: in progress
+- Status: completed
 - Created: `2026-07-23`
+- Completed: `2026-07-23`
 - Outcome: Simplify `upgrade list`, stream visible download progress, and remove
   the unbounded Bun-compiled Linux download wait without weakening transactional
   replacement.
-- Spec: [docs/todo/upgrade-catalog-progress-and-linux-download.md](docs/todo/upgrade-catalog-progress-and-linux-download.md)
+- Spec: [docs/todo/done/upgrade-catalog-progress-and-linux-download.md](docs/todo/done/upgrade-catalog-progress-and-linux-download.md)
 - Plan: [docs/plans/upgrade-catalog-progress-and-linux-download.md](docs/plans/upgrade-catalog-progress-and-linux-download.md)
 - Decision: [docs/decisions/streamed-upgrade-download.md](docs/decisions/streamed-upgrade-download.md)
+- Review: [docs/reviews/implementation/upgrade-catalog-progress-and-linux-download-review.md](docs/reviews/implementation/upgrade-catalog-progress-and-linux-download-review.md)
+- Validation: [docs/validation/upgrade-catalog-progress-and-linux-download.md](docs/validation/upgrade-catalog-progress-and-linux-download.md)
+- Archive: [docs/todo/done/done.md](docs/todo/done/done.md)
 - External: GitHub issues [#16](https://github.com/CGuiho/mirror/issues/16),
   [#17](https://github.com/CGuiho/mirror/issues/17), and
   [#18](https://github.com/CGuiho/mirror/issues/18)
+- Release: [Mirror 3.7.3](https://github.com/CGuiho/mirror/releases/tag/%40guiho/mirror%403.7.3)
+- Result: All three issues are closed after public 3.7.2-to-3.7.3 command
+  upgrade, visible 89.5 MiB progress, exact assets, scoped notes, and green CI.
 
 ## Citty CLI Migration
 
