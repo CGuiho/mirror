@@ -36,8 +36,6 @@ command-upgrade gate remain unchanged.
 ### PA-01 - Channel-aware public acceptance
 
 - Owner: `.github/workflows/publish.yml`
-- Remove the production environment approval gate so an authorized release tag
-  can complete without a manual bypass.
 - After the release exists, fetch `devops/install.sh` from the exact release tag
   and execute it with `--version "$expected_version"` for every stable or
   prerelease publication.
