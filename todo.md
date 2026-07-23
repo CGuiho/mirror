@@ -38,6 +38,20 @@ Add support for reading and updating Python package versions in Mirror. Initial 
 
 Add an option for Python version propagation from a source project to a target project. Initial planning should define what "source" and "target" mean for Python projects, how the target version is selected or derived, and whether this should be a CLI option, configuration field, or both.
 
+## Mirror 3.7.0 Upgrade Catalog And Linux Download
+
+- Status: in progress
+- Created: `2026-07-23`
+- Outcome: Simplify `upgrade list`, stream visible download progress, and remove
+  the unbounded Bun-compiled Linux download wait without weakening transactional
+  replacement.
+- Spec: [docs/todo/upgrade-catalog-progress-and-linux-download.md](docs/todo/upgrade-catalog-progress-and-linux-download.md)
+- Plan: [docs/plans/upgrade-catalog-progress-and-linux-download.md](docs/plans/upgrade-catalog-progress-and-linux-download.md)
+- Decision: [docs/decisions/streamed-upgrade-download.md](docs/decisions/streamed-upgrade-download.md)
+- External: GitHub issues [#16](https://github.com/CGuiho/mirror/issues/16),
+  [#17](https://github.com/CGuiho/mirror/issues/17), and
+  [#18](https://github.com/CGuiho/mirror/issues/18)
+
 ## Citty CLI Migration
 
 - Status: completed
