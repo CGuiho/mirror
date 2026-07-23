@@ -87,6 +87,8 @@ export {
   writeInitConfigFromAnswers,
 } from './config.js'
 export { createReadlineInitPrompter, isInteractiveInit, parseAdapterList, resolveInitAnswers } from './init.js'
+export { resolveMirrorSchemaPath, saveMirrorConfigSchema } from './config-schema.js'
+export type { MirrorSchemaSaveResult, MirrorSchemaSaveStatus } from './config-schema.js'
 export { mirrorConfigJsonSchema, mirrorConfigSchemaReference, renderMirrorConfigJsonSchema } from './schema.js'
 export { assertValidSemver, isMirrorReleaseTarget, mirrorReleaseTargets, resolveNextVersion, sortSemverDescending } from './version.js'
 export {
@@ -131,10 +133,12 @@ export {
   reportAgentsInstructions,
   reportConfig,
   reportConfigSchema,
+  reportSavedConfigSchema,
   reportExecution,
   reportExecutionSummary,
   reportPlan,
   reportSkillInstall,
   reportValue,
+  renderMirrorWelcome,
 } from './reporter.js'
 export { createMirrorCommand, runMirrorCli } from './cli.js'
