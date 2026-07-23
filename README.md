@@ -38,6 +38,7 @@ curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.s
 ```
 
 The installer selects and verifies a native asset, installs `mirror` on PATH,
+persists the configuration schema at `~/.guiho/mirror/schema.json`,
 installs `guiho-s-mirror` into both global agent-tool directories, and
 reconciles Mirror instructions in the current project.
 
