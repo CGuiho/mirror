@@ -15,6 +15,7 @@ documents:
   upgrade-reliability-implementation.md: Records upgrade reliability implementation decisions, progress, verification evidence, and handoff.
   public-installers-and-platform-greeting.md: Defines standalone public installer and platform-aware greeting outcomes for GitHub issues 12 and 13.
   background-update-worker-cpu-safety.md: Defines bounded, coalesced, stale-recoverable background update worker behavior for Mirror.
+  upgrade-catalog-progress-and-linux-download.md: Defines concise release-list text, streamed progress, and bounded compiled Linux self-upgrades for issues 16 through 18.
 tags:
   - todo
   - planning
@@ -28,6 +29,8 @@ keywords:
   - argument parsing
   - mirror upgrade
   - recovery command
+  - download progress
+  - linux upgrade
 flags: []
 status: stable
 ---
