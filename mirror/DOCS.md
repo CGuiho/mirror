@@ -218,6 +218,13 @@ global schema with the newly installed binary, commits cache state, refreshes
 both global skills, and reconciles local instruction blocks. Recovery remains
 pinned to the resolved exact version after every outcome.
 
+The streaming implementation ships in Mirror 3.7.1 and newer. A binary older
+than 3.7.1 cannot retroactively receive updater code before it downloads its
+replacement. If an older `mirror upgrade` remains at `Downloading...`, interrupt
+it and run the exact-version installer recovery command printed by the CLI. The
+canonical public installer replaces and verifies the binary transactionally;
+subsequent upgrades then use streamed progress and deadlines.
+
 ## Installers And Npm Bootstrap
 
 `install.sh` and `install.ps1` print target version, architecture, variant,
