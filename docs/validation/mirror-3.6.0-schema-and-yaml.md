@@ -30,7 +30,12 @@ keywords:
 | Packaged-schema equivalence | Passed in the CLI test suite against the TypeBox renderer. |
 | XDocs strict metadata/tree/doctor | Passed: 10 docs descriptors, source descriptor, 0 doctor errors/warnings. |
 | Obsolete configuration filename scan | Passed: zero matches after migration. |
-| Public release/install acceptance | Pending the `3.6.0` release. |
+| Public release/install acceptance | Pending the corrected `3.6.1` release. |
+
+The `3.6.0` publish workflow failed before asset publication because the
+package POSIX installer referenced a function-local variable after its scope.
+The correction uses `${install_dir}/mirror` and will ship as `3.6.1` without
+rewriting the failed tag.
 
 ## Blocked Change
 
