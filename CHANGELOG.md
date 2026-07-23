@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.7.0] - 2026-07-23
+
+### Added
+
+- Added structured known-length percentage and unknown-length byte progress to
+  `mirror upgrade`, including bounded human progress rendering and complete JSON
+  events.
+- Added ten-minute total and 30-second inactivity deadlines for upgrade
+  downloads, with environment overrides for controlled environments.
+- Added compiled Linux-native streamed-upgrade coverage and a public release
+  gate that upgrades the previous stable Linux installation to the new release.
+
+### Changed
+
+- Simplified human `mirror upgrade list` output to the RunX-style `VERSION`,
+  `CHANNEL`, `PUBLISHED`, `CURRENT`, `LATEST`, and `ASSET` columns while
+  preserving complete tag, URL, compatible-asset, and pagination metadata in
+  JSON.
+- Replaced opaque whole-`Response` persistence with explicit response-body
+  streaming into a Bun file sink.
+
+### Fixed
+
+- Prevented compiled Linux self-upgrades from waiting indefinitely at
+  `Downloading...`.
+- Rejected empty, interrupted, timed-out, and declared-length-mismatched assets
+  before executable replacement, removing temporary candidates while
+  preserving the canonical binary and exact-version recovery.
+
 ## [3.6.1] - 2026-07-23
 
 ### Fixed
