@@ -136,6 +136,66 @@ describe('Mirror RFC 0034 CLI', () => {
     }
   })
 
+  test('renders the concise RunX-style upgrade catalog while preserving JSON metadata', async () => {
+    const platform = detectNativePlatform()
+    const arch = detectNativeArch()
+    const asset = buildAssetCandidates(platform, arch, 'baseline')[0]!
+    let serverUrl = ''
+    const server = Bun.serve({
+      port: 0,
+      fetch() {
+        return Response.json([
+          {
+            tag_name: `@guiho/mirror@${packageJson.version}`,
+            html_url: `${serverUrl}/releases/current`,
+            published_at: '2026-07-23T08:09:10Z',
+            prerelease: false,
+            draft: false,
+            assets: [{ name: asset, browser_download_url: `${serverUrl}/assets/${asset}` }],
+          },
+          {
+            tag_name: '@guiho/mirror@3.6.0-alpha.1',
+            html_url: `${serverUrl}/releases/alpha`,
+            published_at: '2026-07-22T08:09:10Z',
+            prerelease: true,
+            draft: false,
+            assets: [],
+          },
+        ])
+      },
+    })
+    serverUrl = server.url.toString().replace(/\/$/, '')
+    try {
+      const env = { MIRROR_GITHUB_API_URL: serverUrl }
+      const text = await runCli(['upgrade', 'list', '--pre-releases'], { env })
+      expect(text.exitCode).toBe(0)
+      expect(text.stdout).toContain('VERSION')
+      expect(text.stdout).toContain('CHANNEL')
+      expect(text.stdout).toContain('PUBLISHED')
+      expect(text.stdout).toContain('CURRENT')
+      expect(text.stdout).toContain('LATEST')
+      expect(text.stdout).toContain('ASSET')
+      expect(text.stdout).not.toContain('MARKERS')
+      expect(text.stdout).not.toContain('TAG')
+      expect(text.stdout).not.toContain('RELEASE')
+      expect(text.stdout).not.toContain(serverUrl)
+      expect(text.stdout).not.toContain(asset)
+      expect(text.stdout).toContain('2026-07-23')
+
+      const json = await runCli(['upgrade', 'list', '--pre-releases', '--format', 'json'], { env })
+      const catalog = JSON.parse(json.stdout) as {
+        releases: Array<{ tag: string, releaseUrl: string, compatibleAsset?: string }>
+      }
+      expect(catalog.releases[0]).toMatchObject({
+        tag: `@guiho/mirror@${packageJson.version}`,
+        releaseUrl: `${serverUrl}/releases/current`,
+        compatibleAsset: asset,
+      })
+    } finally {
+      server.stop(true)
+    }
+  })
+
   test('renders tree and Markdown help from the Citty command definitions', async () => {
     const tree = await runCli(['agent', '--help-tree'])
     expect(tree.exitCode).toBe(0)
