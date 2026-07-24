@@ -1,0 +1,15 @@
+schema: 1
+project:
+  name: "@guiho/mirror"
+version:
+  scheme: semver
+  source: git
+  output: ["git"]
+git:
+  tag_template: "{name}/v{version}"
+  commit: true
+  push: true
+  allow_dirty: false
+agents:
+  write_changelog: true
+  changelog_path: CHANGELOG.md
