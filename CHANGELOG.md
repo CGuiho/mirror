@@ -1,9 +1,43 @@
-# 🪞 GUIHO Mirror Changelog
+---
+name: GUIHO Mirror Changelog
+purpose: Record notable released and unreleased Mirror changes.
+description: Semantic release history for Mirror.
+created: 2026-05-16
+owner: mirror
+flags: []
+tags: [mirror, changelog]
+keywords: [semantic versioning, releases]
+---
+
+# GUIHO Mirror Changelog
 
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [4.0.0] - 2026-07-26
+
+### Changed
+
+- Made the root Go/Cobra implementation the production CLI, CI, installer, and
+  publication authority; the Bun/TypeScript package is retained only as
+  historical reference.
+- Replaced the legacy release contract with eight static native executables,
+  the canonical skill ZIP, instruction prompt, and checksum manifest: exactly
+  11 assets under `mirror/v<semver>` tags.
+- Added strict typed YAML configuration, generated command-tree and Markdown
+  help, stable exit codes, embedded agent resources, bounded transactional
+  upgrades, platform-aware uninstall behavior, and comprehensive Go tests.
+- Migrated installers and GitHub workflows to verified Go binaries without
+  changing the current project version or publishing a release.
+- Made plain argument-free `mirror` idempotently bootstrap the global embedded
+  skill and bounded current-repository instructions before its banner.
+- Changed `mirror init` defaults to option-1 `v{version}` tags with release
+  commits and pushes enabled, while preserving explicit selections.
+- Added explicit first-release planning for tagless Git-only repositories:
+  exact SemVer targets create canonical tags, while relative targets fail safely
+  until an initial version exists.
 
 ## [3.7.4] - 2026-07-23
 
