@@ -1,4 +1,15 @@
-﻿Copyright (c) 2026 GUIHO Technologies as represented by CristÃ³vÃ£o GUIHO
+---
+name: GUIHO Mirror TODO
+purpose: Track active and completed local Mirror engineering work.
+description: Component task ledger and durable handoff links.
+created: 2026-05-16
+owner: mirror
+flags: []
+tags: [mirror, todo]
+keywords: [tasks, plans, reviews, validation]
+---
+
+Copyright (c) 2026 GUIHO Technologies as represented by Cristovao GUIHO
 All Rights Reserved.
 
 # GUIHO Mirror TODO List
@@ -9,6 +20,26 @@ All Rights Reserved.
 - Parent AGENTS: [../guiho/AGENTS.md](../guiho/AGENTS.md)
 - Local AGENTS: [./AGENTS.md](./AGENTS.md)
 - Local context: Semantic project versioning and release workflow package for @guiho/mirror.
+
+## Mirror Go Production Migration
+
+- Status: completed locally; publication not requested
+- Created: `2026-07-25`
+- Completed: `2026-07-26`
+- Outcome: Make the repository-root Go/Cobra CLI the production, CI, installer,
+  and publication authority with strict YAML, embedded resources, safe native
+  maintenance, and exactly 11 release assets.
+- RFC: [docs/rfc/mirror-go-rewrite-rfc.md](docs/rfc/mirror-go-rewrite-rfc.md)
+- Plan: [docs/plans/mirror-go-production-migration.md](docs/plans/mirror-go-production-migration.md)
+- Review: [docs/reviews/implementation/mirror-go-production-migration-review.md](docs/reviews/implementation/mirror-go-production-migration-review.md)
+- Validation: [docs/validation/mirror-go-production-migration.md](docs/validation/mirror-go-production-migration.md)
+- Result: Local Go tests, vet, exact-set cross-build, verifier, Windows native
+  smoke, and offline PowerShell installer passed. Hosted platform validation and
+  any release remain separate, explicitly authorized work.
+- Added behavior: plain Mirror performs idempotent skill/instruction bootstrap;
+  init defaults to `v{version}` with commit and push enabled.
+- Initial Git-only projects can apply an exact first version without a manual
+  seed tag; relative increments remain rejected until that tag exists.
 
 
 ## Mirror 3.6.0 Global Schema And YAML Completion
@@ -86,10 +117,12 @@ Add an option for Python version propagation from a source project to a target p
 
 ## RFC 0034 CLI Compliance Migration
 
-- Status: testing
+- Status: superseded by Mirror Go Production Migration
 - Created: `2026-07-18T18:48:11+02:00`
 - Updated: `2026-07-19`
-- Outcome: Mirror implements the breaking RFC 0034 source contract; `@guiho/mirror@3.5.3` contains the corrected `.md` asset, exact-set, release-note, and Markdown-validation workflow and is waiting on protected-production approval before live release validation.
+- Outcome: Historical Bun/TypeScript migration record retained as evidence. Its
+  runtime, npm, tag, and fourteen-asset contracts are no longer production
+  authority; see the Go migration above.
 - Spec: [docs/todo/rfc-0034-cli-compliance-migration.md](docs/todo/rfc-0034-cli-compliance-migration.md)
 - Related files:
   - [docs/plans/rfc-0034-cli-compliance-migration.md](docs/plans/rfc-0034-cli-compliance-migration.md) - Approved step-by-step migration plan.
