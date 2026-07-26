@@ -19,7 +19,7 @@ func TestGoReleaseTagPattern(t *testing.T) {
 }
 
 func TestExtractVersionSectionWithReleaseDate(t *testing.T) {
-	changelog := "# Changelog\n\n## 3.8.0 - 2026-07-24\n\n- Go rewrite.\n\n## 3.7.4 - 2026-07-23\n\n- Legacy.\n"
+	changelog := "# Changelog\n\n## [3.8.0] - 2026-07-24\n\n- Go rewrite.\n\n## [3.7.4] - 2026-07-23\n\n- Legacy.\n"
 	notes, err := extractVersionSection(changelog, "3.8.0")
 	if err != nil {
 		t.Fatal(err)
@@ -31,9 +31,9 @@ func TestExtractVersionSectionWithReleaseDate(t *testing.T) {
 
 func TestExtractVersionSectionRejectsMissingDuplicateAndEmpty(t *testing.T) {
 	cases := []string{
-		"## 3.7.4\n\n- old\n",
-		"## 3.8.0\n\n- one\n\n## 3.8.0 - 2026-07-24\n\n- two\n",
-		"## 3.8.0\n\n## 3.7.4\n\n- old\n",
+		"## [3.7.4]\n\n- old\n",
+		"## 3.8.0\n\n- one\n\n## [3.8.0] - 2026-07-24\n\n- two\n",
+		"## [3.8.0]\n\n## [3.7.4]\n\n- old\n",
 	}
 	for _, changelog := range cases {
 		if _, err := extractVersionSection(changelog, "3.8.0"); err == nil {

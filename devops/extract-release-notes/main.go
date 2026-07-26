@@ -31,20 +31,21 @@ func main() {
 }
 
 func extractVersionSection(content, version string) (string, error) {
-	headingPrefix := "## " + version
+	heading := "## " + version
+	bracketedHeading := "## [" + version + "]"
 	lines := strings.Split(strings.ReplaceAll(content, "\r\n", "\n"), "\n")
 	start := -1
 	for index, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		if trimmed == headingPrefix || strings.HasPrefix(trimmed, headingPrefix+" - ") {
+		if isVersionHeading(trimmed, heading) || isVersionHeading(trimmed, bracketedHeading) {
 			if start != -1 {
-				return "", fmt.Errorf("duplicate changelog section: %s", headingPrefix)
+				return "", fmt.Errorf("duplicate changelog section for %s", version)
 			}
 			start = index
 		}
 	}
 	if start == -1 {
-		return "", fmt.Errorf("missing changelog section: %s", headingPrefix)
+		return "", fmt.Errorf("missing changelog section for %s", version)
 	}
 	end := len(lines)
 	for index := start + 1; index < len(lines); index++ {
@@ -55,9 +56,13 @@ func extractVersionSection(content, version string) (string, error) {
 	}
 	body := strings.TrimSpace(strings.Join(lines[start+1:end], "\n"))
 	if body == "" {
-		return "", fmt.Errorf("empty changelog section: %s", headingPrefix)
+		return "", fmt.Errorf("empty changelog section for %s", version)
 	}
 	return strings.TrimSpace(strings.Join(lines[start:end], "\n")) + "\n", nil
+}
+
+func isVersionHeading(line, heading string) bool {
+	return line == heading || strings.HasPrefix(line, heading+" - ")
 }
 
 func fatal(message string) {
