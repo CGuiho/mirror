@@ -1,50 +1,53 @@
 ---
 name: Mirror Technical Overview
-purpose: Explain the current Mirror runtime, configuration, bootstrap, and release architecture.
-description: Technical overview for the RFC 0034-compliant Mirror CLI.
+purpose: Explain the production runtime, configuration, maintenance, and delivery architecture.
+description: Technical overview for the Go/Cobra Mirror CLI.
 created: 2026-07-18
 owner: mirror
 flags: []
-tags:
-  - mirror
-  - architecture
-keywords:
-  - TypeBox
-  - Citty
-  - native binaries
+tags: [mirror, architecture, go, cobra]
+keywords: [strict yaml, transactional upgrade, release matrix]
 ---
 
 # Mirror Technical Overview
 
-The CLI entrypoint is `mirror/source/guiho-mirror-bin.ts`. Raw Citty command
-definitions in `source/cli.ts` own routing, metadata, ordinary help, command-tree
-help, and Markdown help. TypeBox schemas in `source/schema.ts` validate YAML,
-cache data, release payloads, and CLI enum-like inputs.
+`main.go` passes linker-injected build metadata into `cmd.NewRootCommand` and
+maps typed failures to stable process exit codes. `cmd/` constructs one fresh
+Cobra tree per execution. `pkg/` contains configuration, versioning, update,
+upgrade, maintenance, SemVer, and release-matrix domains; these packages do not
+own CLI routing.
 
-Core CLI source is Bun-only. The isolated Node ESM npm bootstrap is
-`mirror/scripts/mirror-bin.mjs`; it selects, caches, and delegates to a native
-binary without containing Mirror versioning logic.
+The argument-free root route synchronously bootstraps embedded agent resources
+before rendering its banner. Skill replacement is a two-root transaction and
+skips byte-identical bundles. Instruction selection is repository-local,
+preserves CRLF/LF and unmanaged content, rejects malformed marker topology, and
+uses atomic per-file replacement with cross-file rollback.
 
-Configuration lookup is:
+Configuration uses `go.yaml.in/yaml/v3` with known-field rejection and typed
+validation. Lookup order is explicit `--config`, the effective working
+directory, then the user's global Mirror directory. TOML and Viper are not part
+of the production contract.
 
-1. `--config <path>`;
-2. `<effective-cwd>/mirror.yaml`;
-3. `~/.guiho/mirror/mirror.yaml`.
+The foreground startup path reads local update state only. Detached workers use
+bounded HTTP clients and platform guards. Upgrade candidates are streamed to a
+temporary file with visible progress, checked against the signed release set's
+SHA-256 manifest, executed for exact version verification, and atomically
+swapped while retaining a backup. Unix reconciles embedded agent resources by
+running the new executable; Windows uses an out-of-process replacement worker
+and a completion journal consumed on the next invocation.
 
-The update cache is `~/.guiho/mirror/cache.json`. Foreground startup reads it
-synchronously and detached update work performs network access. One atomic
-per-cache lease coalesces concurrent starts, the worker network lifetime is
-bounded to 15 seconds, and 30-second stale recovery is token-owned and
-serialized. A loaded configuration path is always reported.
+`pkg/release` is the single source for eight native targets:
 
-Release automation builds the exact twelve `mirror-<platform>-<arch>` native
-assets, using `darwin` for macOS, then adds `guiho-s-mirror.md` and
-`guiho-i-mirror.md` for an exact total of fourteen assets. One TypeScript
-manifest owns the exact filenames used by builds, workflow upload, and
-post-upload verification.
+- Linux amd64, arm64, armv7, and armv6;
+- Darwin amd64 and arm64;
+- Windows amd64 and arm64.
 
-GitHub Release descriptions contain only the exact version's `CHANGELOG.md`
-section. The workflow extracts that section through the next level-two heading
-and applies it on both release creation and idempotent reruns. Existing releases
-have stale extra assets removed, expected assets replaced, and their notes
-reconciled before the workflow asserts exactly fourteen unique filenames.
+`devops/build-binaries.go` produces those static executables plus the canonical
+skill ZIP, instruction prompt, and sorted checksum manifest. The exact set is
+11 assets and is independently checked by `devops/verify-release-assets`.
+
+GitHub Actions runs Go formatting, tidy stability, tests, vet, exact asset
+build/verification, installer contract checks, and native smokes. Publication
+listens to `mirror/v*`, rebuilds from the tag, reconciles an idempotent GitHub
+release, and asserts the exact public asset set. It does not publish the legacy
+Bun package.
