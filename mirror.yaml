@@ -1,6 +1,6 @@
 schema: 1
 project:
-  name: "@guiho/mirror"
+  name: mirror
 version:
   scheme: semver
   source: git
