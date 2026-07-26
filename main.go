@@ -4,8 +4,27 @@
 
 package main
 
-import "github.com/CGuiho/mirror/cmd"
+import (
+	"fmt"
+	"os"
+
+	"github.com/CGuiho/mirror/cmd"
+)
+
+var (
+	version     = "dev"
+	commit      = ""
+	buildDate   = ""
+	buildTarget = "development"
+)
 
 func main() {
-	cmd.Execute()
+	err := cmd.Execute(cmd.BuildInfo{
+		Version: version, Commit: commit, BuildDate: buildDate, Target: buildTarget,
+	})
+	if err == nil {
+		return
+	}
+	fmt.Fprintln(os.Stderr, err)
+	os.Exit(cmd.ExitCode(err))
 }
