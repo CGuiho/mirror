@@ -8,52 +8,188 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'mirror/v*'
 
 jobs:
-  test:
+  go-quality-and-release-assets:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Verify Go formatting
+        run: test -z "$(gofmt -l .)"
+
+      - name: Verify tidy module graph
         run: |
-          git init .
-          git remote add origin "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
-          git fetch --depth=1 origin "${GITHUB_REF}"
-          git checkout --detach FETCH_HEAD
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
 
-      - name: Install Bun
+      - name: Test all Go packages
+        run: go test -count=1 ./...
+
+      - name: Vet all Go packages
+        run: go vet ./...
+
+      - name: Build exact 11-asset release matrix
         run: |
-          curl -fsSL https://bun.sh/install | bash
-          echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
-          "$HOME/.bun/bin/bun" --version
+          build_date="$(git show -s --format=%cI HEAD)"
+          go run ./devops/build-binaries.go \
+            --version 0.0.0-ci \
+            --commit "${GITHUB_SHA}" \
+            --build-date "${build_date}"
+          go run ./devops/verify-release-assets --directory bin
 
-      - run: bun install --frozen-lockfile
-        working-directory: mirror
-      - run: bun run typecheck
-        working-directory: mirror
-      - run: bun test
-        working-directory: mirror
-      - run: bun run build
-        working-directory: mirror
-      - run: bun run binary
-        working-directory: mirror
+      - name: Smoke native Linux binary
+        env:
+          MIRROR_DISABLE_UPDATE_CHECK: '1'
+        run: |
+          bootstrap_root="$(mktemp -d)"
+          trap 'rm -rf "$bootstrap_root"' EXIT
+          mkdir -p "$bootstrap_root/home" "$bootstrap_root/project"
+          test "$(bin/mirror-linux-amd64 --version)" = 'mirror v0.0.0-ci'
+          test "$(MIRROR_HOME_DIR="$bootstrap_root/home" bin/mirror-linux-amd64 --cwd "$bootstrap_root/project")" = 'Hello Windows - mirror v0.0.0-ci'
+          test -s "$bootstrap_root/home/.agents/skills/guiho-s-mirror/SKILL.md"
+          test -s "$bootstrap_root/home/.claude/skills/guiho-s-mirror/SKILL.md"
+          test "$(grep -Fc '<!-- BEGIN MIRROR — DO NOT EDIT THIS SECTION -->' "$bootstrap_root/project/AGENTS.md")" -eq 1
+          bin/mirror-linux-amd64 --help-tree-depth 2 --help-tree | grep -F 'COMMAND TREE'
+          bin/mirror-linux-amd64 agent skill show guiho-s-mirror | grep -F 'name: guiho-s-mirror'
+          bin/mirror-linux-amd64 config check
 
-  windows-self-upgrade:
+      - name: Validate Bash installer and target mapping
+        shell: bash
+        run: |
+          bash -n devops/install.sh
+          export MIRROR_INSTALLER_SOURCE_ONLY=1
+          source devops/install.sh
+          MIRROR_TEST_OS=linux MIRROR_TEST_ARCH=x86_64 test "$(MIRROR_TEST_OS=linux MIRROR_TEST_ARCH=x86_64 detect_asset)" = mirror-linux-amd64
+          MIRROR_TEST_OS=linux MIRROR_TEST_ARCH=aarch64 test "$(MIRROR_TEST_OS=linux MIRROR_TEST_ARCH=aarch64 detect_asset)" = mirror-linux-arm64
+          MIRROR_TEST_OS=linux MIRROR_TEST_ARCH=armv7l test "$(MIRROR_TEST_OS=linux MIRROR_TEST_ARCH=armv7l detect_asset)" = mirror-linux-armv7
+          MIRROR_TEST_OS=linux MIRROR_TEST_ARCH=armv6l test "$(MIRROR_TEST_OS=linux MIRROR_TEST_ARCH=armv6l detect_asset)" = mirror-linux-armv6
+          MIRROR_TEST_OS=darwin MIRROR_TEST_ARCH=x86_64 test "$(MIRROR_TEST_OS=darwin MIRROR_TEST_ARCH=x86_64 detect_asset)" = mirror-darwin-amd64
+          MIRROR_TEST_OS=darwin MIRROR_TEST_ARCH=arm64 test "$(MIRROR_TEST_OS=darwin MIRROR_TEST_ARCH=arm64 detect_asset)" = mirror-darwin-arm64
+
+      - name: Exercise Bash installer offline
+        shell: bash
+        run: |
+          root="$(mktemp -d)"
+          trap 'rm -rf "$root"' EXIT
+          mkdir -p "$root/home" "$root/project" "$root/install"
+          cd "$root/project"
+          MIRROR_HOME_DIR="$root/home" \
+          MIRROR_ASSET_DIR="$GITHUB_WORKSPACE/bin" \
+          MIRROR_INSTALL_DIR="$root/install" \
+          MIRROR_SKIP_PATH_UPDATE=1 \
+          MIRROR_DISABLE_UPDATE_CHECK=1 \
+            bash "$GITHUB_WORKSPACE/devops/install.sh" --version 0.0.0-ci
+          test "$(MIRROR_DISABLE_UPDATE_CHECK=1 "$root/install/mirror" --version)" = 'mirror v0.0.0-ci'
+          test -s "$root/home/.agents/skills/guiho-s-mirror/SKILL.md"
+          test -s "$root/home/.claude/skills/guiho-s-mirror/SKILL.md"
+          test "$(grep -Fc '<!-- BEGIN MIRROR — DO NOT EDIT THIS SECTION -->' AGENTS.md)" -eq 1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mirror-go-release-assets
+          path: bin/*
+          if-no-files-found: error
+
+  native-smoke:
+    needs: go-quality-and-release-assets
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            asset: mirror-linux-amd64
+          - runner: ubuntu-24.04-arm
+            asset: mirror-linux-arm64
+          - runner: macos-15-intel
+            asset: mirror-darwin-amd64
+          - runner: macos-15
+            asset: mirror-darwin-arm64
+          - runner: windows-latest
+            asset: mirror-windows-amd64.exe
+          - runner: windows-11-arm
+            asset: mirror-windows-arm64.exe
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: mirror-go-release-assets
+          path: bin
+
+      - name: Smoke Unix target
+        if: runner.os != 'Windows'
+        env:
+          MIRROR_DISABLE_UPDATE_CHECK: '1'
+        run: |
+          bootstrap_root="$(mktemp -d)"
+          trap 'rm -rf "$bootstrap_root"' EXIT
+          mkdir -p "$bootstrap_root/home" "$bootstrap_root/project"
+          chmod +x "bin/${{ matrix.asset }}"
+          test "$("bin/${{ matrix.asset }}" --version)" = 'mirror v0.0.0-ci'
+          test "$(MIRROR_HOME_DIR="$bootstrap_root/home" "bin/${{ matrix.asset }}" --cwd "$bootstrap_root/project")" = 'Hello Windows - mirror v0.0.0-ci'
+          "bin/${{ matrix.asset }}" agent prompt list --names | grep -Fx guiho-i-mirror
+
+      - name: Smoke Windows target
+        if: runner.os == 'Windows'
+        shell: powershell
+        env:
+          MIRROR_DISABLE_UPDATE_CHECK: '1'
+        run: |
+          $binary = Join-Path $PWD 'bin\${{ matrix.asset }}'
+          $bootstrapRoot = Join-Path $env:RUNNER_TEMP 'mirror-native-bootstrap'
+          $env:MIRROR_HOME_DIR = Join-Path $bootstrapRoot 'home'
+          $project = Join-Path $bootstrapRoot 'project'
+          New-Item -ItemType Directory -Force -Path $env:MIRROR_HOME_DIR, $project | Out-Null
+          if ((& $binary --version | Out-String).Trim() -ne 'mirror v0.0.0-ci') { exit 1 }
+          if ((& $binary --cwd $project | Out-String).Trim() -ne 'Hello Windows - mirror v0.0.0-ci') { exit 1 }
+          if ((& $binary agent prompt list --names | Out-String).Trim() -ne 'guiho-i-mirror') { exit 1 }
+
+  windows-installer:
+    needs: go-quality-and-release-assets
     runs-on: windows-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: mirror-go-release-assets
+          path: bin
 
-      - name: Install Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Validate PowerShell installer syntax
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'devops\install.ps1'), [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count) { $errors | ForEach-Object { Write-Error $_.Message }; exit 1 }
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-        working-directory: mirror
-
-      - name: Typecheck
-        run: bun run typecheck
-        working-directory: mirror
-
-      - name: Verify running binary replacement and installers
-        run: bun test source/self-management.spec.ts source/installer.spec.ts
-        working-directory: mirror
+      - name: Exercise PowerShell installer offline
+        shell: powershell
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'mirror-installer'
+          $home = Join-Path $root 'home'
+          $project = Join-Path $root 'project'
+          $install = Join-Path $root 'install'
+          New-Item -ItemType Directory -Force -Path $home, $project, $install | Out-Null
+          $env:MIRROR_HOME_DIR = $home
+          $env:MIRROR_ASSET_DIR = (Resolve-Path 'bin').Path
+          $env:MIRROR_INSTALL_DIR = $install
+          $env:MIRROR_SKIP_PATH_UPDATE = '1'
+          $env:MIRROR_DISABLE_UPDATE_CHECK = '1'
+          Push-Location $project
+          try {
+            & "$env:GITHUB_WORKSPACE\devops\install.ps1" -Version '0.0.0-ci' -InstallDir $install
+            & "$env:GITHUB_WORKSPACE\devops\install.ps1" -Version '0.0.0-ci' -InstallDir $install
+          } finally { Pop-Location }
+          if ((& "$install\mirror.exe" --version | Out-String).Trim() -ne 'mirror v0.0.0-ci') { exit 1 }
+          if (-not (Test-Path "$home\.agents\skills\guiho-s-mirror\SKILL.md")) { exit 1 }
+          if (-not (Test-Path "$home\.claude\skills\guiho-s-mirror\SKILL.md")) { exit 1 }
+          if ((Select-String -LiteralPath "$project\AGENTS.md" -SimpleMatch '<!-- BEGIN MIRROR').Count -ne 1) { exit 1 }
