@@ -1,12 +1,15 @@
 package updater
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -37,6 +40,22 @@ func TestPerformSelfUpgradeAndRollback(t *testing.T) {
 		DownloadURL:           server.URL,
 		ExpectedChecksum:      expectedChecksum,
 		HTTPClient:            server.Client(),
+		Progress: func(progress DownloadProgress) {
+			if progress.Bytes <= 0 {
+				t.Fatal("progress must report downloaded bytes")
+			}
+		},
+		Verify: func(string, string) error { return nil },
+		Replace: func(executable, candidate, backup, _, _, _, _ string, _ VerifyFunc) (bool, error) {
+			if err := os.Rename(executable, backup); err != nil {
+				return false, err
+			}
+			if err := os.Rename(candidate, executable); err != nil {
+				_ = os.Rename(backup, executable)
+				return false, err
+			}
+			return false, nil
+		},
 	}
 
 	// Upgrade
@@ -60,7 +79,7 @@ func TestPerformSelfUpgradeAndRollback(t *testing.T) {
 	}
 
 	// Test Rollback
-	err = PerformRollback(originalExec)
+	err = performRollbackFiles(originalExec, originalExec+".old")
 	if err != nil {
 		t.Fatalf("PerformRollback failed: %v", err)
 	}
@@ -75,14 +94,70 @@ func TestPerformSelfUpgradeAndRollback(t *testing.T) {
 	}
 }
 
+func TestTargetAssetPreservesEmbeddedARMVariant(t *testing.T) {
+	for target, expected := range map[string]string{
+		"mirror-linux-armv6":       "mirror-linux-armv6",
+		"mirror-linux-armv7":       "mirror-linux-armv7",
+		"mirror-linux-arm64":       "mirror-linux-arm64",
+		"mirror-windows-arm64.exe": "mirror-windows-arm64.exe",
+	} {
+		observed, err := TargetAsset(target)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if observed != expected {
+			t.Fatalf("TargetAsset(%q) = %q, expected %q", target, observed, expected)
+		}
+	}
+}
+
+func TestFetchChecksumRequiresNamedSHA256(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  mirror-linux-amd64")
+		fmt.Fprintln(w, "not-a-checksum  mirror-linux-arm64")
+	}))
+	defer server.Close()
+	checksum, err := FetchChecksum(context.Background(), server.Client(), server.URL, "mirror-linux-amd64")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if checksum != strings.Repeat("a", 64) {
+		t.Fatalf("unexpected checksum %q", checksum)
+	}
+	if _, err := FetchChecksum(context.Background(), server.Client(), server.URL, "mirror-linux-arm64"); err == nil {
+		t.Fatal("expected malformed checksum rejection")
+	}
+}
+
+func TestUpgradeTransactionIsExclusiveAndTokenOwned(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "upgrade.lock")
+	token, release, err := acquireTransaction(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if token == "" {
+		t.Fatal("expected transaction token")
+	}
+	if _, _, err := acquireTransaction(path); err == nil {
+		t.Fatal("expected concurrent transaction rejection")
+	}
+	if err := os.WriteFile(path, []byte("other-token\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	release()
+	if _, err := os.Stat(path); err != nil {
+		t.Fatal("owner removed a lock after its token changed")
+	}
+}
+
 func TestGetTargetAssetName(t *testing.T) {
 	tests := []struct {
 		goos     string
 		goarch   string
 		expected string
 	}{
-		{"windows", "amd64", "mirror-windows-x64.exe"},
-		{"linux", "amd64", "mirror-linux-x64"},
+		{"windows", "amd64", "mirror-windows-amd64.exe"},
+		{"linux", "amd64", "mirror-linux-amd64"},
 		{"darwin", "arm64", "mirror-darwin-arm64"},
 	}
 
