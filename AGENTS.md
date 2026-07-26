@@ -1,111 +1,109 @@
+---
+name: Mirror Agent Instructions
+purpose: Define engineering and release boundaries for the production Mirror CLI.
+description: Repository instructions for Go/Cobra Mirror work.
+created: 2026-07-26
+owner: mirror
+flags: []
+tags: [mirror, agents, go]
+keywords: [cli engineering, validation, release boundary]
+---
+
 ## Agent
 
-Always read this: /c/GUIHO/superiority/agents/guiho-a-0001-swe.AGENTS.md (C:\GUIHO\superiority\agents\guiho-a-0001-swe.AGENTS.md)
-Stop if you can not find it.
+Always read `C:\GUIHO\superiority\agents\guiho-a-0001-swe.AGENTS.md`.
+Stop if it cannot be found.
 
 ## Required CLI Engineering
 
-- Use `guiho-a-0001-swe` as the coordinating GUIHO Software Engineer/SWE agent
-  for Mirror CLI architecture, planning, execution, review, validation, and
-  release work.
-- Load and follow the `guiho-s-0034-cli-engineer` agent skill whenever creating,
-  upgrading, refactoring, reviewing, testing, packaging, installing, or
-  releasing the Mirror CLI.
-- `guiho-s-0034-cli-engineer` is a skill, not an agent. It supplements the SWE
-  agent and does not replace its lifecycle controller.
-- During RFC 0034 implementation, also use the Bun, TypeScript, TypeBox, xdocs,
-  Mirror, documentation, TODO, plan execution, implementation review, cloud,
-  and validation skills named in the approved plan.
-- The approved RFC 0034 migration may make breaking changes. Mirror is pre-1.0;
-  do not keep TOML configuration, old aliases, plural agent commands, automatic
-  agent mutations, or legacy release names when they conflict with the plan.
+- Use `guiho-a-0001-swe` as the lifecycle controller for Mirror architecture,
+  planning, implementation, review, validation, and release preparation.
+- Load and follow `guiho-s-0035-cli-engineer-go` whenever creating, changing,
+  reviewing, testing, packaging, installing, or releasing the Mirror CLI.
+- Use `guiho-s-xdocs` for structured documentation and `guiho-s-mirror` for
+  semantic-version planning or release work.
+- Mirror is pre-1.0. Prefer the approved Go/Cobra contract over compatibility
+  with the archived Bun/TypeScript implementation.
 
+# Repository Notes
 
-﻿# Repository Notes
-
-- The real package lives in `mirror/`; run package commands there unless editing root docs or `ci/`.
-- `@guiho/mirror` is a Bun-native CLI-only package. The CLI entrypoint is `mirror/source/guiho-mirror-bin.ts`; Bun compiles `mirror/bin/` for local validation and platform release assets.
-- Do not add Node.js runtime imports to core CLI source or public TypeScript API exports. Use Bun APIs for file IO, YAML parsing, process execution, and binary compilation. The npm bootstrap is the isolated Node exception. Keep `semver` for semantic version calculations and `citty` as the sole general CLI parser, router, alias registry, and ordinary usage generator.
-- Use Bun, not npm/pnpm/yarn. Install from `mirror/` with `bun install`. Private `@guiho40` packages use Google Artifact Registry from `mirror/.npmrc`; auth helper is `bun _gaa` or `bunx google-artifactregistry-auth`.
+- The production Go module lives at the repository root. `main.go` is the thin
+  executable entrypoint; `cmd/` owns the single Cobra command tree; `pkg/` owns
+  domain behavior; `embed/` owns bundled agent resources.
+- The legacy `mirror/` Bun package is historical reference only. It is not a CI,
+  build, installer, publishing, or release authority.
+- Configuration is YAML only and strictly decoded into typed Go structures.
+- Use Go, Cobra, and the standard library. Do not add Viper or a second command
+  parser. Builds are static (`CGO_ENABLED=0`).
+- Generated outputs in `bin/` are ignored and must not be hand-edited.
 
 ## Commands
 
-- Typecheck: `cd mirror && bun run typecheck`
-- Test all: `cd mirror && bun test`
-- Test one file: `cd mirror && bun test source/guiho-mirror.spec.ts`
-- Build binaries: `cd mirror && bun run build` (writes ignored `mirror/bin/`)
-- Compile CLI binary: `cd mirror && bun run binary` (writes ignored `mirror/bin/`)
-- Avoid `bun _ci` and `bun clean-installation` unless intentionally resetting dependencies; they remove `node_modules` and `bun.lock`.
+- Format check: `gofmt -l .`
+- Test: `go test -count=1 ./...`
+- Vet: `go vet ./...`
+- Build the exact release set: `go run ./devops/build-binaries.go --version <version> --commit <sha> --build-date <RFC3339>`
+- Verify release assets: `go run ./devops/verify-release-assets --dir bin`
+- Configuration check: `go run . config check`
+- Command contract: `go run . --help-tree` and `go run . --help-docs`
 
 ## CLI Behavior
 
-- The canonical groups are `init`, `config`, `version`, `agent`, `upgrade`, and `uninstall`.
-- Release targets are `major`, `premajor`, `minor`, `preminor`, `patch`, `prepatch`, `prerelease`, or exact SemVer.
-- Configuration is YAML only. Read `mirror.yaml`; do not restore TOML fallback.
-- Ordinary config/version commands never mutate agent resources. Use explicit singular `mirror agent ...` commands.
-- Test release mutation paths only in disposable fixture repositories.
+- Canonical groups are `init`, `config`, `version`, `agent`, `upgrade`, and
+  `uninstall`.
+- Release targets are `major`, `premajor`, `minor`, `preminor`, `patch`,
+  `prepatch`, `prerelease`, or exact SemVer.
+- Read `mirror.yaml`; never restore TOML fallback or parent-directory search.
+- Ordinary config/version commands never mutate agent resources. Use explicit
+  singular `mirror agent ...` commands.
+- Plain argument-free `mirror` is the intentional exception: it idempotently
+  bootstraps global skills and current-repository managed instructions before
+  printing the banner. It must not perform version or release effects.
+- `mirror init` defaults to `v{version}`, release commits enabled, and release
+  pushes enabled; explicit interactive selections and flags are authoritative.
+- Test version-application paths only in disposable fixture repositories.
+- A Git-only repository with no version tags may plan/apply an exact initial
+  SemVer; relative targets must fail until that canonical seed exists.
+- Exit codes are stable: 0 success, 1 general, 2 usage, 3 configuration,
+  4 network, 5 integrity, and 130 interruption.
 
-## Gotchas
+## Delivery Contract
 
-- There is no lint or formatter config. Existing TS uses strict `tsconfig.json`, single quotes, and no semicolons; match nearby style.
-- Generated outputs (`mirror/bin/`, `*.tgz`) are ignored; do not hand-edit them.
-- `ci/build-test-publish.sh` clones to `.temp/mirror`, checks out an `@guiho40/mirror@...` tag, authenticates Artifact Registry, then runs `typecheck -> bun test -> build -> binary -> bun publish`. Its explicit-argument branch currently builds `_tag` from undefined `_version`; verify before relying on it.
-- `.vscode/terminals.json` references `bun clean-hard`, but `mirror/package.json` does not define that script.
+- `pkg/release` owns the exact matrix: 8 native executables, one skill ZIP, one
+  instruction prompt, and one checksum manifest (11 assets total).
+- Canonical release tags are `mirror/v<semver>` and native asset names use
+  `mirror-<goos>-<arch>` with `.exe` on Windows.
+- CI and publication are Go-only. Publication remains separately authorized;
+  never bump, tag, push, publish, or create a release without explicit approval.
+- Installers and upgrades must verify SHA-256 before replacement, preserve a
+  rollback path, and reconcile the embedded skill/instruction resources only
+  after a successful binary transition.
 
 ## Documentation Discipline
 
-- `mirror/DOCS.md` is the full package documentation and must describe the behavior that ships.
-- Every time code, configuration, CLI behavior, packaging, release automation, agent automation, or user-facing workflow is modified, update `mirror/DOCS.md` before publishing a new version.
-- If a change genuinely does not require documentation, state that explicitly during release preparation before publishing.
+- `README.md` is the user entrypoint and `mirror/DOCS.md` is the full behavior
+  contract. Update both when user-visible behavior or delivery changes.
+- Keep `TECHNICAL.md`, the Go RFC, implementation plan, review, validation, TODO,
+  XDocs descriptors, and embedded skill consistent with shipped behavior.
+- Historical Bun documents may remain as evidence but must not be presented as
+  current authority.
 
-## Semantic Project Versioning -- GUIHO Mirror
+## Semantic Project Versioning
 
-Invoke the guiho-s-mirror agent skill every time the user wants to bump, tag, release, plan, initialize, configure, or troubleshoot semantic project versioning with GUIHO Mirror.
-
-Before editing release docs or changelogs, inspect mirror.yaml. If agents.write_changelog is false, skip changelog edits. If it is missing or true, changelog edits are allowed when the project has a changelog.
-
-Use [agents].changelog_path as the changelog file path. If it is missing, use CHANGELOG.md in the project root.
+Invoke `guiho-s-mirror` whenever the user requests a bump, tag, release, plan,
+initialization, configuration, or semantic-version troubleshooting. Inspect
+`mirror.yaml` first. Respect `agents.write_changelog` and `agents.changelog_path`.
+`version apply` may commit and push in this repository, so do not run it during
+ordinary implementation or validation.
 
 ## GUIHO Project
 
-### Identity
-
-| Field | Value |
-| --- | --- |
-| GUIHO Project ID | g0000 observed in current GUIHO runtime artifacts; confirm before using as a formal registry ID |
-| GUIHO Subject ID | TBD - formal subject ID for this component is not declared yet |
-| GUIHO Subject Name | Mirror |
-| Project Family | guiho |
-| Repository Directory | C:\GUIHO\mirror |
-| Repository Kind | shared package |
-| Parent Project | GUIHO Root (C:\GUIHO\guiho) |
-| Parent Component | GUIHO Root |
-
-### Component Purpose
-
-Semantic project versioning and release workflow package for @guiho/mirror.
-
-### Parent Context
-
-- Parent AGENTS: [../guiho/AGENTS.md](../guiho/AGENTS.md)
-- Parent TODO: [../guiho/TODO.md](../guiho/TODO.md)
-- Local TODO: [./TODO.md](./TODO.md)
-
-For the full project map, sibling components, package index, service index,
-project-wide TODOs, and cross-repository coordination rules, read the parent
-repository's AGENTS.md GUIHO Project section.
-
-### Local Scope
-
-- Kind: shared package
-- Work directory: .
-- Primary skills: guiho-s-mirror, guiho-s-0015-bun
-- Baseline checks: package-local typecheck/test scripts when present
-
-### Coordination Rules
-
-- This repository is a child of C:\GUIHO\guiho.
-- Keep component-specific implementation tasks in the local TODO file.
-- Keep cross-component planning and parent delegation in the parent TODO file.
-- Read this component's existing local instructions before editing source code.
-- Do not publish, deploy, run migrations, rotate secrets, or mutate production resources without explicit user approval.
+- Repository: `C:\GUIHO\mirror`
+- Parent: `C:\GUIHO\guiho`
+- Purpose: deterministic semantic project versioning and release workflows.
+- Parent instructions: `../guiho/AGENTS.md`
+- Parent backlog: `../guiho/TODO.md`
+- Local backlog: `TODO.md`
+- Keep component work local and cross-component coordination in the parent.
+- Do not publish, deploy, migrate, rotate secrets, or mutate production without
+  explicit approval.
