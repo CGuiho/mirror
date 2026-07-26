@@ -1,3 +1,14 @@
+---
+name: GUIHO Mirror Legacy Package License
+purpose: Preserve the license text shipped with the archived package.
+description: MIT license for the historical Bun package.
+created: 2026-05-16
+owner: mirror-mirror
+flags: []
+tags: [mirror, license, historical]
+keywords: [MIT]
+---
+
 @guiho/mirror
 
 The MIT License (MIT)
