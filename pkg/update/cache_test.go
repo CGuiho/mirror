@@ -1,6 +1,7 @@
 package update
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -68,5 +69,32 @@ func TestLoadNonExistentCache(t *testing.T) {
 	}
 	if cache != nil {
 		t.Errorf("Expected nil cache for non-existent file, got %v", cache)
+	}
+}
+
+func TestReadNoticeUsesOnlyFreshValidatedCache(t *testing.T) {
+	t.Setenv("MIRROR_CACHE_DIR", t.TempDir())
+	now := time.Now().UTC().Truncate(time.Second)
+	if err := SaveCache("", &CacheData{
+		LatestVersion: "3.8.0", CurrentVersion: "3.7.4", LastCheck: now,
+		UpdateAvailable: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if notice := ReadNotice("3.7.4", now); notice == "" {
+		t.Fatal("expected fresh update notice")
+	}
+	if notice := ReadNotice("3.8.0", now); notice != "" {
+		t.Fatalf("did not expect notice for current version: %q", notice)
+	}
+}
+
+func TestLoadCacheRejectsUnknownFields(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "cache.json")
+	if err := os.WriteFile(path, []byte(`{"latestVersion":"3.8.0","currentVersion":"3.7.4","lastCheck":"2026-07-24T00:00:00Z","releaseUrl":"","updateAvailable":true,"unknown":1}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadCache(path); err == nil {
+		t.Fatal("expected strict cache decoding error")
 	}
 }
