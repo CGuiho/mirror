@@ -1,27 +1,24 @@
 ---
 name: GUIHO Mirror
-purpose: Introduce the Mirror repository and route readers to the canonical package documentation.
-description: Repository overview for the RFC 0034-compliant Mirror CLI.
+purpose: Introduce the production Go/Cobra Mirror CLI and its delivery contract.
+description: Repository overview for GUIHO Mirror.
 created: 2026-07-18
 owner: mirror
 flags: []
-tags:
-  - mirror
-  - cli
-keywords:
-  - semantic versioning
-  - RFC 0034
+tags: [mirror, cli, go, cobra]
+keywords: [semantic versioning, yaml, native binaries]
 ---
 
 # GUIHO Mirror
 
-Mirror is GUIHO's deterministic semantic-versioning CLI. The Bun package and
-native CLI live in [`mirror/`](mirror/); repository plans, reviews, validation,
-and release automation live at the root.
+Mirror is GUIHO's deterministic semantic-versioning CLI. The production
+implementation is the Go module at this repository root. One Cobra tree owns
+routing, help, aliases, and generated developer documentation; typed Go
+structures and strict YAML decoding own configuration.
 
-Mirror uses Bun, strict ESM TypeScript, raw Citty, TypeBox, and YAML. The current
-breaking CLI contract is documented in
-[`mirror/DOCS.md`](mirror/DOCS.md). Start with:
+The former Bun/TypeScript package under `mirror/` is retained as historical
+reference only. Go source, tests, installers, CI, and release workflows are the
+delivery authority.
 
 ## Install
 
@@ -34,13 +31,12 @@ irm https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.ps1 | ie
 Linux and macOS:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.sh | sh
 ```
 
-The installer selects and verifies a native asset, installs `mirror` on PATH,
-persists the configuration schema at `~/.guiho/mirror/schema.json`,
-installs `guiho-s-mirror` into both global agent-tool directories, and
-reconciles Mirror instructions in the current project.
+Installers map the host to an approved native asset, verify it against
+`checksums.txt`, install the bundled skill into both global agent roots,
+reconcile the managed instruction block, and verify `mirror v<version>`.
 
 ## Quick Start
 
@@ -51,10 +47,16 @@ mirror version current
 mirror version plan patch
 ```
 
-Configuration is `mirror.yaml` only. Mirror resolves an explicit `--config`
-path, then `<cwd>/mirror.yaml`, then `~/.guiho/mirror/mirror.yaml`.
+Configuration is `mirror.yaml` only. Resolution order is an explicit
+`--config`, `<cwd>/mirror.yaml`, then `~/.guiho/mirror/mirror.yaml`; Mirror does
+not search parent directories.
 
-Agent resources are explicit:
+Running plain `mirror` first idempotently verifies `guiho-s-mirror` in both
+global agent roots and reconciles the bounded instruction block in the current
+repository before printing its normal banner. If both `AGENTS.md` and
+`CLAUDE.md` exist, both are updated; if neither exists, `AGENTS.md` is created.
+
+Agent mutations are explicit:
 
 ```text
 mirror agent skill install
@@ -62,31 +64,45 @@ mirror agent instruction apply
 mirror agent prompt list
 ```
 
-Ordinary config and version commands do not install skills or edit instruction
-files. Native releases contain exactly 12 platform binaries plus
-`guiho-s-mirror.md` and `guiho-i-mirror.md`.
+`mirror init` defaults to tag template `v{version}`, release commits enabled,
+and release-ref pushes enabled. Interactive option 1 and both `[Y/n]` prompts
+show those defaults; explicit answers and flags override them.
+
+For a new Git-only repository with no version tags, start with an exact version,
+for example `mirror version plan 0.0.1` and `mirror version apply 0.0.1 --yes`.
+Mirror renders the configured canonical tag and pushes only that exact ref.
+Relative targets are rejected until the initial exact version exists.
+
+Inspect the complete generated interface with `mirror --help-tree` or
+`mirror --help-docs`. Use `--format json` for machine-readable output.
 
 ## Upgrade
 
 ```text
+mirror upgrade check
 mirror upgrade list
 mirror upgrade
 ```
 
-The release list uses the concise
-`VERSION CHANNEL PUBLISHED CURRENT LATEST ASSET` table. Downloads stream visible
-percentage or byte progress and are bounded by total and inactivity deadlines.
-Mirror validates the full native candidate before its transactional executable
-swap; JSON retains complete catalog and progress metadata.
+Upgrades select the exact current-platform asset, stream bounded download
+progress, verify SHA-256 and the candidate executable, perform transactional
+replacement, and retain a backup for rollback. Windows completes replacement
+out of process and reports the completion journal on the next start.
 
 ## Development
 
 ```text
-cd mirror
-bun install
-bun run typecheck
-bun test
-bun run build
+gofmt -l .
+go test -count=1 ./...
+go vet ./...
+go run . --help-tree
+go run ./devops/build-binaries.go --version 0.0.0-dev --commit local --build-date 2026-01-01T00:00:00Z
+go run ./devops/verify-release-assets --dir bin
 ```
 
-Do not publish packages or create GitHub releases from an unvalidated worktree.
+The approved release set is exactly 11 assets: 8 native binaries, the
+`guiho-s-mirror.zip` skill bundle, `guiho-i-mirror.md`, and `checksums.txt`.
+Building does not authorize a version bump, tag, push, publication, or release.
+
+See [mirror/DOCS.md](mirror/DOCS.md) for the full behavior contract and
+[TECHNICAL.md](TECHNICAL.md) for architecture.
