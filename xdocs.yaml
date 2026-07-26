@@ -1,0 +1,23 @@
+schema: 1
+extensions:
+  supported:
+    - .xdocs.md
+ai:
+  mode: auto
+scan:
+  exclude:
+    - node_modules
+    - .git
+    - .agents
+    - .claude
+    - .github
+    - .vscode
+    - bin
+    - build
+    - library
+    - devops/build-binaries
+    - coverage
+    - mirror/node_modules
+    - mirror/bin
+project:
+  name: mirror

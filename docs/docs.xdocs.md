@@ -6,6 +6,7 @@ children:
   - "mirror-docs-decisions"
   - "mirror-docs-plans"
   - "mirror-docs-reviews"
+  - "mirror-docs-rfc"
   - "mirror-docs-superpowers"
   - "mirror-docs-todo"
   - "mirror-docs-validation"

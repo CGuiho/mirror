@@ -5,6 +5,7 @@ parent: mirror-docs
 children: []
 files: {}
 documents:
+  mirror-go-production-migration.md: Executed plan making Go/Cobra the production and delivery authority.
   mirror-3.6.0-schema-and-yaml.md: Approved implementation and release plan for issues 14 and 15 and shared CLI startup behavior.
   rfc-0034-cli-compliance-migration.md: Approved breaking migration plan for TypeBox, YAML, startup, help, agents, upgrades, installers, npm bootstrap, fourteen assets, docs, and validation.
   upgrade-reliability-implementation.md: Executable implementation plan for verified self-upgrades, recovery, release catalog, installers, tests, and documentation.
@@ -12,6 +13,7 @@ documents:
   publish-channel-acceptance.md: Minimal release-workflow plan for exact tag acceptance, stable-only latest validation, prerelease publishing, and previous-stable upgrades.
 tags:
   - planning
+  - go
   - documentation
 keywords:
   - implementation plans

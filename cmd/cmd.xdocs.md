@@ -1,0 +1,22 @@
+---
+subject: mirror-cmd
+description: Cobra command construction, presentation, error mapping, and platform CLI adapters.
+parent: mirror
+children: []
+files:
+  root.go: Fresh root command construction, global flags, startup lifecycle, and injected dependencies.
+  errors.go: Stable process error categories and exit codes.
+  helptree.go: Deterministic command-tree and Markdown help generation.
+  config.go: Configuration commands.
+  version.go: Semantic-version commands.
+  agent.go: Explicit embedded skill, prompt, and instruction commands.
+  upgrade.go: Native release check, catalog, upgrade, and rollback commands.
+  uninstall.go: Cross-platform uninstall command.
+documents: {}
+tags: [go, cobra, cli]
+keywords: [command tree, help docs, exit codes]
+flags: []
+status: stable
+---
+
+One testable Cobra tree owns all production Mirror command routing and help.

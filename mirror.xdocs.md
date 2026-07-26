@@ -1,31 +1,33 @@
 ---
-subject: "mirror"
-description: "Repository root for mirror, including project metadata, documentation, configuration, and top-level modules."
+subject: mirror
+description: Production Go/Cobra Mirror CLI repository and durable project records.
 parent: null
 children:
-  - "mirror-devops"
-  - "mirror-docs"
-  - "mirror-mirror"
+  - mirror-cmd
+  - mirror-devops
+  - mirror-docs
+  - mirror-embed
+  - mirror-mirror
+  - mirror-pkg
 files:
-  ".gitignore": "Git ignore rules for generated or local-only files."
-  "xdocs.config.toml": "TOML configuration file."
+  .gitignore: Ignore rules for generated and local files.
+  go.mod: Go module and direct dependency contract.
+  go.sum: Go dependency integrity checksums.
+  main.go: Thin executable entrypoint with linker build metadata and exit mapping.
+  mirror.yaml: Self-hosting semantic-version configuration using mirror/v tags.
+  xdocs.yaml: YAML configuration for XDocs discovery and validation.
 documents:
-  "AGENTS.md": "Agent instructions requiring the GUIHO SWE agent and CLI engineer skill for Mirror CLI work, including the approved breaking RFC 0034 migration."
-  "CHANGELOG.md": "Release changelog for this scope."
-  "README.md": "Human-facing README for this scope."
-  "TECHNICAL.md": "Markdown companion document in repository root."
-  "todo.md": "Task index and pending work for this scope."
-  "xdocs-overview.md": "Generated companion overview that links back to this directory xdocs descriptor."
-tags:
-  - "repository"
-  - documentation
-keywords:
-  - "mirror"
-  - "mirror"
-  - "RFC 0034"
-  - "cli engineer"
+  AGENTS.md: Current Go CLI engineering, delivery, documentation, and release boundaries.
+  CHANGELOG.md: Release history and unreleased Go migration notes.
+  README.md: User and contributor entrypoint for the production Go CLI.
+  TECHNICAL.md: Current runtime, maintenance, and delivery architecture.
+  todo.md: Local task ledger and migration handoff.
+  xdocs-overview.md: Generated companion overview for the repository root.
+tags: [repository, mirror, go, documentation]
+keywords: [cobra, strict yaml, native release, eleven assets]
 flags: []
 status: stable
 ---
 
-Repository root for mirror, including project metadata, documentation, configuration, and top-level modules. This descriptor documents files, companion Markdown documents, and child modules in this directory.
+The repository root is the production Mirror Go module. The Bun package is a
+historical child; `cmd`, `pkg`, `embed`, and `devops` own current delivery.

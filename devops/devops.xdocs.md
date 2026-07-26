@@ -1,22 +1,20 @@
 ---
-subject: "mirror-devops"
-description: "DevOps, release, and installation automation for devops."
-parent: "mirror"
-children: []
+subject: mirror-devops
+description: Go release build, verification, notes extraction, and standalone installers.
+parent: mirror
+children:
+  - mirror-devops-extract-release-notes
+  - mirror-devops-verify-release-assets
 files:
-  "compile.sh": "File in devops."
-  "install.ps1": "Standalone public Windows installer mechanically aligned with RunX and safe for irm piped to Invoke-Expression."
-  "install.sh": "Standalone public Linux/macOS installer mechanically aligned with the proven XDocs flow, safe for curl piped to bash, and continuously verified from its public GitHub URL on Ubuntu CI."
+  build-binaries.go: Build the exact 11-asset release set from the Go manifest.
+  install.ps1: Verified standalone Windows amd64 and arm64 installer.
+  install.sh: Verified standalone Linux and Darwin installer.
 documents:
-  "xdocs-overview.md": "Generated companion overview that links back to this directory xdocs descriptor."
-tags:
-  - "automation"
-  - documentation
-keywords:
-  - "mirror-devops"
-  - "devops"
+  xdocs-overview.md: Generated companion overview for DevOps automation.
+tags: [automation, go, release]
+keywords: [static binaries, checksums, installer]
 flags: []
 status: stable
 ---
 
-DevOps, release, and installation automation for devops. This descriptor documents files, companion Markdown documents, and child modules in this directory.
+DevOps tooling consumes the production Go contract and never publishes the legacy package.

@@ -1,6 +1,6 @@
 ---
 subject: "mirror-mirror"
-description: "Module directory mirror in mirror."
+description: "Archived Bun/TypeScript predecessor retained as historical implementation evidence."
 parent: "mirror"
 children:
   - "mirror-mirror-schema"
@@ -20,12 +20,12 @@ files:
   "tsconfig.build.json": "TypeScript compiler configuration."
   "tsconfig.json": "TypeScript compiler configuration."
 documents:
-  "DOCS.md": "Full package documentation, including coalesced bounded update workers, verified transactional self-upgrades, exact-version recovery, complete release catalogs, canonical installer behavior, and stable/prerelease publication acceptance."
+  "DOCS.md": "Current full production CLI behavior contract; this directory's code is historical only."
   "LICENSE.md": "Markdown companion document in mirror."
   "README.md": "Published package README covering installation, Citty CLI behavior, verified self-upgrade/recovery, complete release listing, safety, and development."
   "xdocs-overview.md": "Generated companion overview that links back to this directory xdocs descriptor."
 tags:
-  - "module"
+  - "historical"
   - documentation
 keywords:
   - "mirror-mirror"
@@ -34,4 +34,4 @@ flags: []
 status: stable
 ---
 
-Module directory mirror in mirror. This descriptor documents files, companion Markdown documents, and child modules in this directory.
+Archived predecessor module. Its implementation and package metadata do not override the repository-root Go/Cobra contract.

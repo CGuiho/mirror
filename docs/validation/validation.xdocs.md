@@ -5,6 +5,7 @@ parent: "mirror-docs"
 children: []
 files: {}
 documents:
+  "mirror-go-production-migration.md": "Local Go source, exact asset, Windows binary, installer, workflow, and release-boundary evidence."
   "mirror-3.6.0-schema-and-yaml.md": "Validation evidence for global schema persistence, YAML migration, welcome behavior, and the 3.6.0 release."
   "cli-contextual-help.md": "Validation evidence for contextual CLI help and usage errors."
   "citty-cli-migration.md": "Validation evidence for the completed Citty CLI migration."
