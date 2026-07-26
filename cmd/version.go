@@ -5,139 +5,203 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
-
 	"github.com/CGuiho/mirror/pkg/config"
 	"github.com/CGuiho/mirror/pkg/versioning"
 	"github.com/spf13/cobra"
 )
 
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Plan and apply semantic version changes.",
-	Long:  "Plan and apply semantic version changes.",
-}
-
-var versionPlanCmd = &cobra.Command{
-	Use:   "plan <target>",
-	Short: "Build version plan without applying.",
-	Long:  "Build version plan without applying.",
-	Args:  cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		target := args[0]
-		cfgPath := resolveConfigPath(cmd)
-		cfg, err := config.Load(cfgPath)
-		if err != nil {
-			return fmt.Errorf("failed to load configuration: %w", err)
-		}
-		fmt.Printf("configuration file loaded: %s\n", cfgPath)
-
-		cwd, _ := cmd.Flags().GetString("cwd")
-		if cwd == "" {
-			cwd, _ = os.Getwd()
-		}
-
-		plan, err := versioning.BuildPlan(cfg, cfgPath, target, cwd)
-		if err != nil {
-			return err
-		}
-
-		format, _ := cmd.Flags().GetString("format")
-		if format == "json" {
-			data, _ := json.MarshalIndent(plan, "", "  ")
-			fmt.Println(string(data))
-		} else {
-			fmt.Println()
-			fmt.Println("🪞  GUIHO Mirror")
-			fmt.Println()
-			fmt.Printf("config: %s\n", cfgPath)
-			fmt.Println()
-			fmt.Print(versioning.FormatPlanText(plan))
-		}
-		return nil
-	},
-}
-
-var versionApplyCmd = &cobra.Command{
-	Use:   "apply <target>",
-	Short: "Apply version plan and create Git tags.",
-	Long:  "Apply version plan and create Git tags.",
-	Args:  cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		target := args[0]
-		cfgPath := resolveConfigPath(cmd)
-		cfg, err := config.Load(cfgPath)
-		if err != nil {
-			return fmt.Errorf("failed to load configuration: %w", err)
-		}
-		fmt.Printf("configuration file loaded: %s\n", cfgPath)
-
-		cwd, _ := cmd.Flags().GetString("cwd")
-		if cwd == "" {
-			cwd, _ = os.Getwd()
-		}
-
-		plan, err := versioning.BuildPlan(cfg, cfgPath, target, cwd)
-		if err != nil {
-			return err
-		}
-
-		dryRun, _ := cmd.Flags().GetBool("dry-run")
-		if dryRun {
-			plan.DryRun = true
-			fmt.Println()
-			fmt.Println("🪞  GUIHO Mirror")
-			fmt.Println()
-			fmt.Printf("config: %s\n", cfgPath)
-			fmt.Println()
-			fmt.Print(versioning.FormatPlanText(plan))
-			fmt.Println("dry_run: true")
-			return nil
-		}
-
-		if err := versioning.ApplyPlan(plan, cwd); err != nil {
-			return err
-		}
-
-		format, _ := cmd.Flags().GetString("format")
-		if format == "json" {
-			data, _ := json.MarshalIndent(plan, "", "  ")
-			fmt.Println(string(data))
-		} else {
-			fmt.Printf("configuration file loaded: %s\n", cfgPath)
-			fmt.Println()
-			fmt.Println("🪞  GUIHO Mirror")
-			fmt.Println()
-			fmt.Printf("config: %s\n", cfgPath)
-			fmt.Println()
-			fmt.Print(versioning.FormatPlanText(plan))
-		}
-		return nil
-	},
-}
-
-func init() {
-	versionPlanCmd.Flags().Bool("dry-run", false, "Plan without mutation.")
-	versionApplyCmd.Flags().Bool("dry-run", false, "Plan without mutation.")
-	versionApplyCmd.Flags().Bool("yes", false, "Apply without confirmation.")
-
-	// Version-specific flags from the full help-tree
-	for _, cmd := range []*cobra.Command{versionCmd, versionPlanCmd, versionApplyCmd} {
-		cmd.Flags().String("source", "", "Select package.json, jsr.json, or git as the source.")
-		cmd.Flags().StringSlice("output", nil, "Select output adapters. Repeat or comma-separate values.")
-		cmd.Flags().String("package-file", "", "Override the package.json path.")
-		cmd.Flags().String("jsr-file", "", "Override the jsr.json path.")
-		cmd.Flags().StringSlice("auxiliary", nil, "Add auxiliary package.json paths. Repeat or comma-separate values.")
-		cmd.Flags().String("tag-template", "", "Override the Git tag template.")
-		cmd.Flags().String("name", "", "Override the project name.")
-		cmd.Flags().String("preid", "", "Override the prerelease identifier.")
-		cmd.Flags().Bool("commit", false, "Create a release commit when file outputs changed.")
-		cmd.Flags().Bool("push", false, "Push release refs.")
-		cmd.Flags().Bool("allow-dirty", false, "Allow a dirty Git worktree.")
+func newVersionCommand(deps Dependencies) *cobra.Command {
+	command := &cobra.Command{
+		Use:   "version",
+		Short: "Inspect, plan, and apply semantic version changes.",
+		Args:  cobra.NoArgs,
+		RunE: func(command *cobra.Command, _ []string) error {
+			return command.Help()
+		},
 	}
+	addVersionOverrideFlags(command)
+	command.AddCommand(newVersionCurrentCommand(deps))
+	command.AddCommand(newVersionNextCommand(deps))
+	command.AddCommand(newVersionPlanCommand(deps))
+	command.AddCommand(newVersionApplyCommand(deps))
+	return command
+}
 
-	versionCmd.AddCommand(versionPlanCmd)
-	versionCmd.AddCommand(versionApplyCmd)
+func newVersionCurrentCommand(deps Dependencies) *cobra.Command {
+	return &cobra.Command{
+		Use:   "current",
+		Short: "Print the current configured version.",
+		Args:  cobra.NoArgs,
+		RunE: func(command *cobra.Command, _ []string) error {
+			plan, err := buildPlan(command, deps, "patch")
+			if err != nil {
+				return err
+			}
+			if outputFormat(command) == "json" {
+				return writeJSON(deps.Out, successEnvelope{
+					OK: true, Command: command.CommandPath(),
+					Result: map[string]any{"version": plan.CurrentVersion, "source": plan.Source},
+				})
+			}
+			fmt.Fprintln(deps.Out, plan.CurrentVersion)
+			return nil
+		},
+	}
+}
+
+func newVersionNextCommand(deps Dependencies) *cobra.Command {
+	return &cobra.Command{
+		Use:   "next <target>",
+		Short: "Calculate the next version without building an action plan.",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(command *cobra.Command, args []string) error {
+			plan, err := buildPlan(command, deps, args[0])
+			if err != nil {
+				return err
+			}
+			if outputFormat(command) == "json" {
+				return writeJSON(deps.Out, successEnvelope{
+					OK: true, Command: command.CommandPath(),
+					Result: map[string]any{"current": plan.CurrentVersion, "next": plan.NextVersion},
+				})
+			}
+			fmt.Fprintln(deps.Out, plan.NextVersion)
+			return nil
+		},
+	}
+}
+
+func newVersionPlanCommand(deps Dependencies) *cobra.Command {
+	var dryRun bool
+	command := &cobra.Command{
+		Use:   "plan <target>",
+		Short: "Build a version plan without applying it.",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(command *cobra.Command, args []string) error {
+			plan, err := buildPlan(command, deps, args[0])
+			if err != nil {
+				return err
+			}
+			plan.DryRun = dryRun
+			return renderVersionPlan(command, deps, plan)
+		},
+	}
+	command.Flags().BoolVar(&dryRun, "dry-run", false, "Mark the read-only plan as a dry run.")
+	return command
+}
+
+func newVersionApplyCommand(deps Dependencies) *cobra.Command {
+	var dryRun bool
+	var confirmed bool
+	command := &cobra.Command{
+		Use:   "apply <target>",
+		Short: "Apply a version plan and its exact Git refs.",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(command *cobra.Command, args []string) error {
+			plan, err := buildPlan(command, deps, args[0])
+			if err != nil {
+				return err
+			}
+			if dryRun {
+				plan.DryRun = true
+				return renderVersionPlan(command, deps, plan)
+			}
+			cwd, err := effectiveCWD(command, deps)
+			if err != nil {
+				return err
+			}
+			if err := versioning.ApplyPlanWithOptions(plan, cwd, versioning.ApplyOptions{
+				Confirmed: confirmed,
+				Runner:    deps.Runner,
+			}); err != nil {
+				return err
+			}
+			return renderVersionPlan(command, deps, plan)
+		},
+	}
+	command.Flags().BoolVar(&dryRun, "dry-run", false, "Build the plan without mutation.")
+	command.Flags().BoolVar(&confirmed, "yes", false, "Apply without an interactive confirmation prompt.")
+	return command
+}
+
+func buildPlan(command *cobra.Command, deps Dependencies, target string) (*versioning.VersionPlan, error) {
+	cfg, path, err := loadConfig(command, deps)
+	if err != nil {
+		return nil, err
+	}
+	if err := applyVersionOverrides(command, cfg); err != nil {
+		return nil, err
+	}
+	reportLoadedConfig(deps, path)
+	cwd, err := effectiveCWD(command, deps)
+	if err != nil {
+		return nil, err
+	}
+	return versioning.BuildPlanWithRunner(cfg, path, target, cwd, deps.Runner)
+}
+
+func renderVersionPlan(command *cobra.Command, deps Dependencies, plan *versioning.VersionPlan) error {
+	if outputFormat(command) == "json" {
+		return writeJSON(deps.Out, successEnvelope{OK: true, Command: command.CommandPath(), Result: plan})
+	}
+	fmt.Fprint(deps.Out, versioning.FormatPlanText(plan))
+	return nil
+}
+
+func addVersionOverrideFlags(command *cobra.Command) {
+	flags := command.PersistentFlags()
+	flags.String("source", "", "Override package.json, jsr.json, or git as the source.")
+	flags.StringSlice("output", nil, "Override output adapters; repeat or comma-separate values.")
+	flags.String("package-file", "", "Override the package.json path.")
+	flags.String("jsr-file", "", "Override the jsr.json path.")
+	flags.StringSlice("auxiliary", nil, "Override auxiliary package.json paths.")
+	flags.String("tag-template", "", "Override the Git tag template.")
+	flags.String("name", "", "Override the project name.")
+	flags.String("preid", "", "Override the prerelease identifier.")
+	flags.Bool("commit", false, "Create a release commit when file outputs change.")
+	flags.Bool("push", false, "Push the release commit and exact planned tag.")
+	flags.Bool("allow-dirty", false, "Allow a dirty Git worktree.")
+}
+
+func applyVersionOverrides(command *cobra.Command, cfg *config.MirrorConfig) error {
+	flags := command.Flags()
+	if flags.Changed("source") {
+		cfg.Version.Source, _ = flags.GetString("source")
+	}
+	if flags.Changed("output") {
+		cfg.Version.Output, _ = flags.GetStringSlice("output")
+	}
+	if flags.Changed("package-file") {
+		cfg.Package.Path, _ = flags.GetString("package-file")
+	}
+	if flags.Changed("jsr-file") {
+		cfg.JSR.Path, _ = flags.GetString("jsr-file")
+	}
+	if flags.Changed("auxiliary") {
+		cfg.Package.AuxiliaryPaths, _ = flags.GetStringSlice("auxiliary")
+	}
+	if flags.Changed("tag-template") {
+		cfg.Git.TagTemplate, _ = flags.GetString("tag-template")
+	}
+	if flags.Changed("name") {
+		cfg.Project.Name, _ = flags.GetString("name")
+		cfg.Project.NameSource = ""
+	}
+	if flags.Changed("preid") {
+		cfg.Version.PrereleaseID, _ = flags.GetString("preid")
+	}
+	if flags.Changed("commit") {
+		cfg.Git.Commit, _ = flags.GetBool("commit")
+	}
+	if flags.Changed("push") {
+		cfg.Git.Push, _ = flags.GetBool("push")
+	}
+	if flags.Changed("allow-dirty") {
+		cfg.Git.AllowDirty, _ = flags.GetBool("allow-dirty")
+	}
+	if cfg.Git.Push {
+		cfg.Git.Commit = true
+	}
+	return cfg.Validate()
 }

@@ -9,148 +9,172 @@ import (
 	"os/exec"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	sv "github.com/Masterminds/semver/v3"
 )
 
-// Bump calculates the next version from the current version and target.
-// Target can be: major, premajor, minor, preminor, patch, prepatch, prerelease, or an exact version string.
-func Bump(current string, target string, prereleaseID string) (string, error) {
-	cur, err := sv.NewVersion(strings.TrimPrefix(current, "v"))
+var supportedTargets = map[string]struct{}{
+	"major": {}, "premajor": {}, "minor": {}, "preminor": {},
+	"patch": {}, "prepatch": {}, "prerelease": {},
+}
+
+func Bump(current, target, prereleaseID string) (string, error) {
+	cur, err := sv.StrictNewVersion(strings.TrimPrefix(current, "v"))
 	if err != nil {
 		return "", fmt.Errorf("invalid current version %q: %w", current, err)
 	}
+	if prereleaseID != "" && !validPrereleaseIdentifier(prereleaseID) {
+		return "", fmt.Errorf("invalid prerelease identifier %q", prereleaseID)
+	}
 
+	var next sv.Version
 	switch target {
 	case "major":
-		next := cur.IncMajor()
-		return next.String(), nil
+		next = cur.IncMajor()
 	case "premajor":
-		next := cur.IncMajor()
-		pre, _ := sv.NewVersion(fmt.Sprintf("%s-0", next.String()))
-		if prereleaseID != "" {
-			pre, _ = sv.NewVersion(fmt.Sprintf("%s-%s.0", next.String(), prereleaseID))
-		}
-		return pre.String(), nil
+		next = withPrerelease(cur.IncMajor(), prereleaseID)
 	case "minor":
-		next := cur.IncMinor()
-		return next.String(), nil
+		next = cur.IncMinor()
 	case "preminor":
-		next := cur.IncMinor()
-		pre, _ := sv.NewVersion(fmt.Sprintf("%s-0", next.String()))
-		if prereleaseID != "" {
-			pre, _ = sv.NewVersion(fmt.Sprintf("%s-%s.0", next.String(), prereleaseID))
-		}
-		return pre.String(), nil
+		next = withPrerelease(cur.IncMinor(), prereleaseID)
 	case "patch":
-		next := cur.IncPatch()
-		return next.String(), nil
+		next = cur.IncPatch()
 	case "prepatch":
-		next := cur.IncPatch()
-		pre, _ := sv.NewVersion(fmt.Sprintf("%s-0", next.String()))
-		if prereleaseID != "" {
-			pre, _ = sv.NewVersion(fmt.Sprintf("%s-%s.0", next.String(), prereleaseID))
-		}
-		return pre.String(), nil
+		next = withPrerelease(cur.IncPatch(), prereleaseID)
 	case "prerelease":
-		pre := cur.Prerelease()
-		if pre == "" {
-			next := cur.IncPatch()
-			p, _ := sv.NewVersion(fmt.Sprintf("%s-0", next.String()))
-			if prereleaseID != "" {
-				p, _ = sv.NewVersion(fmt.Sprintf("%s-%s.0", next.String(), prereleaseID))
-			}
-			return p.String(), nil
-		}
-		// Increment the last numeric segment of the prerelease
-		parts := strings.Split(pre, ".")
-		for i := len(parts) - 1; i >= 0; i-- {
-			if n := parseNumber(parts[i]); n >= 0 {
-				parts[i] = fmt.Sprintf("%d", n+1)
-				break
-			}
-		}
-		base := fmt.Sprintf("%d.%d.%d", cur.Major(), cur.Minor(), cur.Patch())
-		p, _ := sv.NewVersion(fmt.Sprintf("%s-%s", base, strings.Join(parts, ".")))
-		return p.String(), nil
+		return incrementPrerelease(cur, prereleaseID)
 	default:
-		// Exact version target
-		next, err := sv.NewVersion(strings.TrimPrefix(target, "v"))
+		exact, err := sv.StrictNewVersion(strings.TrimPrefix(target, "v"))
 		if err != nil {
 			return "", fmt.Errorf("invalid version target %q: %w", target, err)
 		}
-		return next.String(), nil
+		return exact.String(), nil
 	}
+	return next.String(), nil
 }
 
-// FormatTag formats a version string using a tag template.
-// Template variables: {name}, {version}
-func FormatTag(template string, name string, version string) string {
+func withPrerelease(base sv.Version, prereleaseID string) sv.Version {
+	pre := "0"
+	if prereleaseID != "" {
+		pre = prereleaseID + ".0"
+	}
+	next, _ := base.SetPrerelease(pre)
+	return next
+}
+
+func incrementPrerelease(current *sv.Version, prereleaseID string) (string, error) {
+	if current.Prerelease() == "" {
+		return withPrerelease(current.IncPatch(), prereleaseID).String(), nil
+	}
+
+	parts := strings.Split(current.Prerelease(), ".")
+	if prereleaseID != "" && parts[0] != prereleaseID {
+		parts = []string{prereleaseID, "0"}
+	} else {
+		incremented := false
+		for index := len(parts) - 1; index >= 0; index-- {
+			number, err := strconv.ParseUint(parts[index], 10, 64)
+			if err != nil {
+				continue
+			}
+			parts[index] = strconv.FormatUint(number+1, 10)
+			incremented = true
+			break
+		}
+		if !incremented {
+			parts = append(parts, "0")
+		}
+	}
+
+	base, _ := current.SetPrerelease("")
+	next, err := base.SetPrerelease(strings.Join(parts, "."))
+	if err != nil {
+		return "", fmt.Errorf("calculate prerelease from %s: %w", current, err)
+	}
+	return next.String(), nil
+}
+
+func RenderTag(template, name, version string) (string, error) {
+	if template != "v{version}" && template != "{name}@{version}" && template != "{name}/v{version}" {
+		return "", fmt.Errorf("unsupported Git tag template %q", template)
+	}
+	parsed, err := sv.StrictNewVersion(strings.TrimPrefix(version, "v"))
+	if err != nil {
+		return "", fmt.Errorf("invalid Git tag version %q: %w", version, err)
+	}
+	if strings.Contains(template, "{name}") && strings.TrimSpace(name) == "" {
+		return "", fmt.Errorf("Git tag template %q requires a project name", template)
+	}
 	tag := strings.ReplaceAll(template, "{name}", name)
-	tag = strings.ReplaceAll(tag, "{version}", version)
+	tag = strings.ReplaceAll(tag, "{version}", parsed.String())
+	return tag, nil
+}
+
+// FormatTag is the compatibility form of RenderTag for callers with validated data.
+func FormatTag(template, name, version string) string {
+	tag, _ := RenderTag(template, name, version)
 	return tag
 }
 
-// ReadVersionFromGit reads the latest semver tag from the Git repository at the given cwd.
-func ReadVersionFromGit(cwd string, tagTemplate string, projectName string) (string, error) {
-	cmd := exec.Command("git", "tag", "--list", "--sort=-v:refname")
-	cmd.Dir = cwd
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("failed to list git tags: %w\n%s", err, string(out))
+func VersionFromTag(template, tag, projectName string) (string, bool) {
+	if template != "v{version}" && template != "{name}@{version}" && template != "{name}/v{version}" {
+		return "", false
 	}
+	if strings.Contains(template, "{name}") && projectName == "" {
+		return "", false
+	}
+	pattern := regexp.QuoteMeta(template)
+	pattern = strings.ReplaceAll(pattern, regexp.QuoteMeta("{name}"), regexp.QuoteMeta(projectName))
+	pattern = strings.ReplaceAll(pattern, regexp.QuoteMeta("{version}"), `(?P<version>[^/]+)`)
+	match := regexp.MustCompile("^" + pattern + "$").FindStringSubmatch(tag)
+	if match == nil {
+		return "", false
+	}
+	versionIndex := regexp.MustCompile("^" + pattern + "$").SubexpIndex("version")
+	if versionIndex < 0 {
+		return "", false
+	}
+	version, err := sv.StrictNewVersion(match[versionIndex])
+	if err != nil {
+		return "", false
+	}
+	return version.String(), true
+}
 
-	tags := strings.Split(strings.TrimSpace(string(out)), "\n")
-	semverRegex := regexp.MustCompile(`v?(\d+\.\d+\.\d+.*)`)
-
-	// Build expected prefix from template
-	prefix := ""
-	if tagTemplate != "" && projectName != "" {
-		// e.g., template "{name}/v{version}" + name "@guiho/mirror" → prefix "@guiho/mirror/v"
-		prefix = strings.ReplaceAll(tagTemplate, "{version}", "")
-		prefix = strings.ReplaceAll(prefix, "{name}", projectName)
+func ReadVersionFromGit(cwd, tagTemplate, projectName string) (string, error) {
+	command := exec.Command("git", "tag", "--list")
+	command.Dir = cwd
+	output, err := command.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("list Git tags: %w: %s", err, strings.TrimSpace(string(output)))
 	}
 
 	var versions []*sv.Version
-	for _, tag := range tags {
-		tag = strings.TrimSpace(tag)
-		if tag == "" {
+	for _, tag := range strings.Fields(string(output)) {
+		versionText, ok := VersionFromTag(tagTemplate, tag, projectName)
+		if !ok {
 			continue
 		}
-
-		versionStr := tag
-		if prefix != "" && strings.HasPrefix(tag, prefix) {
-			versionStr = strings.TrimPrefix(tag, prefix)
-		} else if prefix != "" {
-			continue
-		}
-
-		matches := semverRegex.FindStringSubmatch(versionStr)
-		if len(matches) < 2 {
-			continue
-		}
-		v, err := sv.NewVersion(matches[1])
-		if err == nil {
-			versions = append(versions, v)
-		}
+		version, _ := sv.StrictNewVersion(versionText)
+		versions = append(versions, version)
 	}
-
 	if len(versions) == 0 {
-		return "0.0.0", nil
+		return "", fmt.Errorf("no Git tags match template %q", tagTemplate)
 	}
-
 	sort.Sort(sort.Reverse(sv.Collection(versions)))
 	return versions[0].String(), nil
 }
 
-func parseNumber(s string) int {
-	n := 0
-	for _, c := range s {
-		if c < '0' || c > '9' {
-			return -1
-		}
-		n = n*10 + int(c-'0')
+func IsSupportedTarget(target string) bool {
+	if _, ok := supportedTargets[target]; ok {
+		return true
 	}
-	return n
+	_, err := sv.StrictNewVersion(strings.TrimPrefix(target, "v"))
+	return err == nil
+}
+
+func validPrereleaseIdentifier(identifier string) bool {
+	return regexp.MustCompile(`^[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*$`).MatchString(identifier)
 }

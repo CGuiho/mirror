@@ -90,3 +90,35 @@ func TestBumpWithVPrefix(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "1.2.4", next)
 }
+
+func TestBumpPrereleaseWithoutNumericSegment(t *testing.T) {
+	next, err := Bump("1.2.3-alpha", "prerelease", "")
+	require.NoError(t, err)
+	assert.Equal(t, "1.2.3-alpha.0", next)
+}
+
+func TestBumpPrereleaseCanChangeIdentifier(t *testing.T) {
+	next, err := Bump("1.2.3-alpha.8", "prerelease", "beta")
+	require.NoError(t, err)
+	assert.Equal(t, "1.2.3-beta.0", next)
+}
+
+func TestRenderTagRequiresExactSupportedTemplate(t *testing.T) {
+	tag, err := RenderTag("{name}/v{version}", "mirror", "3.8.0")
+	require.NoError(t, err)
+	assert.Equal(t, "mirror/v3.8.0", tag)
+
+	_, err = RenderTag("release-{version}", "mirror", "3.8.0")
+	require.Error(t, err)
+}
+
+func TestVersionFromTagMatchesTemplateExactly(t *testing.T) {
+	version, ok := VersionFromTag("{name}/v{version}", "mirror/v3.8.0", "mirror")
+	require.True(t, ok)
+	assert.Equal(t, "3.8.0", version)
+
+	_, ok = VersionFromTag("{name}/v{version}", "@guiho/mirror/v99.0.0", "mirror")
+	assert.False(t, ok)
+	_, ok = VersionFromTag("{name}/v{version}", "mirror/vnot-semver", "mirror")
+	assert.False(t, ok)
+}
