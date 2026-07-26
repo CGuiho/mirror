@@ -175,11 +175,11 @@ jobs:
         shell: powershell
         run: |
           $root = Join-Path $env:RUNNER_TEMP 'mirror-installer'
-          $home = Join-Path $root 'home'
+          $mirrorHome = Join-Path $root 'home'
           $project = Join-Path $root 'project'
           $install = Join-Path $root 'install'
-          New-Item -ItemType Directory -Force -Path $home, $project, $install | Out-Null
-          $env:MIRROR_HOME_DIR = $home
+          New-Item -ItemType Directory -Force -Path $mirrorHome, $project, $install | Out-Null
+          $env:MIRROR_HOME_DIR = $mirrorHome
           $env:MIRROR_ASSET_DIR = (Resolve-Path 'bin').Path
           $env:MIRROR_INSTALL_DIR = $install
           $env:MIRROR_SKIP_PATH_UPDATE = '1'
@@ -190,6 +190,6 @@ jobs:
             & "$env:GITHUB_WORKSPACE\devops\install.ps1" -Version '0.0.0-ci' -InstallDir $install
           } finally { Pop-Location }
           if ((& "$install\mirror.exe" --version | Out-String).Trim() -ne 'mirror v0.0.0-ci') { exit 1 }
-          if (-not (Test-Path "$home\.agents\skills\guiho-s-mirror\SKILL.md")) { exit 1 }
-          if (-not (Test-Path "$home\.claude\skills\guiho-s-mirror\SKILL.md")) { exit 1 }
+          if (-not (Test-Path "$mirrorHome\.agents\skills\guiho-s-mirror\SKILL.md")) { exit 1 }
+          if (-not (Test-Path "$mirrorHome\.claude\skills\guiho-s-mirror\SKILL.md")) { exit 1 }
           if ((Select-String -LiteralPath "$project\AGENTS.md" -SimpleMatch '<!-- BEGIN MIRROR').Count -ne 1) { exit 1 }
