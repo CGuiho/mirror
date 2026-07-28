@@ -25,7 +25,8 @@ All Rights Reserved.
 - Spec:
   [docs/todo/powershell-invoke-expression-installer.md](docs/todo/powershell-invoke-expression-installer.md)
 - External: GitHub issue
-  [#19](https://github.com/CGuiho/mirror/issues/19)
+  [#19](https://github.com/CGuiho/mirror/issues/19) and pull request
+  [#20](https://github.com/CGuiho/mirror/pull/20)
 - Testing: focused Windows PowerShell parser, Go contract, and stage-aware
   `Invoke-Expression` failure checks pass; full Go tests, vet, exact 11-asset
   verification, configuration/help contracts, and two complete offline
@@ -34,6 +35,10 @@ All Rights Reserved.
   [docs/reviews/implementation/powershell-invoke-expression-installer-review.md](docs/reviews/implementation/powershell-invoke-expression-installer-review.md)
 - Validation:
   [docs/validation/powershell-invoke-expression-installer.md](docs/validation/powershell-invoke-expression-installer.md)
+- Hosted CI: run
+  [30370046395](https://github.com/CGuiho/mirror/actions/runs/30370046395)
+  is `action_required` with no jobs pending upstream approval for forked
+  workflows.
 
 ## Parent TODO
 

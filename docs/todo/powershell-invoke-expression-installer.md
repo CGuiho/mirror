@@ -24,6 +24,8 @@ keywords:
 - Index: [TODO.md](../../TODO.md)
 - External:
   [CGuiho/mirror#19](https://github.com/CGuiho/mirror/issues/19)
+- Pull request:
+  [CGuiho/mirror#20](https://github.com/CGuiho/mirror/pull/20)
 
 ## Plan Unit
 
@@ -97,3 +99,17 @@ keywords:
 - Added a Windows Go regression proving an invalid architecture identifies the
   architecture stage and creates no install directory.
 - Focused parser, Go contract, and PowerShell failure-path checks pass.
+
+## Delivery
+
+- Fork: `cguiho-itron/mirror`
+- Branch: `codex/fix-powershell-installer-null`
+- Implementation commit: `14511a680632d20f8def3da95c0d76b875e94d4f`
+- Evidence commit: `779a0ea33e00b4696b9f564217ff2fb3c0aa93db`
+- Pull request:
+  [CGuiho/mirror#20](https://github.com/CGuiho/mirror/pull/20)
+- Hosted CI run
+  [30370046395](https://github.com/CGuiho/mirror/actions/runs/30370046395)
+  is `action_required` with no jobs. Upstream approval of the forked workflow is
+  required before hosted validation can execute.
+- Task remains `testing` pending hosted CI and upstream review.

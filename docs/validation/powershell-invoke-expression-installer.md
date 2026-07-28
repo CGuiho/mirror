@@ -51,7 +51,13 @@ configuration is deferred rather than bundled into the installer PR.
 
 ## Hosted and release gates
 
-- The pull request's Windows job must run the modified offline
+- Pull request
+  [#20](https://github.com/CGuiho/mirror/pull/20) is open and mergeable.
+- CI run
+  [30370046395](https://github.com/CGuiho/mirror/actions/runs/30370046395)
+  ended as `action_required` with no jobs because the forked workflow requires
+  upstream approval.
+- After approval, the pull request's Windows job must run the modified offline
   `Invoke-Expression` test.
 - No version bump, tag, release, or publication was performed.
 - Mirror decision: recommend a patch only after review and merge.
