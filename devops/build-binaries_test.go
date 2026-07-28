@@ -3,7 +3,9 @@ package main
 import (
 	"archive/zip"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -92,6 +94,43 @@ func TestWorkflowAndInstallerContractsAreGoAuthoritative(t *testing.T) {
 	if !slices.IsSorted(release.AssetNames()) {
 		t.Fatal("release asset names must be deterministic")
 	}
+	if !strings.Contains(ci, "$installerSource | Invoke-Expression") {
+		t.Fatal("Windows installer CI does not exercise the Invoke-Expression entrypoint")
+	}
+	for _, required := range []string{"Get-MirrorRequiredText", "Mirror installer failed during ${installerStage}"} {
+		if !strings.Contains(installPS, required) {
+			t.Fatalf("PowerShell installer is missing null-safe stage handling: %s", required)
+		}
+	}
+}
+
+func TestPowerShellInstallerInvokeExpressionReportsStage(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("PowerShell installer regression requires Windows")
+	}
+	root := filepath.Dir(mustWorkingDirectory(t))
+	installer := filepath.Join(root, "devops", "install.ps1")
+	installDir := filepath.Join(t.TempDir(), "must-not-exist")
+	commandText := strings.Join([]string{
+		"$env:MIRROR_TEST_ARCH=' '",
+		"$env:MIRROR_VERSION='0.0.0-test'",
+		"$env:MIRROR_HOME_DIR=" + powerShellLiteral(t.TempDir()),
+		"$env:MIRROR_INSTALL_DIR=" + powerShellLiteral(installDir),
+		"$env:MIRROR_SKIP_PATH_UPDATE='1'",
+		"Get-Content -Raw -LiteralPath " + powerShellLiteral(installer) + " | Invoke-Expression",
+	}, "; ")
+	command := exec.Command("powershell.exe", "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", commandText)
+	output, err := command.CombinedOutput()
+	if err == nil {
+		t.Fatalf("installer unexpectedly accepted an empty architecture:\n%s", output)
+	}
+	expected := "Mirror installer failed during architecture detection: Windows architecture is missing or empty."
+	if !strings.Contains(string(output), expected) {
+		t.Fatalf("installer failure did not identify its stage:\n%s", output)
+	}
+	if _, statErr := os.Stat(installDir); !os.IsNotExist(statErr) {
+		t.Fatalf("failed pre-install validation created the install directory: %v", statErr)
+	}
 }
 
 func assertEnvironmentValue(t *testing.T, environment []string, key, expected string) {
@@ -124,4 +163,8 @@ func normalizedFile(t *testing.T, path string) string {
 		t.Fatal(err)
 	}
 	return strings.ReplaceAll(string(content), "\r\n", "\n")
+}
+
+func powerShellLiteral(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", "''") + "'"
 }
