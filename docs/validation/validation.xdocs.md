@@ -16,6 +16,7 @@ documents:
   "background-update-worker-cpu-safety.md": "Concurrency, process-count, timeout, stale-lock, foreground-isolation, CI, and release evidence for Mirror's update worker."
   "upgrade-catalog-progress-and-linux-download.md": "Local, native, CI, release, public progress, and issue-closure evidence for issues 16 through 18."
   "publish-channel-acceptance.md": "Local and public evidence for exact-tag installation, stable-only latest validation, prerelease readiness, and the Mirror 3.7.4 release."
+  "powershell-invoke-expression-installer.md": "Parser, Go, exact-asset, stage-aware failure, and twice-run Invoke-Expression installer evidence for issue 19."
 tags:
   - "validation"
   - documentation
@@ -25,6 +26,8 @@ keywords:
   - streamed upgrade
   - linux download
   - publish channels
+  - powershell installer
+  - invoke-expression
 flags: []
 status: stable
 ---

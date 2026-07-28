@@ -14,6 +14,27 @@ All Rights Reserved.
 
 # GUIHO Mirror TODO List
 
+## PowerShell Invoke-Expression Installer Hardening
+
+- Status: testing
+- Created: `2026-07-28`
+- Updated: `2026-07-28`
+- Outcome: Make the public Windows `irm .../devops/install.ps1 | iex`
+  entrypoint null-safe, report the exact failing installer stage, and exercise
+  the real `Invoke-Expression` path in Windows CI.
+- Spec:
+  [docs/todo/powershell-invoke-expression-installer.md](docs/todo/powershell-invoke-expression-installer.md)
+- External: GitHub issue
+  [#19](https://github.com/CGuiho/mirror/issues/19)
+- Testing: focused Windows PowerShell parser, Go contract, and stage-aware
+  `Invoke-Expression` failure checks pass; full Go tests, vet, exact 11-asset
+  verification, configuration/help contracts, and two complete offline
+  `Invoke-Expression` installations also pass.
+- Review:
+  [docs/reviews/implementation/powershell-invoke-expression-installer-review.md](docs/reviews/implementation/powershell-invoke-expression-installer-review.md)
+- Validation:
+  [docs/validation/powershell-invoke-expression-installer.md](docs/validation/powershell-invoke-expression-installer.md)
+
 ## Parent TODO
 
 - Parent: [../guiho/TODO.md](../guiho/TODO.md)
