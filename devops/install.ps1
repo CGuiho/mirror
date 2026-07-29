@@ -1,21 +1,26 @@
 param(
   [string]$Version = $(if ($env:MIRROR_VERSION) { $env:MIRROR_VERSION } else { 'latest' }),
-  [string]$InstallDir = $(if ($env:MIRROR_INSTALL_DIR) { $env:MIRROR_INSTALL_DIR } else { Join-Path $HOME '.local\bin' })
+  [string]$InstallDir = $(if ($env:MIRROR_INSTALL_DIR) { $env:MIRROR_INSTALL_DIR } elseif (-not [string]::IsNullOrWhiteSpace([string]$HOME)) { Join-Path $HOME '.local\bin' } else { '' })
 )
 
 $ErrorActionPreference = 'Stop'
-$Repo = if ($env:MIRROR_REPO) { $env:MIRROR_REPO } else { 'CGuiho/mirror' }
-$MirrorHome = if ($env:MIRROR_HOME_DIR) { $env:MIRROR_HOME_DIR } else { $HOME }
 $EmDash = [char]0x2014
 $BeginMarker = "<!-- BEGIN MIRROR $EmDash DO NOT EDIT THIS SECTION -->"
 $EndMarker = '<!-- END MIRROR -->'
 
+function Get-MirrorRequiredText([object]$Value, [string]$Label) {
+  $text = [string]$Value
+  if ([string]::IsNullOrWhiteSpace($text)) { throw "$Label is missing or empty." }
+  return $text
+}
+
 function Get-MirrorAssetName {
-  $architecture = if ($env:MIRROR_TEST_ARCH) {
-    $env:MIRROR_TEST_ARCH.ToLowerInvariant()
+  $rawArchitecture = if ($env:MIRROR_TEST_ARCH) {
+    [string]$env:MIRROR_TEST_ARCH
   } else {
-    [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
+    [string][System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
   }
+  $architecture = (Get-MirrorRequiredText $rawArchitecture 'Windows architecture').Trim().ToLowerInvariant()
   switch ($architecture) {
     { $_ -in @('x64', 'amd64', 'x86_64') } { return 'mirror-windows-amd64.exe' }
     { $_ -in @('arm64', 'aarch64') } { return 'mirror-windows-arm64.exe' }
@@ -24,18 +29,20 @@ function Get-MirrorAssetName {
 }
 
 function Resolve-MirrorVersion([string]$Requested) {
-  $normalized = $Requested -replace '^mirror/v', '' -replace '^v', ''
+  $normalized = (Get-MirrorRequiredText $Requested 'Requested Mirror version').Trim() -replace '^mirror/v', '' -replace '^v', ''
   if ($normalized -ne 'latest') { return $normalized }
   if ($env:MIRROR_ASSET_DIR) { throw 'An exact -Version is required with MIRROR_ASSET_DIR.' }
   $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" -Headers @{ 'User-Agent' = 'guiho-mirror-installer' }
-  if ($release.tag_name -notmatch '^mirror/v(.+)$') {
-    throw "Latest release tag is not canonical: $($release.tag_name)"
+  $releaseTag = (Get-MirrorRequiredText $release.tag_name 'Latest Mirror release tag').Trim()
+  if ($releaseTag -notmatch '^mirror/v(.+)$') {
+    throw "Latest release tag is not canonical: $releaseTag"
   }
-  return $Matches[1]
+  return Get-MirrorRequiredText $Matches[1] 'Latest Mirror release version'
 }
 
 function Get-MirrorAssetBase([string]$ResolvedVersion) {
-  if ($env:MIRROR_DOWNLOAD_BASE_URL) { return $env:MIRROR_DOWNLOAD_BASE_URL.TrimEnd('/') }
+  $customBase = [string]$env:MIRROR_DOWNLOAD_BASE_URL
+  if (-not [string]::IsNullOrWhiteSpace($customBase)) { return $customBase.Trim().TrimEnd('/') }
   return "https://github.com/$Repo/releases/download/mirror%2Fv$ResolvedVersion"
 }
 
@@ -51,8 +58,9 @@ function Get-MirrorAsset([string]$Name, [string]$Destination, [string]$Base) {
 function Test-MirrorChecksum([string]$Manifest, [string]$Name, [string]$Path) {
   $line = Get-Content -LiteralPath $Manifest | Where-Object { $_ -match "^[0-9a-fA-F]{64}\s+\*?$([regex]::Escape($Name))$" }
   if (@($line).Count -ne 1) { throw "Missing or duplicate checksum for $Name" }
-  $expected = (($line -split '\s+')[0]).ToLowerInvariant()
-  $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash.ToLowerInvariant()
+  $expected = (Get-MirrorRequiredText (([string]$line -split '\s+')[0]) "Expected checksum for $Name").ToLowerInvariant()
+  $hash = Get-FileHash -Algorithm SHA256 -LiteralPath $Path
+  $actual = (Get-MirrorRequiredText $hash.Hash "Observed checksum for $Name").ToLowerInvariant()
   if ($actual -ne $expected) { throw "Checksum mismatch for $Name" }
   Write-Host "Verified SHA-256: $Name"
 }
@@ -63,7 +71,7 @@ function Read-ValidatedMarkdown([string]$Path, [string]$ExpectedName) {
   if ($bytes.Length -ge 2 -and $bytes[0] -eq 0x4d -and $bytes[1] -eq 0x5a) { throw "Markdown asset is executable: $Path" }
   if ($bytes -contains 0) { throw "Markdown asset contains NUL bytes: $Path" }
   $encoding = [System.Text.UTF8Encoding]::new($false, $true)
-  $content = $encoding.GetString($bytes) -replace "`r`n", "`n"
+  $content = [string]($encoding.GetString($bytes) -replace "`r`n", "`n")
   if (-not $content.StartsWith("---`n") -or $content -notmatch "(?m)^name:\s*$([regex]::Escape($ExpectedName))\s*$") {
     throw "Markdown asset has invalid frontmatter identity: $Path"
   }
@@ -90,12 +98,15 @@ function Install-MirrorSkill([string]$SkillFile, [string]$Destination) {
 }
 
 function Set-MirrorInstruction([string]$Path, [string]$PromptContent) {
-  $existing = if (Test-Path -LiteralPath $Path) { [System.IO.File]::ReadAllText($Path) } else { '' }
+  $existing = ''
+  if (Test-Path -LiteralPath $Path) { $existing = [string][System.IO.File]::ReadAllText($Path) }
   $begin = [regex]::Escape($BeginMarker)
   $end = [regex]::Escape($EndMarker)
-  $clean = [regex]::Replace($existing, "(?ms)^$begin\r?\n.*?^$end\r?\n?", '').TrimEnd()
+  $clean = [string][regex]::Replace($existing, "(?ms)^$begin\r?\n.*?^$end\r?\n?", '')
+  $clean = $clean.TrimEnd()
   $newline = if ($existing.Contains("`r`n")) { "`r`n" } else { "`n" }
-  $block = $BeginMarker + $newline + $PromptContent.Trim() + $newline + $EndMarker + $newline
+  $validatedPrompt = (Get-MirrorRequiredText $PromptContent 'Mirror instruction prompt').Trim()
+  $block = $BeginMarker + $newline + $validatedPrompt + $newline + $EndMarker + $newline
   $next = if ($clean) { $clean + $newline + $newline + $block } else { $block }
   $parent = Split-Path -Parent $Path
   if ($parent) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
@@ -123,61 +134,83 @@ function Add-MirrorPath([string]$Directory) {
   }
 }
 
-if ($env:MIRROR_INSTALLER_SOURCE_ONLY -eq '1') { return }
-
-$asset = Get-MirrorAssetName
-$resolvedVersion = Resolve-MirrorVersion $Version
-$base = Get-MirrorAssetBase $resolvedVersion
-$temporaryDirectory = Join-Path ([System.IO.Path]::GetTempPath()) ('mirror-install-' + [guid]::NewGuid().ToString('N'))
-New-Item -ItemType Directory -Path $temporaryDirectory | Out-Null
+$installerStage = 'initialization'
 try {
-  Write-Host 'Installing GUIHO Mirror'
-  Write-Host "Version: $resolvedVersion"
-  Write-Host "Target: $asset"
-  Write-Host "Source: $base"
+  $Repo = Get-MirrorRequiredText $(if ($env:MIRROR_REPO) { $env:MIRROR_REPO } else { 'CGuiho/mirror' }) 'Mirror repository'
+  $MirrorHome = Get-MirrorRequiredText $(if ($env:MIRROR_HOME_DIR) { $env:MIRROR_HOME_DIR } else { $HOME }) 'Mirror home directory'
+  $InstallDir = Get-MirrorRequiredText $InstallDir 'Mirror installation directory'
 
-  $manifest = Join-Path $temporaryDirectory 'checksums.txt'
-  $binary = Join-Path $temporaryDirectory $asset
-  $skillArchive = Join-Path $temporaryDirectory 'guiho-s-mirror.zip'
-  $instruction = Join-Path $temporaryDirectory 'guiho-i-mirror.md'
-  Get-MirrorAsset 'checksums.txt' $manifest $base
-  Get-MirrorAsset $asset $binary $base
-  Get-MirrorAsset 'guiho-s-mirror.zip' $skillArchive $base
-  Get-MirrorAsset 'guiho-i-mirror.md' $instruction $base
-  Test-MirrorChecksum $manifest $asset $binary
-  Test-MirrorChecksum $manifest 'guiho-s-mirror.zip' $skillArchive
-  Test-MirrorChecksum $manifest 'guiho-i-mirror.md' $instruction
+  if ($env:MIRROR_INSTALLER_SOURCE_ONLY -eq '1') { return }
 
-  $expanded = Join-Path $temporaryDirectory 'skill'
-  Expand-Archive -LiteralPath $skillArchive -DestinationPath $expanded
-  $skill = Join-Path $expanded 'guiho-s-mirror\SKILL.md'
-  [void](Read-ValidatedMarkdown $skill 'guiho-s-mirror')
-  $promptContent = Read-ValidatedMarkdown $instruction 'guiho-i-mirror'
-
-  New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
-  $destination = Join-Path $InstallDir 'mirror.exe'
-  $backup = "$destination.mirror-backup"
-  if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Force }
-  if (Test-Path -LiteralPath $destination) { Move-Item -LiteralPath $destination -Destination $backup }
+  $installerStage = 'architecture detection'
+  $asset = Get-MirrorAssetName
+  $installerStage = 'release resolution'
+  $resolvedVersion = Resolve-MirrorVersion $Version
+  $base = Get-MirrorAssetBase $resolvedVersion
+  $installerStage = 'temporary workspace creation'
+  $temporaryDirectory = Join-Path ([System.IO.Path]::GetTempPath()) ('mirror-install-' + [guid]::NewGuid().ToString('N'))
+  New-Item -ItemType Directory -Path $temporaryDirectory | Out-Null
   try {
-    Copy-Item -LiteralPath $binary -Destination $destination
-    $previousDisable = $env:MIRROR_DISABLE_UPDATE_CHECK
-    $env:MIRROR_DISABLE_UPDATE_CHECK = '1'
-    try { $observed = (& $destination --version | Out-String).Trim() } finally { $env:MIRROR_DISABLE_UPDATE_CHECK = $previousDisable }
-    if ($observed -ne "mirror v$resolvedVersion") { throw "Installed binary version verification failed: $observed" }
-    if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Force }
-  } catch {
-    if (Test-Path -LiteralPath $destination) { Remove-Item -LiteralPath $destination -Force }
-    if (Test-Path -LiteralPath $backup) { Move-Item -LiteralPath $backup -Destination $destination }
-    throw
-  }
-  Write-Host "Installed binary: $destination"
+    Write-Host 'Installing GUIHO Mirror'
+    Write-Host "Version: $resolvedVersion"
+    Write-Host "Target: $asset"
+    Write-Host "Source: $base"
 
-  Install-MirrorSkill $skill (Join-Path $MirrorHome '.agents\skills\guiho-s-mirror')
-  Install-MirrorSkill $skill (Join-Path $MirrorHome '.claude\skills\guiho-s-mirror')
-  Install-MirrorInstructions $promptContent
-  Add-MirrorPath $InstallDir
-  Write-Host "Mirror installation complete: mirror v$resolvedVersion"
-} finally {
-  if (Test-Path -LiteralPath $temporaryDirectory) { Remove-Item -LiteralPath $temporaryDirectory -Recurse -Force }
+    $manifest = Join-Path $temporaryDirectory 'checksums.txt'
+    $binary = Join-Path $temporaryDirectory $asset
+    $skillArchive = Join-Path $temporaryDirectory 'guiho-s-mirror.zip'
+    $instruction = Join-Path $temporaryDirectory 'guiho-i-mirror.md'
+    $installerStage = 'asset download'
+    Get-MirrorAsset 'checksums.txt' $manifest $base
+    Get-MirrorAsset $asset $binary $base
+    Get-MirrorAsset 'guiho-s-mirror.zip' $skillArchive $base
+    Get-MirrorAsset 'guiho-i-mirror.md' $instruction $base
+    $installerStage = 'checksum verification'
+    Test-MirrorChecksum $manifest $asset $binary
+    Test-MirrorChecksum $manifest 'guiho-s-mirror.zip' $skillArchive
+    Test-MirrorChecksum $manifest 'guiho-i-mirror.md' $instruction
+
+    $installerStage = 'agent resource validation'
+    $expanded = Join-Path $temporaryDirectory 'skill'
+    Expand-Archive -LiteralPath $skillArchive -DestinationPath $expanded
+    $skill = Join-Path $expanded 'guiho-s-mirror\SKILL.md'
+    [void](Read-ValidatedMarkdown $skill 'guiho-s-mirror')
+    $promptContent = Read-ValidatedMarkdown $instruction 'guiho-i-mirror'
+
+    $installerStage = 'binary installation'
+    New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
+    $destination = Join-Path $InstallDir 'mirror.exe'
+    $backup = "$destination.mirror-backup"
+    if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Force }
+    if (Test-Path -LiteralPath $destination) { Move-Item -LiteralPath $destination -Destination $backup }
+    try {
+      Copy-Item -LiteralPath $binary -Destination $destination
+      $previousDisable = $env:MIRROR_DISABLE_UPDATE_CHECK
+      $env:MIRROR_DISABLE_UPDATE_CHECK = '1'
+      try { $observed = [string](& $destination --version | Out-String) } finally { $env:MIRROR_DISABLE_UPDATE_CHECK = $previousDisable }
+      $observed = (Get-MirrorRequiredText $observed 'Installed binary version output').Trim()
+      if ($observed -ne "mirror v$resolvedVersion") { throw "Installed binary version verification failed: $observed" }
+      if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Force }
+    } catch {
+      if (Test-Path -LiteralPath $destination) { Remove-Item -LiteralPath $destination -Force }
+      if (Test-Path -LiteralPath $backup) { Move-Item -LiteralPath $backup -Destination $destination }
+      throw
+    }
+    Write-Host "Installed binary: $destination"
+
+    $installerStage = 'agent skill installation'
+    Install-MirrorSkill $skill (Join-Path $MirrorHome '.agents\skills\guiho-s-mirror')
+    Install-MirrorSkill $skill (Join-Path $MirrorHome '.claude\skills\guiho-s-mirror')
+    $installerStage = 'instruction installation'
+    Install-MirrorInstructions $promptContent
+    $installerStage = 'PATH update'
+    Add-MirrorPath $InstallDir
+    Write-Host "Mirror installation complete: mirror v$resolvedVersion"
+  } finally {
+    if (Test-Path -LiteralPath $temporaryDirectory) { Remove-Item -LiteralPath $temporaryDirectory -Recurse -Force }
+  }
+} catch {
+  $failure = [string]$_.Exception.Message
+  if ([string]::IsNullOrWhiteSpace($failure)) { $failure = 'Unknown failure.' }
+  throw "Mirror installer failed during ${installerStage}: $failure"
 }

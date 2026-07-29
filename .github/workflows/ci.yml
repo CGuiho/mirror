@@ -178,18 +178,40 @@ jobs:
           $mirrorHome = Join-Path $root 'home'
           $project = Join-Path $root 'project'
           $install = Join-Path $root 'install'
-          New-Item -ItemType Directory -Force -Path $mirrorHome, $project, $install | Out-Null
+          $invalidInstall = Join-Path $root 'invalid-install'
+          New-Item -ItemType Directory -Force -Path $mirrorHome, $project | Out-Null
           $env:MIRROR_HOME_DIR = $mirrorHome
           $env:MIRROR_ASSET_DIR = (Resolve-Path 'bin').Path
-          $env:MIRROR_INSTALL_DIR = $install
           $env:MIRROR_SKIP_PATH_UPDATE = '1'
           $env:MIRROR_DISABLE_UPDATE_CHECK = '1'
+          $env:MIRROR_VERSION = '0.0.0-ci'
+          $installerSource = Get-Content -Raw -LiteralPath "$env:GITHUB_WORKSPACE\devops\install.ps1"
           Push-Location $project
           try {
-            & "$env:GITHUB_WORKSPACE\devops\install.ps1" -Version '0.0.0-ci' -InstallDir $install
-            & "$env:GITHUB_WORKSPACE\devops\install.ps1" -Version '0.0.0-ci' -InstallDir $install
-          } finally { Pop-Location }
-          if ((& "$install\mirror.exe" --version | Out-String).Trim() -ne 'mirror v0.0.0-ci') { exit 1 }
-          if (-not (Test-Path "$mirrorHome\.agents\skills\guiho-s-mirror\SKILL.md")) { exit 1 }
-          if (-not (Test-Path "$mirrorHome\.claude\skills\guiho-s-mirror\SKILL.md")) { exit 1 }
-          if ((Select-String -LiteralPath "$project\AGENTS.md" -SimpleMatch '<!-- BEGIN MIRROR').Count -ne 1) { exit 1 }
+            $env:MIRROR_INSTALL_DIR = $invalidInstall
+            $env:MIRROR_TEST_ARCH = ' '
+            $failedAsExpected = $false
+            try {
+              $installerSource | Invoke-Expression
+            } catch {
+              if ($_.Exception.Message -notlike 'Mirror installer failed during architecture detection:*') { throw }
+              $failedAsExpected = $true
+            }
+            if (-not $failedAsExpected) { throw 'Installer unexpectedly accepted an empty architecture.' }
+            if (Test-Path -LiteralPath $invalidInstall) { throw 'Failed pre-install validation created the install directory.' }
+            Remove-Item Env:MIRROR_TEST_ARCH
+
+            $env:MIRROR_INSTALL_DIR = $install
+            $installerSource | Invoke-Expression
+            $installerSource | Invoke-Expression
+
+            if ((& "$install\mirror.exe" --version | Out-String).Trim() -ne 'mirror v0.0.0-ci') { exit 1 }
+            if (-not (Test-Path "$mirrorHome\.agents\skills\guiho-s-mirror\SKILL.md")) { exit 1 }
+            if (-not (Test-Path "$mirrorHome\.claude\skills\guiho-s-mirror\SKILL.md")) { exit 1 }
+            if ((Select-String -LiteralPath "$project\AGENTS.md" -SimpleMatch '<!-- BEGIN MIRROR').Count -ne 1) { exit 1 }
+          } finally {
+            Pop-Location
+            foreach ($name in @('MIRROR_HOME_DIR', 'MIRROR_ASSET_DIR', 'MIRROR_INSTALL_DIR', 'MIRROR_SKIP_PATH_UPDATE', 'MIRROR_DISABLE_UPDATE_CHECK', 'MIRROR_VERSION', 'MIRROR_TEST_ARCH')) {
+              Remove-Item "Env:$name" -ErrorAction SilentlyContinue
+            }
+          }

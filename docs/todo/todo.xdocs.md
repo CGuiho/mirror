@@ -16,6 +16,7 @@ documents:
   upgrade-reliability-implementation.md: Records upgrade reliability implementation decisions, progress, verification evidence, and handoff.
   public-installers-and-platform-greeting.md: Defines standalone public installer and platform-aware greeting outcomes for GitHub issues 12 and 13.
   background-update-worker-cpu-safety.md: Defines bounded, coalesced, stale-recoverable background update worker behavior for Mirror.
+  powershell-invoke-expression-installer.md: Tracks null-safe public PowerShell installer execution and Invoke-Expression regression coverage for GitHub issue 19.
 tags:
   - todo
   - planning
@@ -31,6 +32,8 @@ keywords:
   - recovery command
   - download progress
   - linux upgrade
+  - powershell installer
+  - invoke-expression
 flags: []
 status: stable
 ---
