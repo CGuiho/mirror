@@ -11,6 +11,7 @@ documents:
   upgrade-reliability-final-review.md: Maps issues 9 and 10 to source, test, CI, and pending published-binary evidence.
   upgrade-catalog-progress-and-linux-download-review.md: Accepts the concise catalog, streamed progress, bounded Linux transaction, and public forward-upgrade proof for issues 16 through 18.
   powershell-invoke-expression-installer-review.md: Reviews null-safe PowerShell installer inputs, stage-aware failures, rollback preservation, and Invoke-Expression coverage for issue 19.
+  managed-mirror-instruction-body-review.md: Reviews metadata-free managed instruction rendering across Go and both public installers.
 tags:
   - reviews
   - implementation
@@ -22,6 +23,8 @@ keywords:
   - linux download
   - powershell installer
   - invoke-expression
+  - managed instruction
+  - YAML frontmatter
 flags: []
 status: stable
 ---

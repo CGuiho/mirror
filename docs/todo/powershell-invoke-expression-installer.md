@@ -3,6 +3,7 @@ name: PowerShell Invoke-Expression Installer Hardening
 purpose: Define the bounded fix and validation contract for GitHub issue 19.
 description: Tracks null-safe installer inputs, stage-aware errors, transactional failure behavior, and real Invoke-Expression regression coverage.
 created: 2026-07-28
+updated: 2026-07-30
 owner: mirror-docs-todo
 flags: []
 tags:
@@ -37,6 +38,17 @@ keywords:
   `devops/install.ps1`, the Go release asset manifest, the Windows installer CI
   job, and the public installer validation records.
 
+### Follow-up unit
+
+- Unit: `PSI-19-F1`
+- Trigger: post-merge reproduction on 2026-07-30 from Git Bash into Windows
+  PowerShell.
+- Dedicated architecture and implementation-plan documents remain unnecessary
+  because this is a bounded correction to architecture-source precedence.
+- Required outcome: ignore blank architecture candidates, fall back through
+  Windows processor environment variables and runtime architecture, and keep
+  explicit unsupported-architecture diagnostics.
+
 ## Reproduction Evidence
 
 - The reported public command fails in an affected Windows PowerShell
@@ -47,6 +59,15 @@ keywords:
   null-boundary guards and stage-aware errors is deterministic.
 - Current Windows CI executes the installer as a file with an exact offline
   version and does not pipe the installer source through `Invoke-Expression`.
+- After PR #20 merged, the exact public command failed from
+  `C:\cguiho\meudon-laboratory-manager` with:
+
+  ```text
+  Mirror installer failed during architecture detection: Windows architecture is missing or empty.
+  ```
+
+- Persistent process, user, and machine `MIRROR_TEST_ARCH` values are absent,
+  confirming that the failure is not a stale test override.
 
 ## Scope
 
@@ -80,7 +101,7 @@ keywords:
 
 ## Lifecycle
 
-- Current phase: testing.
+- Current phase: testing (`PSI-19-F1`).
 - Plan waiver: a separate plan is unnecessary for the bounded `PSI-19` unit.
 - XDocs limitation: metadata commands currently reject the repository's
   pre-existing `scan.exclude` path entries; descriptor updates remain manual
@@ -113,3 +134,18 @@ keywords:
   is `action_required` with no jobs. Upstream approval of the forked workflow is
   required before hosted validation can execute.
 - Task remains `testing` pending hosted CI and upstream review.
+
+## Follow-up implementation milestone
+
+- Blank `MIRROR_TEST_ARCH` and runtime architecture candidates are ignored.
+- Detection falls through runtime OS architecture,
+  `PROCESSOR_ARCHITEW6432`, process `PROCESSOR_ARCHITECTURE`, and machine
+  `PROCESSOR_ARCHITECTURE`.
+- Focused Windows tests force the runtime sources blank and verify both AMD64
+  and ARM64 processor fallbacks.
+- The controlled failure regression now uses an explicit unsupported value,
+  preserving stage diagnostics without treating whitespace as fatal.
+- Full Go tests, vet, the exact 11-asset build/verifier, command contracts, and
+  two offline `Invoke-Expression` installs with blank runtime sources pass.
+- Delivery branch: `codex/fix-powershell-architecture-fallback` on
+  `cguiho-itron/mirror`; hosted fork CI remains a pre-merge gate.

@@ -17,6 +17,7 @@ documents:
   "upgrade-catalog-progress-and-linux-download.md": "Local, native, CI, release, public progress, and issue-closure evidence for issues 16 through 18."
   "publish-channel-acceptance.md": "Local and public evidence for exact-tag installation, stable-only latest validation, prerelease readiness, and the Mirror 3.7.4 release."
   "powershell-invoke-expression-installer.md": "Parser, Go, exact-asset, stage-aware failure, and twice-run Invoke-Expression installer evidence for issue 19."
+  "managed-mirror-instruction-body.md": "Raw prompt, metadata-free managed body, newline, idempotency, installer, and exact-asset evidence."
 tags:
   - "validation"
   - documentation
@@ -28,6 +29,8 @@ keywords:
   - publish channels
   - powershell installer
   - invoke-expression
+  - managed instruction
+  - YAML frontmatter
 flags: []
 status: stable
 ---

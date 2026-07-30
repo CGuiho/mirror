@@ -14,14 +14,36 @@ All Rights Reserved.
 
 # GUIHO Mirror TODO List
 
+## Managed Mirror Instruction Body
+
+- Status: testing
+- Created: `2026-07-30`
+- Updated: `2026-07-30`
+- Outcome: Keep required YAML frontmatter on the released
+  `guiho-i-mirror.md` asset while inserting only its Markdown body beneath the
+  exact managed markers, beginning with `## GUIHO Mirror Instruction Block`.
+- Spec:
+  [docs/todo/managed-mirror-instruction-body.md](docs/todo/managed-mirror-instruction-body.md)
+- Testing: focused and complete Go suites, vet, PowerShell parser, Bash syntax
+  and body rendering, exact 11-asset verification, native bootstrap, command
+  contracts, and twice-run offline PowerShell installation pass. Hosted CI
+  remains required for the full Bash installer and workflow.
+- Review:
+  [docs/reviews/implementation/managed-mirror-instruction-body-review.md](docs/reviews/implementation/managed-mirror-instruction-body-review.md)
+- Validation:
+  [docs/validation/managed-mirror-instruction-body.md](docs/validation/managed-mirror-instruction-body.md)
+- Delivery: include in the fork-based follow-up pull request for the installer
+  architecture correction; do not modify any `AGENTS.md`.
+
 ## PowerShell Invoke-Expression Installer Hardening
 
 - Status: testing
 - Created: `2026-07-28`
-- Updated: `2026-07-28`
+- Updated: `2026-07-30`
 - Outcome: Make the public Windows `irm .../devops/install.ps1 | iex`
-  entrypoint null-safe, report the exact failing installer stage, and exercise
-  the real `Invoke-Expression` path in Windows CI.
+  entrypoint null-safe, resolve architecture across Windows PowerShell host
+  variants, report the exact failing installer stage, and exercise the real
+  `Invoke-Expression` path in Windows CI.
 - Spec:
   [docs/todo/powershell-invoke-expression-installer.md](docs/todo/powershell-invoke-expression-installer.md)
 - External: GitHub issue
@@ -39,6 +61,15 @@ All Rights Reserved.
   [30370046395](https://github.com/CGuiho/mirror/actions/runs/30370046395)
   is `action_required` with no jobs pending upstream approval for forked
   workflows.
+- Follow-up: the merged stage diagnostics exposed that
+  `RuntimeInformation.OSArchitecture` can be empty in a Git-Bash-launched
+  Windows PowerShell session. Plan unit `PSI-19-F1` adds processor-environment
+  fallbacks and corrects the whitespace regression expectation.
+- Follow-up testing: focused PowerShell parser and Go regressions pass for
+  blank runtime sources falling back to both AMD64 and ARM64 processor
+  architecture values. The full Go suite, vet, exact asset verifier, command
+  contracts, and a twice-run offline `Invoke-Expression` installation with
+  blank runtime sources also pass.
 
 ## Parent TODO
 
