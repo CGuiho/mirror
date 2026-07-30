@@ -82,6 +82,36 @@ func TestInstructionsPreserveCRLFAndRemoveDuplicateBlocks(t *testing.T) {
 	if strings.Count(text, BlockBeginMarker) != 1 || !strings.Contains(text, "prefix\r\n") || !strings.Contains(text, "\r\nsuffix\r\n") {
 		t.Fatalf("instruction reconciliation did not preserve unmanaged CRLF content: %q", text)
 	}
+	expectedBody := BlockBeginMarker + "\r\n## GUIHO Mirror Instruction Block\r\n"
+	if !strings.Contains(text, expectedBody) {
+		t.Fatalf("managed instruction did not begin with the canonical body: %q", text)
+	}
+	managed := text[strings.Index(text, BlockBeginMarker):strings.Index(text, BlockEndMarker)]
+	if strings.Contains(managed, "\r\n---\r\n") || strings.Contains(managed, "name: guiho-i-mirror") {
+		t.Fatalf("managed instruction contains release frontmatter: %q", managed)
+	}
+	if strings.Contains(text, "\r\n\r\n"+BlockEndMarker) {
+		t.Fatalf("managed instruction has a blank line before the end marker: %q", text)
+	}
+}
+
+func TestInstructionBodyRequiresClosedFrontmatterAndContent(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		content string
+		message string
+	}{
+		{name: "missing", content: "## Body\n", message: "frontmatter is missing"},
+		{name: "unclosed", content: "---\nname: guiho-i-mirror\n", message: "frontmatter is not closed"},
+		{name: "empty", content: "---\nname: guiho-i-mirror\n---\n", message: "body is empty"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := instructionBody(test.content)
+			if err == nil || !strings.Contains(err.Error(), test.message) {
+				t.Fatalf("expected %q, got %v", test.message, err)
+			}
+		})
+	}
 }
 
 func TestMalformedInstructionBlockFailsWithoutMutation(t *testing.T) {

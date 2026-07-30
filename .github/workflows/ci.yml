@@ -59,6 +59,9 @@ jobs:
           test -s "$bootstrap_root/home/.agents/skills/guiho-s-mirror/SKILL.md"
           test -s "$bootstrap_root/home/.claude/skills/guiho-s-mirror/SKILL.md"
           test "$(grep -Fc '<!-- BEGIN MIRROR — DO NOT EDIT THIS SECTION -->' "$bootstrap_root/project/AGENTS.md")" -eq 1
+          test "$(sed -n '/<!-- BEGIN MIRROR/{n;p;q;}' "$bootstrap_root/project/AGENTS.md")" = '## GUIHO Mirror Instruction Block'
+          ! sed -n '/<!-- BEGIN MIRROR/,/<!-- END MIRROR -->/p' "$bootstrap_root/project/AGENTS.md" | grep -F 'name: guiho-i-mirror'
+          test -n "$(awk '/<!-- END MIRROR -->/{print previous; exit}{previous=$0}' "$bootstrap_root/project/AGENTS.md")"
           bin/mirror-linux-amd64 --help-tree-depth 2 --help-tree | grep -F 'COMMAND TREE'
           bin/mirror-linux-amd64 agent skill show guiho-s-mirror | grep -F 'name: guiho-s-mirror'
           bin/mirror-linux-amd64 config check
@@ -93,6 +96,9 @@ jobs:
           test -s "$root/home/.agents/skills/guiho-s-mirror/SKILL.md"
           test -s "$root/home/.claude/skills/guiho-s-mirror/SKILL.md"
           test "$(grep -Fc '<!-- BEGIN MIRROR — DO NOT EDIT THIS SECTION -->' AGENTS.md)" -eq 1
+          test "$(sed -n '/<!-- BEGIN MIRROR/{n;p;q;}' AGENTS.md)" = '## GUIHO Mirror Instruction Block'
+          ! sed -n '/<!-- BEGIN MIRROR/,/<!-- END MIRROR -->/p' AGENTS.md | grep -F 'name: guiho-i-mirror'
+          test -n "$(awk '/<!-- END MIRROR -->/{print previous; exit}{previous=$0}' AGENTS.md)"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -186,18 +192,37 @@ jobs:
           $env:MIRROR_DISABLE_UPDATE_CHECK = '1'
           $env:MIRROR_VERSION = '0.0.0-ci'
           $installerSource = Get-Content -Raw -LiteralPath "$env:GITHUB_WORKSPACE\devops\install.ps1"
+          $hadProcessorArchitecture = Test-Path Env:PROCESSOR_ARCHITECTURE
+          $previousProcessorArchitecture = $env:PROCESSOR_ARCHITECTURE
+          $hadProcessorArchitectureWow64 = Test-Path Env:PROCESSOR_ARCHITEW6432
+          $previousProcessorArchitectureWow64 = $env:PROCESSOR_ARCHITEW6432
           Push-Location $project
           try {
-            $env:MIRROR_INSTALL_DIR = $invalidInstall
+            $env:MIRROR_INSTALLER_SOURCE_ONLY = '1'
             $env:MIRROR_TEST_ARCH = ' '
+            $env:MIRROR_TEST_RUNTIME_ARCH = ' '
+            $env:PROCESSOR_ARCHITEW6432 = ' '
+            $env:PROCESSOR_ARCHITECTURE = 'AMD64'
+            $installerSource | Invoke-Expression
+            if ((Get-MirrorAssetName) -ne 'mirror-windows-amd64.exe') { throw 'Processor architecture fallback failed.' }
+            $env:PROCESSOR_ARCHITECTURE = 'ARM64'
+            if ((Get-MirrorAssetName) -ne 'mirror-windows-arm64.exe') { throw 'ARM64 processor architecture fallback failed.' }
+            Remove-Item Env:MIRROR_INSTALLER_SOURCE_ONLY
+            Remove-Item Env:MIRROR_TEST_RUNTIME_ARCH
+            Remove-Item Env:MIRROR_TEST_ARCH
+            if ($hadProcessorArchitecture) { $env:PROCESSOR_ARCHITECTURE = $previousProcessorArchitecture } else { Remove-Item Env:PROCESSOR_ARCHITECTURE }
+            if ($hadProcessorArchitectureWow64) { $env:PROCESSOR_ARCHITEW6432 = $previousProcessorArchitectureWow64 } else { Remove-Item Env:PROCESSOR_ARCHITEW6432 }
+
+            $env:MIRROR_INSTALL_DIR = $invalidInstall
+            $env:MIRROR_TEST_ARCH = 'unsupported'
             $failedAsExpected = $false
             try {
               $installerSource | Invoke-Expression
             } catch {
-              if ($_.Exception.Message -notlike 'Mirror installer failed during architecture detection:*') { throw }
+              if ($_.Exception.Message -ne 'Mirror installer failed during architecture detection: Unsupported Mirror installer architecture: unsupported') { throw }
               $failedAsExpected = $true
             }
-            if (-not $failedAsExpected) { throw 'Installer unexpectedly accepted an empty architecture.' }
+            if (-not $failedAsExpected) { throw 'Installer unexpectedly accepted an unsupported architecture.' }
             if (Test-Path -LiteralPath $invalidInstall) { throw 'Failed pre-install validation created the install directory.' }
             Remove-Item Env:MIRROR_TEST_ARCH
 
@@ -209,9 +234,17 @@ jobs:
             if (-not (Test-Path "$mirrorHome\.agents\skills\guiho-s-mirror\SKILL.md")) { exit 1 }
             if (-not (Test-Path "$mirrorHome\.claude\skills\guiho-s-mirror\SKILL.md")) { exit 1 }
             if ((Select-String -LiteralPath "$project\AGENTS.md" -SimpleMatch '<!-- BEGIN MIRROR').Count -ne 1) { exit 1 }
+            $agentsContent = ([System.IO.File]::ReadAllText("$project\AGENTS.md") -replace "`r`n", "`n")
+            $managedStart = "<!-- BEGIN MIRROR $([char]0x2014) DO NOT EDIT THIS SECTION -->`n## GUIHO Mirror Instruction Block`n"
+            if (-not $agentsContent.Contains($managedStart)) { throw 'Managed instruction body did not begin after the marker.' }
+            $managed = $agentsContent.Substring($agentsContent.IndexOf('<!-- BEGIN MIRROR'), $agentsContent.IndexOf('<!-- END MIRROR -->') - $agentsContent.IndexOf('<!-- BEGIN MIRROR'))
+            if ($managed.Contains('name: guiho-i-mirror') -or $managed.Contains("`n---`n")) { throw 'Managed instruction contains release frontmatter.' }
+            if ($agentsContent.Contains("`n`n<!-- END MIRROR -->")) { throw 'Managed instruction has a blank line before the end marker.' }
           } finally {
             Pop-Location
-            foreach ($name in @('MIRROR_HOME_DIR', 'MIRROR_ASSET_DIR', 'MIRROR_INSTALL_DIR', 'MIRROR_SKIP_PATH_UPDATE', 'MIRROR_DISABLE_UPDATE_CHECK', 'MIRROR_VERSION', 'MIRROR_TEST_ARCH')) {
+            foreach ($name in @('MIRROR_HOME_DIR', 'MIRROR_ASSET_DIR', 'MIRROR_INSTALL_DIR', 'MIRROR_SKIP_PATH_UPDATE', 'MIRROR_DISABLE_UPDATE_CHECK', 'MIRROR_VERSION', 'MIRROR_TEST_ARCH', 'MIRROR_TEST_RUNTIME_ARCH', 'MIRROR_INSTALLER_SOURCE_ONLY')) {
               Remove-Item "Env:$name" -ErrorAction SilentlyContinue
             }
+            if ($hadProcessorArchitecture) { $env:PROCESSOR_ARCHITECTURE = $previousProcessorArchitecture } else { Remove-Item Env:PROCESSOR_ARCHITECTURE -ErrorAction SilentlyContinue }
+            if ($hadProcessorArchitectureWow64) { $env:PROCESSOR_ARCHITEW6432 = $previousProcessorArchitectureWow64 } else { Remove-Item Env:PROCESSOR_ARCHITEW6432 -ErrorAction SilentlyContinue }
           }

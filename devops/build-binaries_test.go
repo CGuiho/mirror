@@ -112,7 +112,7 @@ func TestPowerShellInstallerInvokeExpressionReportsStage(t *testing.T) {
 	installer := filepath.Join(root, "devops", "install.ps1")
 	installDir := filepath.Join(t.TempDir(), "must-not-exist")
 	commandText := strings.Join([]string{
-		"$env:MIRROR_TEST_ARCH=' '",
+		"$env:MIRROR_TEST_ARCH='unsupported'",
 		"$env:MIRROR_VERSION='0.0.0-test'",
 		"$env:MIRROR_HOME_DIR=" + powerShellLiteral(t.TempDir()),
 		"$env:MIRROR_INSTALL_DIR=" + powerShellLiteral(installDir),
@@ -122,14 +122,80 @@ func TestPowerShellInstallerInvokeExpressionReportsStage(t *testing.T) {
 	command := exec.Command("powershell.exe", "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", commandText)
 	output, err := command.CombinedOutput()
 	if err == nil {
-		t.Fatalf("installer unexpectedly accepted an empty architecture:\n%s", output)
+		t.Fatalf("installer unexpectedly accepted an unsupported architecture:\n%s", output)
 	}
-	expected := "Mirror installer failed during architecture detection: Windows architecture is missing or empty."
+	expected := "Mirror installer failed during architecture detection: Unsupported Mirror installer architecture: unsupported"
 	if !strings.Contains(string(output), expected) {
 		t.Fatalf("installer failure did not identify its stage:\n%s", output)
 	}
 	if _, statErr := os.Stat(installDir); !os.IsNotExist(statErr) {
 		t.Fatalf("failed pre-install validation created the install directory: %v", statErr)
+	}
+}
+
+func TestPowerShellInstallerBlankArchitectureFallsBack(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("PowerShell installer regression requires Windows")
+	}
+	root := filepath.Dir(mustWorkingDirectory(t))
+	installer := filepath.Join(root, "devops", "install.ps1")
+	for _, test := range []struct {
+		architecture string
+		asset        string
+	}{
+		{architecture: "AMD64", asset: "mirror-windows-amd64.exe"},
+		{architecture: "ARM64", asset: "mirror-windows-arm64.exe"},
+	} {
+		t.Run(test.architecture, func(t *testing.T) {
+			commandText := strings.Join([]string{
+				"$env:MIRROR_INSTALLER_SOURCE_ONLY='1'",
+				"$env:MIRROR_TEST_ARCH=' '",
+				"$env:MIRROR_TEST_RUNTIME_ARCH=' '",
+				"$env:PROCESSOR_ARCHITEW6432=' '",
+				"$env:PROCESSOR_ARCHITECTURE=" + powerShellLiteral(test.architecture),
+				"$env:MIRROR_HOME_DIR=" + powerShellLiteral(t.TempDir()),
+				"$env:MIRROR_INSTALL_DIR=" + powerShellLiteral(t.TempDir()),
+				"Get-Content -Raw -LiteralPath " + powerShellLiteral(installer) + " | Invoke-Expression",
+				"if ((Get-MirrorAssetName) -ne " + powerShellLiteral(test.asset) + ") { throw 'Processor architecture fallback failed.' }",
+			}, "; ")
+			command := exec.Command("powershell.exe", "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", commandText)
+			output, err := command.CombinedOutput()
+			if err != nil {
+				t.Fatalf("installer did not fall back from blank architecture sources:\n%s", output)
+			}
+		})
+	}
+}
+
+func TestPowerShellInstallerWritesInstructionBodyWithoutFrontmatter(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("PowerShell installer regression requires Windows")
+	}
+	root := filepath.Dir(mustWorkingDirectory(t))
+	installer := filepath.Join(root, "devops", "install.ps1")
+	prompt := filepath.Join(root, "embed", "prompts", "guiho-i-mirror.md")
+	target := filepath.Join(t.TempDir(), "AGENTS.md")
+	commandText := strings.Join([]string{
+		"$env:MIRROR_INSTALLER_SOURCE_ONLY='1'",
+		"$env:MIRROR_HOME_DIR=" + powerShellLiteral(t.TempDir()),
+		"$env:MIRROR_INSTALL_DIR=" + powerShellLiteral(t.TempDir()),
+		"Get-Content -Raw -LiteralPath " + powerShellLiteral(installer) + " | Invoke-Expression",
+		"$prompt = Get-Content -Raw -LiteralPath " + powerShellLiteral(prompt),
+		"[System.IO.File]::WriteAllText(" + powerShellLiteral(target) + ", \"# User`r`n\", [System.Text.UTF8Encoding]::new($false))",
+		"Set-MirrorInstruction -Path " + powerShellLiteral(target) + " -PromptContent $prompt",
+		"$raw = [System.IO.File]::ReadAllText(" + powerShellLiteral(target) + ")",
+		"if ($raw.Replace(\"`r`n\", '').Contains(\"`n\")) { throw 'Managed instruction did not preserve CRLF.' }",
+		"$content = ($raw -replace \"`r`n\", \"`n\")",
+		"$expected = $BeginMarker + \"`n## GUIHO Mirror Instruction Block`n\"",
+		"if (-not $content.Contains($expected)) { throw 'Managed instruction body did not begin after the marker.' }",
+		"$managed = $content.Substring($content.IndexOf($BeginMarker), $content.IndexOf($EndMarker) - $content.IndexOf($BeginMarker))",
+		"if ($managed.Contains('name: guiho-i-mirror') -or $managed.Contains(\"`n---`n\")) { throw 'Managed instruction contains release frontmatter.' }",
+		"if ($content.Contains(\"`n`n\" + $EndMarker)) { throw 'Managed instruction has a blank line before the end marker.' }",
+	}, "; ")
+	command := exec.Command("powershell.exe", "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", commandText)
+	output, err := command.CombinedOutput()
+	if err != nil {
+		t.Fatalf("PowerShell installer wrote a metadata-bearing instruction block:\n%s", output)
 	}
 }
 

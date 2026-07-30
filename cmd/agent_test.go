@@ -40,7 +40,17 @@ func TestAgentNamespaceUsesEmbeddedResourcesAndBothSkillTargets(t *testing.T) {
 		"agent", "prompt", "show", "guiho-i-mirror",
 	})
 	require.NoError(t, err)
+	assert.True(t, strings.HasPrefix(stdout.String(), "---\nname: guiho-i-mirror"))
 	assert.Contains(t, stdout.String(), "name: guiho-i-mirror")
+
+	stdout.Reset()
+	err = ExecuteContext(context.Background(), deps, BuildInfo{Version: "dev"}, []string{
+		"agent", "instruction", "show",
+	})
+	require.NoError(t, err)
+	assert.True(t, strings.HasPrefix(stdout.String(), "## GUIHO Mirror Instruction Block\n"))
+	assert.NotContains(t, stdout.String(), "---")
+	assert.NotContains(t, stdout.String(), "name: guiho-i-mirror")
 }
 
 func TestAgentInstructionMutationIsIdempotentAcrossBothFiles(t *testing.T) {
@@ -58,6 +68,8 @@ func TestAgentInstructionMutationIsIdempotentAcrossBothFiles(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 1, strings.Count(string(content), "<!-- BEGIN MIRROR"))
 		assert.Equal(t, 1, strings.Count(string(content), "<!-- END MIRROR -->"))
+		assert.Contains(t, string(content), "<!-- BEGIN MIRROR — DO NOT EDIT THIS SECTION -->\n## GUIHO Mirror Instruction Block")
+		assert.NotContains(t, string(content), "name: guiho-i-mirror")
 		assert.Contains(t, string(content), "# User content")
 	}
 }

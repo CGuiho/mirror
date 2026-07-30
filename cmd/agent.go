@@ -214,14 +214,14 @@ func newAgentInstructionMutationCommand(action string, remove bool) *cobra.Comma
 func newAgentInstructionShowCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "show",
-		Short: "Print the raw instruction template.",
+		Short: "Print the managed instruction body.",
 		Args:  cobra.NoArgs,
 		RunE: func(command *cobra.Command, _ []string) error {
-			data, err := fs.ReadFile(embedFS.FS, "prompts/guiho-i-mirror.md")
+			body, err := maintenance.EmbeddedInstructionBody(embedFS.FS)
 			if err != nil {
 				return fmt.Errorf("read instruction template: %w", err)
 			}
-			_, err = command.OutOrStdout().Write(data)
+			_, err = fmt.Fprintln(command.OutOrStdout(), body)
 			return err
 		},
 	}

@@ -139,6 +139,37 @@ install_skill() {
   printf 'Installed skill: %s\n' "$destination"
 }
 
+write_instruction_body() {
+  local prompt="$1"
+  awk '
+    {
+      sub(/\r$/, "")
+    }
+    NR == 1 {
+      if ($0 != "---") exit 1
+      in_frontmatter = 1
+      next
+    }
+    in_frontmatter && $0 == "---" {
+      in_frontmatter = 0
+      next
+    }
+    in_frontmatter {
+      next
+    }
+    !started && $0 == "" {
+      next
+    }
+    {
+      print
+      started = 1
+    }
+    END {
+      if (in_frontmatter || !started) exit 1
+    }
+  ' "$prompt"
+}
+
 write_instruction_file() {
   local path="$1" prompt="$2" parent temporary
   parent="$(dirname "$path")"
@@ -153,8 +184,8 @@ write_instruction_file() {
   fi
   if [[ -s "$temporary" ]]; then printf '\n' >> "$temporary"; fi
   printf '%s\n' "$BEGIN_MARKER" >> "$temporary"
-  cat "$prompt" >> "$temporary"
-  printf '\n%s\n' "$END_MARKER" >> "$temporary"
+  write_instruction_body "$prompt" >> "$temporary"
+  printf '%s\n' "$END_MARKER" >> "$temporary"
   chmod 0644 "$temporary"
   mv "$temporary" "$path"
   printf 'Updated instruction block: %s\n' "$path"
