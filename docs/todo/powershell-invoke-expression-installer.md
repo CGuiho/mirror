@@ -3,8 +3,9 @@ name: PowerShell Invoke-Expression Installer Hardening
 purpose: Define the bounded fix and validation contract for GitHub issue 19.
 description: Tracks null-safe installer inputs, stage-aware errors, transactional failure behavior, and real Invoke-Expression regression coverage.
 created: 2026-07-28
+updated: 2026-08-02
 owner: mirror-docs-todo
-flags: []
+flags: [completed]
 tags:
   - mirror
   - installer
@@ -20,7 +21,7 @@ keywords:
 ## Todo Index
 
 - Task: `PowerShell Invoke-Expression Installer Hardening`
-- Status: testing
+- Status: completed
 - Index: [TODO.md](../../TODO.md)
 - External:
   [CGuiho/mirror#19](https://github.com/CGuiho/mirror/issues/19)
@@ -80,13 +81,15 @@ keywords:
 
 ## Lifecycle
 
-- Current phase: testing.
+- Current phase: completed after pull-request and merged-main CI succeeded.
 - Plan waiver: a separate plan is unnecessary for the bounded `PSI-19` unit.
-- XDocs limitation: metadata commands currently reject the repository's
-  pre-existing `scan.exclude` path entries; descriptor updates remain manual
-  and the unrelated configuration is not changed in this unit.
-- Mirror decision: defer any patch release until the pull request is reviewed
-  and merged; no tag, release, or publication is authorized by this task.
+- XDocs note: PR validation with XDocs v0.9.0 rejected the repository's
+  pre-existing path-shaped `scan.exclude` entries. The installed v0.7.2 CLI
+  passes strict metadata, tree, and doctor during the release audit; the
+  version-specific configuration compatibility remains separate from this
+  installer unit.
+- Mirror decision: the merged compatible fix is selected for the separately
+  authorized `mirror/v4.0.1` patch release.
 
 ## Implementation Milestone
 
@@ -108,8 +111,12 @@ keywords:
 - Evidence commit: `779a0ea33e00b4696b9f564217ff2fb3c0aa93db`
 - Pull request:
   [CGuiho/mirror#20](https://github.com/CGuiho/mirror/pull/20)
-- Hosted CI run
-  [30370046395](https://github.com/CGuiho/mirror/actions/runs/30370046395)
-  is `action_required` with no jobs. Upstream approval of the forked workflow is
-  required before hosted validation can execute.
-- Task remains `testing` pending hosted CI and upstream review.
+- Merge commit: `c49eccf095d0a0eba47903be37b0603bb53e24f8`.
+- Final pull-request CI run:
+  [30370284376](https://github.com/CGuiho/mirror/actions/runs/30370284376)
+  (`success`).
+- Merged-main CI run:
+  [30465213620](https://github.com/CGuiho/mirror/actions/runs/30465213620)
+  (`success`).
+- Issue [#19](https://github.com/CGuiho/mirror/issues/19) is closed as
+  completed.
