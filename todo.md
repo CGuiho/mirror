@@ -16,9 +16,10 @@ All Rights Reserved.
 
 ## PowerShell Invoke-Expression Installer Hardening
 
-- Status: testing
+- Status: completed
 - Created: `2026-07-28`
-- Updated: `2026-07-28`
+- Updated: `2026-08-02`
+- Completed: `2026-08-02`
 - Outcome: Make the public Windows `irm .../devops/install.ps1 | iex`
   entrypoint null-safe, report the exact failing installer stage, and exercise
   the real `Invoke-Expression` path in Windows CI.
@@ -35,10 +36,18 @@ All Rights Reserved.
   [docs/reviews/implementation/powershell-invoke-expression-installer-review.md](docs/reviews/implementation/powershell-invoke-expression-installer-review.md)
 - Validation:
   [docs/validation/powershell-invoke-expression-installer.md](docs/validation/powershell-invoke-expression-installer.md)
-- Hosted CI: run
-  [30370046395](https://github.com/CGuiho/mirror/actions/runs/30370046395)
-  is `action_required` with no jobs pending upstream approval for forked
-  workflows.
+- Delivery: pull request
+  [#20](https://github.com/CGuiho/mirror/pull/20) merged as
+  `c49eccf095d0a0eba47903be37b0603bb53e24f8`; issue
+  [#19](https://github.com/CGuiho/mirror/issues/19) is closed as completed.
+- Hosted CI: final pull-request run
+  [30370284376](https://github.com/CGuiho/mirror/actions/runs/30370284376)
+  and merged-main run
+  [30465213620](https://github.com/CGuiho/mirror/actions/runs/30465213620)
+  both completed successfully.
+- Mirror decision: include this compatible installer fix in the separately
+  authorized `mirror/v4.0.1` patch release; public release verification remains
+  part of the release audit.
 
 ## Parent TODO
 
