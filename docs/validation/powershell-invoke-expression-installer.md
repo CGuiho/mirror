@@ -3,8 +3,9 @@ name: PowerShell Invoke-Expression Installer Validation
 purpose: Preserve reproducible local evidence for the GitHub issue 19 fix.
 description: Validation report for null-safe stage diagnostics and the public PowerShell installer execution path.
 created: 2026-07-28
+updated: 2026-08-02
 owner: mirror-docs-validation
-flags: [local-complete, xdocs-blocked]
+flags: [local-complete, hosted-complete, release-ready, xdocs-limitation]
 tags: [mirror, validation, windows]
 keywords: [Invoke-Expression, go test, exact assets, installer]
 ---
@@ -29,9 +30,10 @@ keywords: [Invoke-Expression, go test, exact assets, installer]
 | Command contracts | Passed: `go run . --help-tree` and `go run . --help-docs`. |
 | Patch hygiene | Passed: `git diff --check`. |
 
-## XDocs limitation
+## XDocs version note
 
-The required commands were attempted:
+During the pull request, these required commands were attempted with XDocs
+v0.9.0:
 
 ```text
 xdocs meta devops --documents --strict
@@ -46,18 +48,48 @@ scan.exclude entries must be non-empty directory names
 ```
 
 The repository's pre-existing `xdocs.yaml` uses path-shaped exclusions such as
-`devops/build-binaries` and `mirror/node_modules`. Correcting that unrelated
-configuration is deferred rather than bundled into the installer PR.
+`devops/build-binaries` and `mirror/node_modules`. During the 4.0.1 release
+audit, the installed XDocs v0.7.2 CLI accepted the configuration and passed
+strict root metadata, the complete tree, and root doctor with zero errors and
+zero warnings. Compatibility with the stricter v0.9.0 configuration validator
+remains a separate maintenance concern and is not bundled into this installer
+fix.
+
+## 4.0.1 release-audit refresh
+
+| Gate | Outcome |
+| --- | --- |
+| Live release gap | Passed: `mirror/v4.0.0` resolves to `890e096c226bf7c5557cc24874bfa4a73a8b859b`, while merged PR #20 resolves to `c49eccf095d0a0eba47903be37b0603bb53e24f8` outside that tag. |
+| Format and module graph | Passed: `gofmt -l .` returned no paths; `go mod tidy` left `go.mod` and `go.sum` unchanged. |
+| Full Go validation | Passed: `go test -count=1 ./...` and `go vet ./...`. |
+| Release candidate | Passed: eight static binaries plus skill ZIP, instruction Markdown, and checksum manifest; the verifier reported exactly 11 assets and 10 checksums. |
+| Windows native smoke | Passed: the candidate reported `mirror v4.0.1` and exposed `guiho-i-mirror`. |
+| Windows installer | Passed: controlled pre-install failure plus two complete offline `Invoke-Expression` installations with exact version, dual-root skill, one instruction block, and idempotent plain bootstrap checks. |
+| CLI contracts | Passed: configuration check, command tree, and generated Markdown help. |
+| XDocs | Passed with installed XDocs v0.7.2: 36 valid descriptors, complete tree, doctor valid with zero errors and zero warnings. |
+| Patch hygiene | Passed: `git diff --check`. |
+
+The Darwin, Linux, Windows ARM64, and Linux ARMv6/ARMv7 candidates are local
+cross-build evidence only. The tag-triggered hosted workflow owns matching
+native-runner evidence where runners exist.
 
 ## Hosted and release gates
 
 - Pull request
-  [#20](https://github.com/CGuiho/mirror/pull/20) is open and mergeable.
-- CI run
-  [30370046395](https://github.com/CGuiho/mirror/actions/runs/30370046395)
-  ended as `action_required` with no jobs because the forked workflow requires
-  upstream approval.
-- After approval, the pull request's Windows job must run the modified offline
-  `Invoke-Expression` test.
-- No version bump, tag, release, or publication was performed.
-- Mirror decision: recommend a patch only after review and merge.
+  [#20](https://github.com/CGuiho/mirror/pull/20) merged into `main` as
+  `c49eccf095d0a0eba47903be37b0603bb53e24f8`.
+- Final pull-request CI run
+  [30370284376](https://github.com/CGuiho/mirror/actions/runs/30370284376)
+  completed successfully for head
+  `b2355af2ab20bf803cdbbbd00222c41b14c39810`.
+- Merged-main CI run
+  [30465213620](https://github.com/CGuiho/mirror/actions/runs/30465213620)
+  completed successfully for the merge commit.
+- Issue [#19](https://github.com/CGuiho/mirror/issues/19) is closed as
+  completed.
+- The prior public release remains stable `mirror/v4.0.0`; live ancestry proves
+  the merge is not contained in that tag.
+- Mirror decision: a patch is correct because the change is a compatible
+  installer fix. The authorized target is `mirror/v4.0.1`; release workflow,
+  asset, checksum, and downloaded-native-binary verification remain required
+  after the tag is applied.
