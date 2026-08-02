@@ -16,6 +16,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.1] - 2026-08-02
+
+### Fixed
+
+- Made the public PowerShell installer validate nullable environment,
+  architecture, release, checksum, prompt, and installed-version values before
+  invoking string methods.
+- Added stage-aware installer failures while preserving binary rollback,
+  temporary cleanup, dual-root skill installation, and managed instructions.
+- Exercised the complete offline Windows installer twice through
+  `Invoke-Expression` in CI and proved invalid pre-install input creates no
+  installation directory.
+
 ## [4.0.0] - 2026-07-26
 
 ### Changed
