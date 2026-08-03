@@ -39,7 +39,7 @@ All Rights Reserved.
 
 - Status: testing
 - Created: `2026-07-28`
-- Updated: `2026-07-30`
+- Updated: `2026-08-03`
 - Outcome: Make the public Windows `irm .../devops/install.ps1 | iex`
   entrypoint null-safe, resolve architecture across Windows PowerShell host
   variants, report the exact failing installer stage, and exercise the real
@@ -48,7 +48,8 @@ All Rights Reserved.
   [docs/todo/powershell-invoke-expression-installer.md](docs/todo/powershell-invoke-expression-installer.md)
 - External: GitHub issue
   [#19](https://github.com/CGuiho/mirror/issues/19) and pull request
-  [#20](https://github.com/CGuiho/mirror/pull/20)
+  [#20](https://github.com/CGuiho/mirror/pull/20); follow-up pull request
+  [#21](https://github.com/CGuiho/mirror/pull/21).
 - Testing: focused Windows PowerShell parser, Go contract, and stage-aware
   `Invoke-Expression` failure checks pass; full Go tests, vet, exact 11-asset
   verification, configuration/help contracts, and two complete offline
@@ -57,10 +58,15 @@ All Rights Reserved.
   [docs/reviews/implementation/powershell-invoke-expression-installer-review.md](docs/reviews/implementation/powershell-invoke-expression-installer-review.md)
 - Validation:
   [docs/validation/powershell-invoke-expression-installer.md](docs/validation/powershell-invoke-expression-installer.md)
-- Hosted CI: run
-  [30370046395](https://github.com/CGuiho/mirror/actions/runs/30370046395)
-  is `action_required` with no jobs pending upstream approval for forked
-  workflows.
+- Delivery: pull request
+  [#20](https://github.com/CGuiho/mirror/pull/20) merged as
+  `c49eccf095d0a0eba47903be37b0603bb53e24f8`; issue
+  [#19](https://github.com/CGuiho/mirror/issues/19) is closed as completed.
+- Hosted CI: final pull-request run
+  [30370284376](https://github.com/CGuiho/mirror/actions/runs/30370284376)
+  and merged-main run
+  [30465213620](https://github.com/CGuiho/mirror/actions/runs/30465213620)
+  both completed successfully for the initial correction.
 - Follow-up: the merged stage diagnostics exposed that
   `RuntimeInformation.OSArchitecture` can be empty in a Git-Bash-launched
   Windows PowerShell session. Plan unit `PSI-19-F1` adds processor-environment
@@ -70,6 +76,14 @@ All Rights Reserved.
   architecture values. The full Go suite, vet, exact asset verifier, command
   contracts, and a twice-run offline `Invoke-Expression` installation with
   blank runtime sources also pass.
+- Follow-up hosted CI: pull request
+  [#21](https://github.com/CGuiho/mirror/pull/21) run
+  [30534110081](https://github.com/CGuiho/mirror/actions/runs/30534110081)
+  passed all eight jobs before the `main` refresh; the merge-resolution commit
+  requires a fresh run.
+- Mirror decision: include this compatible installer fix in the separately
+  authorized `mirror/v4.0.1` patch release; public release verification remains
+  part of the release audit.
 
 ## Parent TODO
 

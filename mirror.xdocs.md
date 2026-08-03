@@ -18,7 +18,7 @@ files:
   xdocs.yaml: YAML configuration for XDocs discovery and validation.
 documents:
   AGENTS.md: Current Go CLI engineering, delivery, documentation, and release boundaries.
-  CHANGELOG.md: Release history and unreleased Go migration notes.
+  CHANGELOG.md: Release history and exact-version release notes.
   README.md: User and contributor entrypoint for the production Go CLI.
   TECHNICAL.md: Current runtime, maintenance, and delivery architecture.
   todo.md: Local task ledger and migration handoff.

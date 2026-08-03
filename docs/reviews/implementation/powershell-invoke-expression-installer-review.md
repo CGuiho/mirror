@@ -3,9 +3,9 @@ name: PowerShell Invoke-Expression Installer Implementation Review
 purpose: Review the issue 19 fix against the standalone Windows installer and delivery contracts.
 description: Local review of null-boundary validation, stage-aware failures, rollback preservation, and Invoke-Expression coverage.
 created: 2026-07-28
-updated: 2026-07-30
+updated: 2026-08-03
 owner: mirror-docs-reviews-implementation
-flags: [accepted-local]
+flags: [accepted-release]
 tags: [mirror, review, windows]
 keywords: [Invoke-Expression, null safety, installer stages, rollback]
 ---
@@ -14,9 +14,9 @@ keywords: [Invoke-Expression, null safety, installer stages, rollback]
 
 ## Verdict
 
-Accepted for pull-request handoff. No blocking local finding remains. Hosted
-Windows CI is still required before merge, and release publication is outside
-this task.
+Accepted for release. No blocking implementation finding remains. Pull request
+#20 and merged-main CI both passed before this compatible fix was selected for
+the authorized 4.0.1 patch release.
 
 ## Scope reviewed
 
@@ -65,13 +65,13 @@ this task.
 - The original report does not include the affected PowerShell version or the
   exact nullable value. An isolated Windows PowerShell 5.1 run against public
   v4.0.0 succeeds, so the original environment remains unreproduced.
-- Hosted Windows CI must confirm the workflow syntax and runner behavior.
-- XDocs v0.9.0 rejects pre-existing path-shaped `scan.exclude` entries before
-  metadata validation. This installer PR does not mix in that unrelated
-  configuration repair.
+- XDocs v0.9.0 rejected pre-existing path-shaped `scan.exclude` entries during
+  PR validation. The installed v0.7.2 CLI passes strict metadata, tree, and
+  doctor during release preparation; cross-version configuration compatibility
+  remains separate from this installer review.
 
 ## Release boundary
 
-A compatible patch release is appropriate after review and merge, but no
-version application, tag, release, or publication is authorized in this pull
-request task.
+The pull-request task did not authorize publication. The subsequent release
+audit separately authorized a compatible 4.0.1 patch release after live
+evidence proved the merge was outside the 4.0.0 tag.
