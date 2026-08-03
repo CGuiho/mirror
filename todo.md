@@ -14,20 +14,42 @@ All Rights Reserved.
 
 # GUIHO Mirror TODO List
 
+## Managed Mirror Instruction Body
+
+- Status: testing
+- Created: `2026-07-30`
+- Updated: `2026-07-30`
+- Outcome: Keep required YAML frontmatter on the released
+  `guiho-i-mirror.md` asset while inserting only its Markdown body beneath the
+  exact managed markers, beginning with `## GUIHO Mirror Instruction Block`.
+- Spec:
+  [docs/todo/managed-mirror-instruction-body.md](docs/todo/managed-mirror-instruction-body.md)
+- Testing: focused and complete Go suites, vet, PowerShell parser, Bash syntax
+  and body rendering, exact 11-asset verification, native bootstrap, command
+  contracts, and twice-run offline PowerShell installation pass. Hosted CI
+  remains required for the full Bash installer and workflow.
+- Review:
+  [docs/reviews/implementation/managed-mirror-instruction-body-review.md](docs/reviews/implementation/managed-mirror-instruction-body-review.md)
+- Validation:
+  [docs/validation/managed-mirror-instruction-body.md](docs/validation/managed-mirror-instruction-body.md)
+- Delivery: include in the fork-based follow-up pull request for the installer
+  architecture correction; do not modify any `AGENTS.md`.
+
 ## PowerShell Invoke-Expression Installer Hardening
 
-- Status: completed
+- Status: testing
 - Created: `2026-07-28`
-- Updated: `2026-08-02`
-- Completed: `2026-08-02`
+- Updated: `2026-08-03`
 - Outcome: Make the public Windows `irm .../devops/install.ps1 | iex`
-  entrypoint null-safe, report the exact failing installer stage, and exercise
-  the real `Invoke-Expression` path in Windows CI.
+  entrypoint null-safe, resolve architecture across Windows PowerShell host
+  variants, report the exact failing installer stage, and exercise the real
+  `Invoke-Expression` path in Windows CI.
 - Spec:
   [docs/todo/powershell-invoke-expression-installer.md](docs/todo/powershell-invoke-expression-installer.md)
 - External: GitHub issue
   [#19](https://github.com/CGuiho/mirror/issues/19) and pull request
-  [#20](https://github.com/CGuiho/mirror/pull/20)
+  [#20](https://github.com/CGuiho/mirror/pull/20); follow-up pull request
+  [#21](https://github.com/CGuiho/mirror/pull/21).
 - Testing: focused Windows PowerShell parser, Go contract, and stage-aware
   `Invoke-Expression` failure checks pass; full Go tests, vet, exact 11-asset
   verification, configuration/help contracts, and two complete offline
@@ -44,7 +66,21 @@ All Rights Reserved.
   [30370284376](https://github.com/CGuiho/mirror/actions/runs/30370284376)
   and merged-main run
   [30465213620](https://github.com/CGuiho/mirror/actions/runs/30465213620)
-  both completed successfully.
+  both completed successfully for the initial correction.
+- Follow-up: the merged stage diagnostics exposed that
+  `RuntimeInformation.OSArchitecture` can be empty in a Git-Bash-launched
+  Windows PowerShell session. Plan unit `PSI-19-F1` adds processor-environment
+  fallbacks and corrects the whitespace regression expectation.
+- Follow-up testing: focused PowerShell parser and Go regressions pass for
+  blank runtime sources falling back to both AMD64 and ARM64 processor
+  architecture values. The full Go suite, vet, exact asset verifier, command
+  contracts, and a twice-run offline `Invoke-Expression` installation with
+  blank runtime sources also pass.
+- Follow-up hosted CI: pull request
+  [#21](https://github.com/CGuiho/mirror/pull/21) run
+  [30534110081](https://github.com/CGuiho/mirror/actions/runs/30534110081)
+  passed all eight jobs before the `main` refresh; the merge-resolution commit
+  requires a fresh run.
 - Mirror decision: include this compatible installer fix in the separately
   authorized `mirror/v4.0.1` patch release; public release verification remains
   part of the release audit.

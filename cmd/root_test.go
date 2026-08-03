@@ -78,7 +78,16 @@ func TestPlainMirrorBootstrapsAgentResourcesIdempotently(t *testing.T) {
 				path := filepath.Join(root, name)
 				content, err := os.ReadFile(path)
 				require.NoError(t, err)
-				assert.Equal(t, 1, strings.Count(string(content), "<!-- BEGIN MIRROR"))
+				normalized := strings.ReplaceAll(string(content), "\r\n", "\n")
+				assert.Equal(t, 1, strings.Count(normalized, "<!-- BEGIN MIRROR"))
+				assert.Contains(t, normalized, "<!-- BEGIN MIRROR — DO NOT EDIT THIS SECTION -->\n## GUIHO Mirror Instruction Block")
+				managedStart := strings.Index(normalized, "<!-- BEGIN MIRROR")
+				managedEnd := strings.Index(normalized, "<!-- END MIRROR -->")
+				require.Greater(t, managedStart, -1)
+				require.Greater(t, managedEnd, managedStart)
+				managed := normalized[managedStart:managedEnd]
+				assert.NotContains(t, managed, "\n---\n")
+				assert.NotContains(t, managed, "name: guiho-i-mirror")
 				if slices.Contains(test.existing, name) {
 					assert.Contains(t, string(content), "Keep this.")
 					assert.NotContains(t, strings.ReplaceAll(string(content), "\r\n", ""), "\n")

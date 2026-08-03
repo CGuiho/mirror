@@ -279,11 +279,23 @@ type InstructionResult struct {
 }
 
 func ApplyInstructions(embeddedFS embed.FS, targetDir string) ([]InstructionResult, error) {
+	body, err := EmbeddedInstructionBody(embeddedFS)
+	if err != nil {
+		return nil, err
+	}
+	return mutateInstructions(targetDir, body, false)
+}
+
+func EmbeddedInstructionBody(embeddedFS embed.FS) (string, error) {
 	content, err := fs.ReadFile(embeddedFS, "prompts/guiho-i-mirror.md")
 	if err != nil {
-		return nil, fmt.Errorf("read embedded Mirror instruction: %w", err)
+		return "", fmt.Errorf("read embedded Mirror instruction: %w", err)
 	}
-	return mutateInstructions(targetDir, string(content), false)
+	body, err := instructionBody(string(content))
+	if err != nil {
+		return "", fmt.Errorf("render embedded Mirror instruction: %w", err)
+	}
+	return body, nil
 }
 
 func RemoveInstructions(targetDir string) ([]InstructionResult, error) {
@@ -373,6 +385,22 @@ func validateManagedBlock(content string) error {
 		cursor = end
 	}
 	return nil
+}
+
+func instructionBody(content string) (string, error) {
+	normalized := strings.ReplaceAll(content, "\r\n", "\n")
+	if !strings.HasPrefix(normalized, "---\n") {
+		return "", errors.New("Mirror instruction frontmatter is missing")
+	}
+	frontmatterEnd := strings.Index(normalized[4:], "\n---\n")
+	if frontmatterEnd < 0 {
+		return "", errors.New("Mirror instruction frontmatter is not closed")
+	}
+	body := strings.TrimSpace(normalized[4+frontmatterEnd+5:])
+	if body == "" {
+		return "", errors.New("Mirror instruction body is empty")
+	}
+	return body, nil
 }
 
 func reconcileBlock(content, blockContent string, remove bool) string {

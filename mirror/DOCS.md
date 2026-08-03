@@ -33,7 +33,9 @@ Stable exit codes are 0 success, 1 general failure, 2 usage, 3 configuration,
   roots and reconciles managed instructions in the current repository, then
   prints its banner. Selection is both existing instruction files, the one that
   exists, or a new `AGENTS.md`; unchanged resources are not rewritten and
-  malformed markers fail without altering unmanaged content.
+  malformed markers fail without altering unmanaged content. The block contains
+  only the prompt Markdown body, beginning with
+  `## GUIHO Mirror Instruction Block`; release-asset frontmatter is excluded.
 - `mirror init` creates a YAML configuration without overwriting an existing
   file unless explicitly requested. Its option-1 tag default is `v{version}`;
   release commits and pushed refs default to yes. Explicit prompt answers or
@@ -47,8 +49,10 @@ Stable exit codes are 0 success, 1 general failure, 2 usage, 3 configuration,
 - `mirror agent skill list|show|install|update|uninstall` manages the embedded
   `guiho-s-mirror` bundle in both supported agent roots.
 - `mirror agent instruction show|apply|update|remove` manages one idempotent,
-  marker-delimited instruction block in `AGENTS.md` and `CLAUDE.md`.
-- `mirror agent prompt list|show` exposes bundled prompts without mutation.
+  marker-delimited, metadata-free instruction body in `AGENTS.md` and
+  `CLAUDE.md`.
+- `mirror agent prompt list|show` exposes raw bundled prompts, including release
+  metadata, without mutation.
 - `mirror upgrade check|list`, bare `mirror upgrade`, exact `--version`,
   `--dry-run`, and `upgrade rollback` provide the native maintenance lifecycle.
 - `mirror uninstall` previews with `--dry-run` and removes the executable plus
@@ -94,6 +98,8 @@ cannot replace itself directly.
 `devops/install.sh` supports Linux amd64/arm64/armv7/armv6 and Darwin
 amd64/arm64. `devops/install.ps1` supports Windows amd64/arm64. Both accept the
 offline `MIRROR_ASSET_DIR` test override and verify checksums before mutation.
+They validate the prompt asset metadata but insert only its Markdown body into
+managed project files.
 
 Canonical tags are `mirror/v<semver>`. The exact public set is eight native
 binaries, `guiho-s-mirror.zip`, `guiho-i-mirror.md`, and `checksums.txt`.

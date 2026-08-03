@@ -3,7 +3,7 @@ name: PowerShell Invoke-Expression Installer Implementation Review
 purpose: Review the issue 19 fix against the standalone Windows installer and delivery contracts.
 description: Local review of null-boundary validation, stage-aware failures, rollback preservation, and Invoke-Expression coverage.
 created: 2026-07-28
-updated: 2026-08-02
+updated: 2026-08-03
 owner: mirror-docs-reviews-implementation
 flags: [accepted-release]
 tags: [mirror, review, windows]
@@ -28,6 +28,20 @@ the authorized 4.0.1 patch release.
 - affected XDocs descriptors and validation evidence
 
 ## Findings
+
+### Follow-up accepted
+
+- The 2026-07-30 reproduction identifies the remaining defect: the merged
+  detector had only one production architecture source after a blank test
+  override and treated whitespace as a deliberate failure.
+- The follow-up ignores blank candidates and preserves explicit test overrides
+  only when nonblank.
+- Runtime OS architecture remains preferred. WOW64 native architecture,
+  process architecture, and machine architecture provide ordered fallbacks for
+  Windows PowerShell hosts where runtime architecture is unavailable.
+- AMD64 and ARM64 processor fallback tests pass in Windows PowerShell.
+- Unsupported architecture still fails at `architecture detection` before any
+  install target is created.
 
 ### Closed
 

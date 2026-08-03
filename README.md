@@ -36,7 +36,8 @@ curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.s
 
 Installers map the host to an approved native asset, verify it against
 `checksums.txt`, install the bundled skill into both global agent roots,
-reconcile the managed instruction block, and verify `mirror v<version>`.
+reconcile the managed instruction block without the prompt asset's YAML
+frontmatter, and verify `mirror v<version>`.
 
 ## Quick Start
 
@@ -55,6 +56,8 @@ Running plain `mirror` first idempotently verifies `guiho-s-mirror` in both
 global agent roots and reconciles the bounded instruction block in the current
 repository before printing its normal banner. If both `AGENTS.md` and
 `CLAUDE.md` exist, both are updated; if neither exists, `AGENTS.md` is created.
+The managed body begins with `## GUIHO Mirror Instruction Block`; descriptor
+frontmatter remains only in the standalone prompt asset.
 
 Agent mutations are explicit:
 

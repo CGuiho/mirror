@@ -17,6 +17,7 @@ documents:
   public-installers-and-platform-greeting.md: Defines standalone public installer and platform-aware greeting outcomes for GitHub issues 12 and 13.
   background-update-worker-cpu-safety.md: Defines bounded, coalesced, stale-recoverable background update worker behavior for Mirror.
   powershell-invoke-expression-installer.md: Tracks null-safe public PowerShell installer execution and Invoke-Expression regression coverage for GitHub issue 19.
+  managed-mirror-instruction-body.md: Defines metadata-free managed instruction rendering while retaining prompt asset frontmatter.
 tags:
   - todo
   - planning
@@ -34,6 +35,8 @@ keywords:
   - linux upgrade
   - powershell installer
   - invoke-expression
+  - managed instruction
+  - YAML frontmatter
 flags: []
 status: stable
 ---

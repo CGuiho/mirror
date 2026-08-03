@@ -9,7 +9,7 @@ tags: [mirror, instruction, agents]
 keywords: [version plan, version apply]
 ---
 
-# GUIHO Mirror Instruction Block
+## GUIHO Mirror Instruction Block
 
 Run plain `mirror` once in a repository to verify the global Mirror skill and
 this bounded instruction block. Repeated runs are idempotent.

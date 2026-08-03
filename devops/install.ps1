@@ -15,11 +15,21 @@ function Get-MirrorRequiredText([object]$Value, [string]$Label) {
 }
 
 function Get-MirrorAssetName {
-  $rawArchitecture = if ($env:MIRROR_TEST_ARCH) {
-    [string]$env:MIRROR_TEST_ARCH
+  $runtimeArchitecture = if (Test-Path Env:MIRROR_TEST_RUNTIME_ARCH) {
+    [string]$env:MIRROR_TEST_RUNTIME_ARCH
   } else {
     [string][System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
   }
+  $architectureCandidates = @(
+    [string]$env:MIRROR_TEST_ARCH
+    $runtimeArchitecture
+    [string]$env:PROCESSOR_ARCHITEW6432
+    [string]$env:PROCESSOR_ARCHITECTURE
+    [string][Environment]::GetEnvironmentVariable('PROCESSOR_ARCHITECTURE', 'Machine')
+  )
+  $rawArchitecture = $architectureCandidates |
+    Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } |
+    Select-Object -First 1
   $architecture = (Get-MirrorRequiredText $rawArchitecture 'Windows architecture').Trim().ToLowerInvariant()
   switch ($architecture) {
     { $_ -in @('x64', 'amd64', 'x86_64') } { return 'mirror-windows-amd64.exe' }
@@ -78,6 +88,17 @@ function Read-ValidatedMarkdown([string]$Path, [string]$ExpectedName) {
   return $content
 }
 
+function Get-MirrorMarkdownBody([string]$Content) {
+  $normalized = (Get-MirrorRequiredText $Content 'Mirror instruction prompt') -replace "`r`n", "`n"
+  $frontmatter = [regex]::Match(
+    $normalized,
+    '\A---\n.*?\n---(?:\n|\z)',
+    [System.Text.RegularExpressions.RegexOptions]::Singleline
+  )
+  if (-not $frontmatter.Success) { throw 'Mirror instruction prompt has invalid frontmatter.' }
+  return Get-MirrorRequiredText $normalized.Substring($frontmatter.Length) 'Mirror instruction body'
+}
+
 function Install-MirrorSkill([string]$SkillFile, [string]$Destination) {
   $parent = Split-Path -Parent $Destination
   New-Item -ItemType Directory -Path $parent -Force | Out-Null
@@ -105,7 +126,7 @@ function Set-MirrorInstruction([string]$Path, [string]$PromptContent) {
   $clean = [string][regex]::Replace($existing, "(?ms)^$begin\r?\n.*?^$end\r?\n?", '')
   $clean = $clean.TrimEnd()
   $newline = if ($existing.Contains("`r`n")) { "`r`n" } else { "`n" }
-  $validatedPrompt = (Get-MirrorRequiredText $PromptContent 'Mirror instruction prompt').Trim()
+  $validatedPrompt = (Get-MirrorMarkdownBody $PromptContent).Trim().Replace("`n", $newline)
   $block = $BeginMarker + $newline + $validatedPrompt + $newline + $EndMarker + $newline
   $next = if ($clean) { $clean + $newline + $newline + $block } else { $block }
   $parent = Split-Path -Parent $Path
