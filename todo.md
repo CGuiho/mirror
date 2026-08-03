@@ -14,6 +14,32 @@ All Rights Reserved.
 
 # GUIHO Mirror TODO List
 
+## POSIX sh Public Installer Pipe
+
+- Status: testing
+- Created: `2026-08-03`
+- Updated: `2026-08-03`
+- Outcome: Make the documented
+  `curl .../devops/install.sh | sh` entrypoint execute under POSIX shells while
+  preserving verified assets, transactional binary replacement, dual-root
+  skills, managed instructions, and PATH behavior.
+- Spec:
+  [docs/todo/posix-sh-installer-pipe.md](docs/todo/posix-sh-installer-pipe.md)
+- External: GitHub issue
+  [#22](https://github.com/CGuiho/mirror/issues/22).
+- Testing: real `dash` syntax and twice-run streamed offline installation pass,
+  along with full Go tests, vet, exact 11-asset verification, PowerShell parser,
+  configuration, and generated help contracts. Hosted run
+  [30804069515](https://github.com/CGuiho/mirror/actions/runs/30804069515)
+  passed all eight jobs; the pull request is ready for merge.
+- Review:
+  [docs/reviews/implementation/posix-sh-installer-pipe-review.md](docs/reviews/implementation/posix-sh-installer-pipe-review.md)
+- Validation:
+  [docs/validation/posix-sh-installer-pipe.md](docs/validation/posix-sh-installer-pipe.md)
+- Delivery: branch `codex/fix-posix-sh-installer`; pull request
+  [#23](https://github.com/CGuiho/mirror/pull/23).
+- Release boundary: no version bump, tag, release, or publication is authorized.
+
 ## Managed Mirror Instruction Body
 
 - Status: testing

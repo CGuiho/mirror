@@ -2,6 +2,9 @@ package main
 
 import (
 	"archive/zip"
+	"bytes"
+	"crypto/sha256"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -62,6 +65,7 @@ func TestWorkflowAndInstallerContractsAreGoAuthoritative(t *testing.T) {
 	root := filepath.Dir(mustWorkingDirectory(t))
 	ci := normalizedFile(t, filepath.Join(root, ".github", "workflows", "ci.yml"))
 	publish := normalizedFile(t, filepath.Join(root, ".github", "workflows", "publish.yml"))
+	readme := normalizedFile(t, filepath.Join(root, "README.md"))
 	installSh := normalizedFile(t, filepath.Join(root, "devops", "install.sh"))
 	installPS := normalizedFile(t, filepath.Join(root, "devops", "install.ps1"))
 
@@ -97,10 +101,152 @@ func TestWorkflowAndInstallerContractsAreGoAuthoritative(t *testing.T) {
 	if !strings.Contains(ci, "$installerSource | Invoke-Expression") {
 		t.Fatal("Windows installer CI does not exercise the Invoke-Expression entrypoint")
 	}
+	if !strings.Contains(readme, "devops/install.sh | sh") {
+		t.Fatal("README does not expose the POSIX sh installer entrypoint")
+	}
+	if !strings.HasPrefix(installSh, "#!/bin/sh\nset -eu\n") || strings.Contains(installSh, "pipefail") {
+		t.Fatal("shell installer does not declare the documented POSIX sh contract")
+	}
+	if !strings.Contains(ci, "sh -s -- --version 0.0.0-ci") {
+		t.Fatal("CI does not exercise the complete installer through the documented sh pipe")
+	}
 	for _, required := range []string{"Get-MirrorRequiredText", "Mirror installer failed during ${installerStage}"} {
 		if !strings.Contains(installPS, required) {
 			t.Fatalf("PowerShell installer is missing null-safe stage handling: %s", required)
 		}
+	}
+}
+
+func TestShellInstallerAcceptsPOSIXSyntax(t *testing.T) {
+	shell, err := exec.LookPath("dash")
+	if err != nil {
+		t.Skip("dash is unavailable")
+	}
+	root := filepath.Dir(mustWorkingDirectory(t))
+	command := exec.Command(shell, "-n", filepath.Join(root, "devops", "install.sh"))
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("installer is not valid POSIX shell syntax: %v\n%s", err, output)
+	}
+}
+
+func TestShellInstallerRunsTwiceThroughPOSIXPipe(t *testing.T) {
+	shell, err := exec.LookPath("dash")
+	if err != nil {
+		shell, err = exec.LookPath("sh")
+		if err != nil {
+			t.Fatal("sh is required for the public installer contract")
+		}
+	}
+	root := filepath.Dir(mustWorkingDirectory(t))
+	installer := filepath.Join(root, "devops", "install.sh")
+	fixture := t.TempDir()
+	assetDir := filepath.Join(fixture, "assets")
+	homeDir := filepath.Join(fixture, "home")
+	projectDir := filepath.Join(fixture, "project")
+	installDir := filepath.Join(fixture, "install")
+	for _, directory := range []string{assetDir, homeDir, projectDir, installDir} {
+		if err := os.MkdirAll(directory, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeShellInstallerFixtureAssets(t, assetDir, "0.0.0-test")
+	t.Setenv("MIRROR_HOME_DIR", pathForShell(homeDir))
+	t.Setenv("MIRROR_ASSET_DIR", pathForShell(assetDir))
+	t.Setenv("MIRROR_INSTALL_DIR", pathForShell(installDir))
+	t.Setenv("MIRROR_SKIP_PATH_UPDATE", "1")
+	t.Setenv("MIRROR_DISABLE_UPDATE_CHECK", "1")
+	t.Setenv("MIRROR_TEST_OS", "linux")
+	t.Setenv("MIRROR_TEST_ARCH", "x86_64")
+
+	for attempt := 1; attempt <= 2; attempt++ {
+		source, err := os.Open(installer)
+		if err != nil {
+			t.Fatal(err)
+		}
+		command := exec.Command(shell, "-s", "--", "--version", "0.0.0-test")
+		command.Dir = projectDir
+		command.Env = os.Environ()
+		command.Stdin = source
+		output, runErr := command.CombinedOutput()
+		closeErr := source.Close()
+		if runErr != nil {
+			t.Fatalf("POSIX pipe installation %d failed: %v\n%s", attempt, runErr, output)
+		}
+		if closeErr != nil {
+			t.Fatal(closeErr)
+		}
+	}
+
+	versionCommand := exec.Command(shell, pathForShell(filepath.Join(installDir, "mirror")), "--version")
+	versionOutput, err := versionCommand.CombinedOutput()
+	if err != nil || strings.TrimSpace(string(versionOutput)) != "mirror v0.0.0-test" {
+		t.Fatalf("installed fixture binary failed verification: %v\n%s", err, versionOutput)
+	}
+	for _, skill := range []string{
+		filepath.Join(homeDir, ".agents", "skills", "guiho-s-mirror", "SKILL.md"),
+		filepath.Join(homeDir, ".claude", "skills", "guiho-s-mirror", "SKILL.md"),
+	} {
+		if _, err := os.Stat(skill); err != nil {
+			t.Fatalf("installer did not write skill %s: %v", skill, err)
+		}
+	}
+	instructions, err := os.ReadFile(filepath.Join(projectDir, "AGENTS.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Count(string(instructions), "<!-- BEGIN MIRROR") != 1 {
+		t.Fatalf("twice-run installer did not preserve one managed block:\n%s", instructions)
+	}
+	if strings.Contains(string(instructions), "name: guiho-i-mirror") {
+		t.Fatal("managed instruction block contains release frontmatter")
+	}
+}
+
+func pathForShell(path string) string {
+	if runtime.GOOS != "windows" {
+		return path
+	}
+	volume := filepath.VolumeName(path)
+	drive := strings.ToLower(strings.TrimSuffix(volume, ":"))
+	rest := filepath.ToSlash(strings.TrimPrefix(path, volume))
+	return "/" + drive + rest
+}
+
+func writeShellInstallerFixtureAssets(t *testing.T, directory, version string) {
+	t.Helper()
+	assets := map[string][]byte{
+		"mirror-linux-amd64": []byte("#!/bin/sh\nprintf 'mirror v" + version + "\\n'\n"),
+		"guiho-i-mirror.md":  []byte("---\nname: guiho-i-mirror\n---\n## GUIHO Mirror Instruction Block\n\nFixture instructions.\n"),
+	}
+	var archive bytes.Buffer
+	zipWriter := zip.NewWriter(&archive)
+	skillWriter, err := zipWriter.Create("guiho-s-mirror/SKILL.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := skillWriter.Write([]byte("---\nname: guiho-s-mirror\n---\n# Mirror fixture skill\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := zipWriter.Close(); err != nil {
+		t.Fatal(err)
+	}
+	assets["guiho-s-mirror.zip"] = archive.Bytes()
+
+	var checksums strings.Builder
+	for _, name := range []string{"mirror-linux-amd64", "guiho-s-mirror.zip", "guiho-i-mirror.md"} {
+		content := assets[name]
+		mode := os.FileMode(0o644)
+		if name == "mirror-linux-amd64" {
+			mode = 0o755
+		}
+		if err := os.WriteFile(filepath.Join(directory, name), content, mode); err != nil {
+			t.Fatal(err)
+		}
+		digest := sha256.Sum256(content)
+		fmt.Fprintf(&checksums, "%x  %s\n", digest, name)
+	}
+	if err := os.WriteFile(filepath.Join(directory, "checksums.txt"), []byte(checksums.String()), 0o644); err != nil {
+		t.Fatal(err)
 	}
 }
 

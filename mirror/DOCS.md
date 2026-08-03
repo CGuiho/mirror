@@ -95,11 +95,13 @@ cannot replace itself directly.
 
 ## Installation and Delivery
 
-`devops/install.sh` supports Linux amd64/arm64/armv7/armv6 and Darwin
-amd64/arm64. `devops/install.ps1` supports Windows amd64/arm64. Both accept the
-offline `MIRROR_ASSET_DIR` test override and verify checksums before mutation.
-They validate the prompt asset metadata but insert only its Markdown body into
-managed project files.
+`devops/install.sh` is POSIX `sh` and supports Linux
+amd64/arm64/armv7/armv6 and Darwin amd64/arm64. Its documented
+`curl ... | sh` stream is exercised twice in offline CI; Bash remains supported
+for direct execution and source-only target checks. `devops/install.ps1`
+supports Windows amd64/arm64. Both accept the offline `MIRROR_ASSET_DIR` test
+override and verify checksums before mutation. They validate the prompt asset
+metadata but insert only its Markdown body into managed project files.
 
 Canonical tags are `mirror/v<semver>`. The exact public set is eight native
 binaries, `guiho-s-mirror.zip`, `guiho-i-mirror.md`, and `checksums.txt`.

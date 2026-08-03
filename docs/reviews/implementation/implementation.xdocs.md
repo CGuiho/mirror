@@ -12,6 +12,7 @@ documents:
   upgrade-catalog-progress-and-linux-download-review.md: Accepts the concise catalog, streamed progress, bounded Linux transaction, and public forward-upgrade proof for issues 16 through 18.
   powershell-invoke-expression-installer-review.md: Reviews null-safe PowerShell installer inputs, stage-aware failures, rollback preservation, and Invoke-Expression coverage for issue 19.
   managed-mirror-instruction-body-review.md: Reviews metadata-free managed instruction rendering across Go and both public installers.
+  posix-sh-installer-pipe-review.md: Reviews the POSIX shell conversion, streamed execution coverage, and preserved installer safety boundaries for issue 22.
 tags:
   - reviews
   - implementation
@@ -25,6 +26,8 @@ keywords:
   - invoke-expression
   - managed instruction
   - YAML frontmatter
+  - posix sh
+  - curl pipe
 flags: []
 status: stable
 ---
