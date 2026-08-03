@@ -41,7 +41,8 @@ root doctor reported zero errors and zero warnings.
 
 ## Hosted and Release Gates
 
-- Pull-request CI remains pending.
+- Pull request [#23](https://github.com/CGuiho/mirror/pull/23) is open; its
+  hosted CI remains pending.
 - Hosted CI must run the complete offline installer twice through `sh`, the
   exact 11-asset job, Windows installer coverage, and six native smoke jobs.
 - No version bump, tag, release, or publication was performed.

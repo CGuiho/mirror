@@ -34,7 +34,8 @@ All Rights Reserved.
   [docs/reviews/implementation/posix-sh-installer-pipe-review.md](docs/reviews/implementation/posix-sh-installer-pipe-review.md)
 - Validation:
   [docs/validation/posix-sh-installer-pipe.md](docs/validation/posix-sh-installer-pipe.md)
-- Delivery branch: `codex/fix-posix-sh-installer`; pull request pending.
+- Delivery: branch `codex/fix-posix-sh-installer`; pull request
+  [#23](https://github.com/CGuiho/mirror/pull/23).
 - Release boundary: no version bump, tag, release, or publication is authorized.
 
 ## Managed Mirror Instruction Body

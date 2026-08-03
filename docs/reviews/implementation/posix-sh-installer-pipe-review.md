@@ -20,6 +20,7 @@ remaining pull-request gate.
 ## Scope Reviewed
 
 - [Issue #22 task](../../todo/posix-sh-installer-pipe.md)
+- [Pull request #23](https://github.com/CGuiho/mirror/pull/23)
 - `devops/install.sh`
 - `devops/build-binaries_test.go`
 - `.github/workflows/ci.yml`

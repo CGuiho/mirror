@@ -18,6 +18,7 @@ keywords: [curl pipe, dash, sh, checksum, rollback]
 - Status: testing
 - Index: [TODO.md](../../todo.md)
 - External: [CGuiho/mirror#22](https://github.com/CGuiho/mirror/issues/22)
+- Pull request: [CGuiho/mirror#23](https://github.com/CGuiho/mirror/pull/23)
 
 ## Plan Unit
 
@@ -86,4 +87,4 @@ arrays, arithmetic conditions, and process substitution, so removing only
 ## Delivery
 
 - Branch: `codex/fix-posix-sh-installer`
-- Pull request: pending.
+- Pull request: [CGuiho/mirror#23](https://github.com/CGuiho/mirror/pull/23)
