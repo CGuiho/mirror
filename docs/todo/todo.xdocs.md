@@ -18,6 +18,7 @@ documents:
   background-update-worker-cpu-safety.md: Defines bounded, coalesced, stale-recoverable background update worker behavior for Mirror.
   powershell-invoke-expression-installer.md: Tracks null-safe public PowerShell installer execution and Invoke-Expression regression coverage for GitHub issue 19.
   managed-mirror-instruction-body.md: Defines metadata-free managed instruction rendering while retaining prompt asset frontmatter.
+  posix-sh-installer-pipe.md: Defines the POSIX sh repair and streamed offline regression contract for GitHub issue 22.
 tags:
   - todo
   - planning
@@ -37,6 +38,8 @@ keywords:
   - invoke-expression
   - managed instruction
   - YAML frontmatter
+  - posix sh
+  - curl pipe
 flags: []
 status: stable
 ---

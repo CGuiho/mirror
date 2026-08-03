@@ -34,6 +34,8 @@ Linux and macOS:
 curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.sh | sh
 ```
 
+The Unix installer is POSIX `sh` compatible and does not require Bash.
+
 Installers map the host to an approved native asset, verify it against
 `checksums.txt`, install the bundled skill into both global agent roots,
 reconcile the managed instruction block without the prompt asset's YAML

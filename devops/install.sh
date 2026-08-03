@@ -1,5 +1,5 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/sh
+set -eu
 
 REPO="${MIRROR_REPO:-CGuiho/mirror}"
 VERSION="${MIRROR_VERSION:-latest}"
@@ -26,7 +26,7 @@ Environment:
 EOF
 }
 
-while (($#)); do
+while [ "$#" -gt 0 ]; do
   case "$1" in
     --version) VERSION="${2:?--version requires a value}"; shift 2 ;;
     --install-dir) INSTALL_DIR="${2:?--install-dir requires a value}"; shift 2 ;;
@@ -36,62 +36,64 @@ while (($#)); do
 done
 
 detect_asset() {
-  local detected_os detected_arch
-  detected_os="${MIRROR_TEST_OS:-$(uname -s)}"
-  detected_arch="${MIRROR_TEST_ARCH:-$(uname -m)}"
-  detected_os="$(printf '%s' "$detected_os" | tr '[:upper:]' '[:lower:]')"
-  detected_arch="$(printf '%s' "$detected_arch" | tr '[:upper:]' '[:lower:]')"
-  case "$detected_os:$detected_arch" in
+  detected_asset_os="${MIRROR_TEST_OS:-$(uname -s)}"
+  detected_asset_arch="${MIRROR_TEST_ARCH:-$(uname -m)}"
+  detected_asset_os="$(printf '%s' "$detected_asset_os" | tr '[:upper:]' '[:lower:]')"
+  detected_asset_arch="$(printf '%s' "$detected_asset_arch" | tr '[:upper:]' '[:lower:]')"
+  case "$detected_asset_os:$detected_asset_arch" in
     linux:x86_64|linux:amd64) printf 'mirror-linux-amd64\n' ;;
     linux:aarch64|linux:arm64) printf 'mirror-linux-arm64\n' ;;
     linux:armv7l|linux:armv7) printf 'mirror-linux-armv7\n' ;;
     linux:armv6l|linux:armv6) printf 'mirror-linux-armv6\n' ;;
     darwin:x86_64|darwin:amd64) printf 'mirror-darwin-amd64\n' ;;
     darwin:arm64|darwin:aarch64) printf 'mirror-darwin-arm64\n' ;;
-    *) printf 'Unsupported Mirror installer target: %s/%s\n' "$detected_os" "$detected_arch" >&2; return 1 ;;
+    *) printf 'Unsupported Mirror installer target: %s/%s\n' "$detected_asset_os" "$detected_asset_arch" >&2; return 1 ;;
   esac
 }
 
 resolve_version() {
-  local requested="$1" tag
-  requested="${requested#mirror/v}"
-  requested="${requested#v}"
-  if [[ "$requested" != latest ]]; then
-    printf '%s\n' "$requested"
+  resolve_requested="$1"
+  resolve_requested="${resolve_requested#mirror/v}"
+  resolve_requested="${resolve_requested#v}"
+  if [ "$resolve_requested" != latest ]; then
+    printf '%s\n' "$resolve_requested"
     return
   fi
-  if [[ -n "${MIRROR_ASSET_DIR:-}" ]]; then
+  if [ -n "${MIRROR_ASSET_DIR:-}" ]; then
     printf 'An exact --version is required with MIRROR_ASSET_DIR.\n' >&2
     return 1
   fi
-  tag="$(curl --fail --silent --show-error --location \
+  resolve_release_json="$(curl --fail --silent --show-error --location \
     --proto '=https' --tlsv1.2 \
-    "https://api.github.com/repos/${REPO}/releases/latest" \
+    "https://api.github.com/repos/${REPO}/releases/latest")"
+  resolve_tag="$(printf '%s\n' "$resolve_release_json" \
     | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
     | head -n 1)"
-  case "$tag" in
-    mirror/v*) printf '%s\n' "${tag#mirror/v}" ;;
-    *) printf 'Latest release tag is not canonical: %s\n' "$tag" >&2; return 1 ;;
+  case "$resolve_tag" in
+    mirror/v*) printf '%s\n' "${resolve_tag#mirror/v}" ;;
+    *) printf 'Latest release tag is not canonical: %s\n' "$resolve_tag" >&2; return 1 ;;
   esac
 }
 
 asset_base_url() {
-  local version="$1"
-  if [[ -n "${MIRROR_DOWNLOAD_BASE_URL:-}" ]]; then
+  asset_base_version="$1"
+  if [ -n "${MIRROR_DOWNLOAD_BASE_URL:-}" ]; then
     printf '%s\n' "${MIRROR_DOWNLOAD_BASE_URL%/}"
   else
-    printf 'https://github.com/%s/releases/download/mirror%%2Fv%s\n' "$REPO" "$version"
+    printf 'https://github.com/%s/releases/download/mirror%%2Fv%s\n' "$REPO" "$asset_base_version"
   fi
 }
 
 download_asset() {
-  local name="$1" destination="$2" base="$3"
-  if [[ -n "${MIRROR_ASSET_DIR:-}" ]]; then
-    cp "${MIRROR_ASSET_DIR%/}/$name" "$destination"
+  download_name="$1"
+  download_destination="$2"
+  download_base="$3"
+  if [ -n "${MIRROR_ASSET_DIR:-}" ]; then
+    cp "${MIRROR_ASSET_DIR%/}/$download_name" "$download_destination"
     return
   fi
-  printf 'Downloading %s\n' "$base/$name"
-  curl --fail --location --progress-bar --proto '=https' --tlsv1.2 "$base/$name" --output "$destination"
+  printf 'Downloading %s\n' "$download_base/$download_name"
+  curl --fail --location --progress-bar --proto '=https' --tlsv1.2 "$download_base/$download_name" --output "$download_destination"
 }
 
 sha256_file() {
@@ -106,41 +108,51 @@ sha256_file() {
 }
 
 verify_asset() {
-  local manifest="$1" name="$2" path="$3" expected actual
-  expected="$(awk -v name="$name" '$2 == name || $2 == "*" name {print tolower($1)}' "$manifest")"
-  [[ "$expected" =~ ^[0-9a-f]{64}$ ]] || { printf 'Missing checksum for %s\n' "$name" >&2; return 1; }
-  actual="$(sha256_file "$path")"
-  [[ "$actual" == "$expected" ]] || { printf 'Checksum mismatch for %s\n' "$name" >&2; return 1; }
-  printf 'Verified SHA-256: %s\n' "$name"
+  verify_manifest="$1"
+  verify_name="$2"
+  verify_path="$3"
+  verify_expected="$(awk -v name="$verify_name" '$2 == name || $2 == "*" name {print tolower($1)}' "$verify_manifest")"
+  if ! printf '%s\n' "$verify_expected" | LC_ALL=C grep -Eq '^[0-9a-f]{64}$'; then
+    printf 'Missing checksum for %s\n' "$verify_name" >&2
+    return 1
+  fi
+  verify_actual="$(sha256_file "$verify_path")"
+  if [ "$verify_actual" != "$verify_expected" ]; then
+    printf 'Checksum mismatch for %s\n' "$verify_name" >&2
+    return 1
+  fi
+  printf 'Verified SHA-256: %s\n' "$verify_name"
 }
 
 verify_markdown() {
-  local path="$1" name="$2"
-  [[ -s "$path" ]] || return 1
-  LC_ALL=C grep -a -q '^---$' "$path"
-  LC_ALL=C grep -a -q "^name:[[:space:]]*$name[[:space:]]*$" "$path"
-  cmp -s "$path" <(LC_ALL=C tr -d '\000' < "$path")
+  verify_markdown_path="$1"
+  verify_markdown_name="$2"
+  [ -s "$verify_markdown_path" ] || return 1
+  LC_ALL=C grep -a -q '^---$' "$verify_markdown_path" || return 1
+  LC_ALL=C grep -a -q "^name:[[:space:]]*$verify_markdown_name[[:space:]]*$" "$verify_markdown_path" || return 1
+  LC_ALL=C tr -d '\000' < "$verify_markdown_path" | cmp -s "$verify_markdown_path" - || return 1
 }
 
 install_skill() {
-  local source="$1" destination="$2" parent stage backup
-  parent="$(dirname "$destination")"
-  mkdir -p "$parent"
-  stage="$(mktemp -d "$parent/.mirror-skill-new.XXXXXX")"
-  backup="$parent/.mirror-skill-backup.$$"
-  install -m 0644 "$source" "$stage/SKILL.md"
-  rm -rf "$backup"
-  if [[ -e "$destination" ]]; then mv "$destination" "$backup"; fi
-  if ! mv "$stage" "$destination"; then
-    [[ -e "$backup" ]] && mv "$backup" "$destination"
+  skill_source="$1"
+  skill_destination="$2"
+  skill_parent="$(dirname "$skill_destination")"
+  mkdir -p "$skill_parent"
+  skill_stage="$(mktemp -d "$skill_parent/.mirror-skill-new.XXXXXX")"
+  skill_backup="$skill_parent/.mirror-skill-backup.$$"
+  install -m 0644 "$skill_source" "$skill_stage/SKILL.md"
+  rm -rf "$skill_backup"
+  if [ -e "$skill_destination" ]; then mv "$skill_destination" "$skill_backup"; fi
+  if ! mv "$skill_stage" "$skill_destination"; then
+    if [ -e "$skill_backup" ]; then mv "$skill_backup" "$skill_destination"; fi
     return 1
   fi
-  rm -rf "$backup"
-  printf 'Installed skill: %s\n' "$destination"
+  rm -rf "$skill_backup"
+  printf 'Installed skill: %s\n' "$skill_destination"
 }
 
 write_instruction_body() {
-  local prompt="$1"
+  instruction_body_prompt="$1"
   awk '
     {
       sub(/\r$/, "")
@@ -167,48 +179,56 @@ write_instruction_body() {
     END {
       if (in_frontmatter || !started) exit 1
     }
-  ' "$prompt"
+  ' "$instruction_body_prompt"
 }
 
 write_instruction_file() {
-  local path="$1" prompt="$2" parent temporary
-  parent="$(dirname "$path")"
-  mkdir -p "$parent"
-  temporary="$(mktemp "$parent/.mirror-instruction.XXXXXX")"
-  if [[ -f "$path" ]]; then
+  instruction_path="$1"
+  instruction_prompt="$2"
+  instruction_parent="$(dirname "$instruction_path")"
+  mkdir -p "$instruction_parent"
+  instruction_temporary="$(mktemp "$instruction_parent/.mirror-instruction.XXXXXX")"
+  if [ -f "$instruction_path" ]; then
     awk -v begin="$BEGIN_MARKER" -v end="$END_MARKER" '
       $0 == begin {inside=1; next}
       $0 == end {inside=0; next}
       !inside {print}
-    ' "$path" > "$temporary"
+    ' "$instruction_path" > "$instruction_temporary"
   fi
-  if [[ -s "$temporary" ]]; then printf '\n' >> "$temporary"; fi
-  printf '%s\n' "$BEGIN_MARKER" >> "$temporary"
-  write_instruction_body "$prompt" >> "$temporary"
-  printf '%s\n' "$END_MARKER" >> "$temporary"
-  chmod 0644 "$temporary"
-  mv "$temporary" "$path"
-  printf 'Updated instruction block: %s\n' "$path"
+  if [ -s "$instruction_temporary" ]; then printf '\n' >> "$instruction_temporary"; fi
+  printf '%s\n' "$BEGIN_MARKER" >> "$instruction_temporary"
+  write_instruction_body "$instruction_prompt" >> "$instruction_temporary"
+  printf '%s\n' "$END_MARKER" >> "$instruction_temporary"
+  chmod 0644 "$instruction_temporary"
+  mv "$instruction_temporary" "$instruction_path"
+  printf 'Updated instruction block: %s\n' "$instruction_path"
 }
 
 install_instructions() {
-  local prompt="$1" targets=()
-  [[ -f AGENTS.md ]] && targets+=("$PWD/AGENTS.md")
-  [[ -f CLAUDE.md ]] && targets+=("$PWD/CLAUDE.md")
-  ((${#targets[@]})) || targets+=("$PWD/AGENTS.md")
-  local target
-  for target in "${targets[@]}"; do write_instruction_file "$target" "$prompt"; done
+  instructions_prompt="$1"
+  instructions_found=0
+  if [ -f AGENTS.md ]; then
+    write_instruction_file "$PWD/AGENTS.md" "$instructions_prompt"
+    instructions_found=1
+  fi
+  if [ -f CLAUDE.md ]; then
+    write_instruction_file "$PWD/CLAUDE.md" "$instructions_prompt"
+    instructions_found=1
+  fi
+  if [ "$instructions_found" -eq 0 ]; then
+    write_instruction_file "$PWD/AGENTS.md" "$instructions_prompt"
+  fi
 }
 
 configure_path() {
-  [[ "${MIRROR_SKIP_PATH_UPDATE:-0}" == 1 ]] && return
+  [ "${MIRROR_SKIP_PATH_UPDATE:-0}" = 1 ] && return
   case ":$PATH:" in *":$INSTALL_DIR:"*) return ;; esac
-  local profile="$MIRROR_HOME/.profile"
-  printf '\nexport PATH="%s:$PATH"\n' "$INSTALL_DIR" >> "$profile"
-  printf 'Added %s to PATH in %s\n' "$INSTALL_DIR" "$profile"
+  path_profile="$MIRROR_HOME/.profile"
+  printf '\nexport PATH="%s:$PATH"\n' "$INSTALL_DIR" >> "$path_profile"
+  printf 'Added %s to PATH in %s\n' "$INSTALL_DIR" "$path_profile"
 }
 
-if [[ "${MIRROR_INSTALLER_SOURCE_ONLY:-0}" == 1 ]]; then
+if [ "${MIRROR_INSTALLER_SOURCE_ONLY:-0}" = 1 ]; then
   return 0 2>/dev/null || exit 0
 fi
 
@@ -219,7 +239,7 @@ ASSET="$(detect_asset)"
 RESOLVED_VERSION="$(resolve_version "$VERSION")"
 BASE_URL="$(asset_base_url "$RESOLVED_VERSION")"
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+trap 'rm -rf "$TMP"' 0
 
 printf 'Installing GUIHO Mirror\nVersion: %s\nTarget: %s\nSource: %s\n' "$RESOLVED_VERSION" "$ASSET" "$BASE_URL"
 download_asset checksums.txt "$TMP/checksums.txt" "$BASE_URL"
@@ -238,14 +258,14 @@ mkdir -p "$INSTALL_DIR"
 DESTINATION="$INSTALL_DIR/mirror"
 BACKUP="$DESTINATION.mirror-backup"
 rm -f "$BACKUP"
-[[ -e "$DESTINATION" ]] && mv "$DESTINATION" "$BACKUP"
+[ -e "$DESTINATION" ] && mv "$DESTINATION" "$BACKUP"
 if ! install -m 0755 "$TMP/$ASSET" "$DESTINATION"; then
-  [[ -e "$BACKUP" ]] && mv "$BACKUP" "$DESTINATION"
+  [ -e "$BACKUP" ] && mv "$BACKUP" "$DESTINATION"
   exit 1
 fi
-if [[ "$(MIRROR_DISABLE_UPDATE_CHECK=1 "$DESTINATION" --version)" != "mirror v$RESOLVED_VERSION" ]]; then
+if [ "$(MIRROR_DISABLE_UPDATE_CHECK=1 "$DESTINATION" --version)" != "mirror v$RESOLVED_VERSION" ]; then
   rm -f "$DESTINATION"
-  [[ -e "$BACKUP" ]] && mv "$BACKUP" "$DESTINATION"
+  [ -e "$BACKUP" ] && mv "$BACKUP" "$DESTINATION"
   printf 'Installed binary version verification failed.\n' >&2
   exit 1
 fi

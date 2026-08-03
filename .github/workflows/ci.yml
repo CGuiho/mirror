@@ -69,6 +69,8 @@ jobs:
       - name: Validate Bash installer and target mapping
         shell: bash
         run: |
+          sh -n devops/install.sh
+          dash -n devops/install.sh
           bash -n devops/install.sh
           export MIRROR_INSTALLER_SOURCE_ONLY=1
           source devops/install.sh
@@ -86,12 +88,15 @@ jobs:
           trap 'rm -rf "$root"' EXIT
           mkdir -p "$root/home" "$root/project" "$root/install"
           cd "$root/project"
-          MIRROR_HOME_DIR="$root/home" \
-          MIRROR_ASSET_DIR="$GITHUB_WORKSPACE/bin" \
-          MIRROR_INSTALL_DIR="$root/install" \
-          MIRROR_SKIP_PATH_UPDATE=1 \
-          MIRROR_DISABLE_UPDATE_CHECK=1 \
-            bash "$GITHUB_WORKSPACE/devops/install.sh" --version 0.0.0-ci
+          for attempt in 1 2; do
+            cat "$GITHUB_WORKSPACE/devops/install.sh" | \
+              MIRROR_HOME_DIR="$root/home" \
+              MIRROR_ASSET_DIR="$GITHUB_WORKSPACE/bin" \
+              MIRROR_INSTALL_DIR="$root/install" \
+              MIRROR_SKIP_PATH_UPDATE=1 \
+              MIRROR_DISABLE_UPDATE_CHECK=1 \
+              sh -s -- --version 0.0.0-ci
+          done
           test "$(MIRROR_DISABLE_UPDATE_CHECK=1 "$root/install/mirror" --version)" = 'mirror v0.0.0-ci'
           test -s "$root/home/.agents/skills/guiho-s-mirror/SKILL.md"
           test -s "$root/home/.claude/skills/guiho-s-mirror/SKILL.md"
