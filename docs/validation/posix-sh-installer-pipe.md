@@ -5,7 +5,7 @@ description: Validation report for POSIX syntax, streamed offline installation, 
 created: 2026-08-03
 updated: 2026-08-03
 owner: mirror-docs-validation
-flags: [local-complete, hosted-pending, xdocs-workaround]
+flags: [local-complete, hosted-complete, release-ready, xdocs-workaround]
 tags: [mirror, validation, installer]
 keywords: [posix sh, dash, curl pipe, exact assets]
 ---
@@ -41,8 +41,11 @@ root doctor reported zero errors and zero warnings.
 
 ## Hosted and Release Gates
 
-- Pull request [#23](https://github.com/CGuiho/mirror/pull/23) is open; its
-  hosted CI remains pending.
-- Hosted CI must run the complete offline installer twice through `sh`, the
-  exact 11-asset job, Windows installer coverage, and six native smoke jobs.
+- Pull request [#23](https://github.com/CGuiho/mirror/pull/23) run
+  [30804069515](https://github.com/CGuiho/mirror/actions/runs/30804069515)
+  passed all eight jobs.
+- The Go quality and exact-assets job passed the complete twice-run offline
+  `sh` stream, full Go validation, and the exact 11-asset verifier.
+- The Windows installer job and all six Linux, Darwin, and Windows native smoke
+  jobs passed.
 - No version bump, tag, release, or publication was performed.

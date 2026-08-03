@@ -5,7 +5,7 @@ description: Local review of POSIX conversion, streamed regression coverage, and
 created: 2026-08-03
 updated: 2026-08-03
 owner: mirror-docs-reviews-implementation
-flags: [accepted-local]
+flags: [accepted-pr]
 tags: [mirror, review, installer]
 keywords: [posix sh, dash, curl pipe, transactional install]
 ---
@@ -14,8 +14,8 @@ keywords: [posix sh, dash, curl pipe, transactional install]
 
 ## Verdict
 
-Accepted locally. No blocking implementation finding remains; hosted CI is the
-remaining pull-request gate.
+Accepted for merge. No blocking implementation finding remains, and hosted
+pull-request CI passed all eight jobs.
 
 ## Scope Reviewed
 
@@ -47,10 +47,17 @@ remaining pull-request gate.
 
 ### Residual
 
-- Hosted runner evidence remains pending until the pull request executes.
 - XDocs v0.9.0 rejects the repository's pre-existing path-shaped exclusions;
   metadata validation uses an equivalent temporary directory-name config and
   does not change the unrelated checked-in configuration.
+- Release and public-install evidence remain separate from this pull request.
+
+## Hosted Evidence
+
+GitHub Actions run
+[30804069515](https://github.com/CGuiho/mirror/actions/runs/30804069515)
+passed the Go quality and exact-assets job, all six native smoke jobs, and the
+Windows installer job. The quality job executed the twice-run POSIX stream.
 
 ## Release Boundary
 

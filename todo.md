@@ -29,7 +29,9 @@ All Rights Reserved.
   [#22](https://github.com/CGuiho/mirror/issues/22).
 - Testing: real `dash` syntax and twice-run streamed offline installation pass,
   along with full Go tests, vet, exact 11-asset verification, PowerShell parser,
-  configuration, and generated help contracts. Hosted CI remains required.
+  configuration, and generated help contracts. Hosted run
+  [30804069515](https://github.com/CGuiho/mirror/actions/runs/30804069515)
+  passed all eight jobs; the pull request is ready for merge.
 - Review:
   [docs/reviews/implementation/posix-sh-installer-pipe-review.md](docs/reviews/implementation/posix-sh-installer-pipe-review.md)
 - Validation:

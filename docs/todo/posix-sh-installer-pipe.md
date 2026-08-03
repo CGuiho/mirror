@@ -80,11 +80,13 @@ arrays, arithmetic conditions, and process substitution, so removing only
 
 ## Lifecycle
 
-- Current phase: testing; local implementation and validation are complete.
-- Hosted pull-request CI remains the delivery gate.
+- Current phase: ready for merge; local and hosted validation are complete.
 - No release effect is authorized by this task.
 
 ## Delivery
 
 - Branch: `codex/fix-posix-sh-installer`
 - Pull request: [CGuiho/mirror#23](https://github.com/CGuiho/mirror/pull/23)
+- Hosted CI:
+  [run 30804069515](https://github.com/CGuiho/mirror/actions/runs/30804069515)
+  passed all eight jobs.
