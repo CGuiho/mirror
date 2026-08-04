@@ -6,6 +6,7 @@ children:
   - mirror-docs-todo-done
 files: {}
 documents:
+  init-git-defaults.md: Tracks Git-first init defaults and yes-by-default release prompts for GitHub issue 26.
   mirror-v4.1.0-hooks.md: Defines typed YAML command and AI-instruction hooks for GitHub issue 24.
   global-mirror-schema.md: Tracks global TypeBox-derived schema persistence for GitHub issue 14.
   complete-yaml-configuration-migration.md: Tracks completion of the YAML-only configuration migration for GitHub issue 15.
@@ -42,6 +43,7 @@ keywords:
   - posix sh
   - curl pipe
   - lifecycle hooks
+  - init defaults
 flags: []
 status: stable
 ---

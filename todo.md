@@ -14,6 +14,22 @@ All Rights Reserved.
 
 # GUIHO Mirror TODO List
 
+## Mirror Init Git Defaults
+
+- Status: testing
+- Created: `2026-08-05`
+- Updated: `2026-08-05`
+- Outcome: Make `mirror init` default to Git source/output even when package
+  metadata exists, while preserving `v{version}`, release commits, and release
+  pushes as yes-by-default.
+- Spec: [docs/todo/init-git-defaults.md](docs/todo/init-git-defaults.md)
+- External: GitHub issue
+  [#26](https://github.com/CGuiho/mirror/issues/26).
+- Plan unit: `INIT-26`; a dedicated architecture/plan is unnecessary for this
+  bounded init-default correction.
+- Validation:
+  [docs/validation/init-git-defaults.md](docs/validation/init-git-defaults.md)
+
 ## Mirror v4.1.0 Hooks
 
 - Status: implemented; pull-request checks pending
