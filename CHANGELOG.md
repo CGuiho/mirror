@@ -18,11 +18,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.1.0-alpha.0] - 2026-08-05
+
+### Added
+
+- Added strict `mirror.yaml` lifecycle hooks with typed AI-agent instructions
+  and trusted command hooks for everything, plan, apply, write, commit, tag,
+  push, nested error, and finalizer boundaries.
+- Added structured hook context files, `MIRROR_*` environment projection,
+  captured hook results, stable JSON-safe reporting, and primary/secondary
+  hook error aggregation.
+
+### Changed
+
+- Required explicit command-hook trust through `--run-hooks`, `--skip-hooks`,
+  or an interactive answer; `--yes` no longer authorizes repository command
+  hooks by itself.
+- Made managed Mirror instruction blocks insert the metadata-free prompt body
+  and include the hook authorization boundary for agents.
+
 ### Fixed
 
 - Made the documented `curl .../devops/install.sh | sh` entrypoint compatible
   with POSIX shells while preserving checksum verification, transactional
   replacement, agent resources, managed instructions, and Bash execution.
+- Corrected Windows installer architecture fallback and managed instruction
+  reconciliation edge cases while preserving checksum and rollback behavior.
 
 ## [4.0.1] - 2026-08-02
 
