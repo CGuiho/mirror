@@ -6,6 +6,7 @@ package versioning
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,9 +14,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/CGuiho/mirror/pkg/config"
+	mirrorhooks "github.com/CGuiho/mirror/pkg/hooks"
 	mirrorsemver "github.com/CGuiho/mirror/pkg/semver"
 	mastersemver "github.com/Masterminds/semver/v3"
 )
@@ -34,20 +37,22 @@ type VersionPlanAction struct {
 }
 
 type VersionPlan struct {
-	CurrentVersion string              `json:"current"`
-	NextVersion    string              `json:"next"`
-	Initial        bool                `json:"initial,omitempty"`
-	Source         string              `json:"source"`
-	Output         []string            `json:"output"`
-	ProjectName    string              `json:"project,omitempty"`
-	ConfigPath     string              `json:"config"`
-	Tag            string              `json:"tag,omitempty"`
-	Actions        []VersionPlanAction `json:"actions"`
-	AllowDirty     bool                `json:"allow_dirty"`
-	CommitEnabled  bool                `json:"commit_enabled"`
-	PushEnabled    bool                `json:"push_enabled"`
-	DryRun         bool                `json:"dry_run"`
-	Applied        bool                `json:"applied"`
+	CurrentVersion string               `json:"current"`
+	NextVersion    string               `json:"next"`
+	Initial        bool                 `json:"initial,omitempty"`
+	Source         string               `json:"source"`
+	Output         []string             `json:"output"`
+	ProjectName    string               `json:"project,omitempty"`
+	ConfigPath     string               `json:"config"`
+	Tag            string               `json:"tag,omitempty"`
+	Actions        []VersionPlanAction  `json:"actions"`
+	AllowDirty     bool                 `json:"allow_dirty"`
+	CommitEnabled  bool                 `json:"commit_enabled"`
+	PushEnabled    bool                 `json:"push_enabled"`
+	DryRun         bool                 `json:"dry_run"`
+	Applied        bool                 `json:"applied"`
+	Completed      []string             `json:"completed,omitempty"`
+	HookResults    []mirrorhooks.Result `json:"hooks,omitempty"`
 }
 
 var errNoGitVersion = errors.New("no Git version tag")
@@ -71,6 +76,8 @@ func (ExecRunner) Run(cwd, name string, args ...string) ([]byte, error) {
 type ApplyOptions struct {
 	Confirmed bool
 	Runner    Runner
+	Context   context.Context
+	Hooks     *mirrorhooks.Session
 }
 
 func BuildPlan(cfg *config.MirrorConfig, cfgPath, target, cwd string) (*VersionPlan, error) {
@@ -244,6 +251,39 @@ func ApplyPlan(plan *VersionPlan, cwd string) error {
 	return ApplyPlanWithOptions(plan, cwd, ApplyOptions{Confirmed: true})
 }
 
+func HookContextForPlan(plan *VersionPlan) mirrorhooks.Context {
+	if plan == nil {
+		return mirrorhooks.Context{}
+	}
+	hookContext := mirrorhooks.Context{
+		Stage:          "plan",
+		Source:         plan.Source,
+		Output:         append([]string(nil), plan.Output...),
+		CurrentVersion: plan.CurrentVersion,
+		NextVersion:    plan.NextVersion,
+		ProjectName:    plan.ProjectName,
+		GitTag:         plan.Tag,
+		Applied:        plan.Applied,
+		DryRun:         plan.DryRun,
+		Completed:      append([]string(nil), plan.Completed...),
+	}
+	for _, action := range plan.Actions {
+		switch action.Type {
+		case "write-file":
+			hookContext.FilePaths = append(hookContext.FilePaths, action.Path)
+		case "git-commit":
+			hookContext.CommitMessage = action.Message
+			hookContext.CommitPaths = append([]string(nil), action.Paths...)
+		case "git-tag":
+			hookContext.Tag = action.Tag
+		case "git-push":
+			hookContext.PushCommit = action.IncludeCommit
+			hookContext.PushTag = action.IncludeTags
+		}
+	}
+	return hookContext
+}
+
 func ApplyPlanWithOptions(plan *VersionPlan, cwd string, options ApplyOptions) error {
 	if plan == nil {
 		return errors.New("version plan is required")
@@ -253,6 +293,9 @@ func ApplyPlanWithOptions(plan *VersionPlan, cwd string, options ApplyOptions) e
 	}
 	if options.Runner == nil {
 		options.Runner = ExecRunner{}
+	}
+	if options.Context == nil {
+		options.Context = context.Background()
 	}
 	absoluteCWD, err := filepath.Abs(cwd)
 	if err != nil {
@@ -308,6 +351,7 @@ func ApplyPlanWithOptions(plan *VersionPlan, cwd string, options ApplyOptions) e
 
 	filesCommitted := false
 	tagCreated := false
+	completed := append([]string(nil), plan.Completed...)
 	rollbackFiles := func() {
 		if filesCommitted {
 			return
@@ -315,6 +359,14 @@ func ApplyPlanWithOptions(plan *VersionPlan, cwd string, options ApplyOptions) e
 		for path, data := range backups {
 			_ = atomicWrite(path, data)
 		}
+		retained := completed[:0]
+		for _, effect := range completed {
+			if effect != "write" {
+				retained = append(retained, effect)
+			}
+		}
+		completed = retained
+		plan.Completed = append([]string(nil), completed...)
 	}
 	rollbackStaging := func(paths []string) {
 		if len(paths) == 0 {
@@ -324,46 +376,136 @@ func ApplyPlanWithOptions(plan *VersionPlan, cwd string, options ApplyOptions) e
 		args = append(args, paths...)
 		_, _ = options.Runner.Run(absoluteCWD, "git", args...)
 	}
-	for _, action := range plan.Actions {
-		switch action.Type {
-		case "write-file":
-			if err := writeVersionDocument(action.Path, action.Adapter, plan.NextVersion); err != nil {
+	baseHookContext := HookContextForPlan(plan)
+	runStage := func(
+		stage string,
+		before, after, onError config.HookEvent,
+		hookContext mirrorhooks.Context,
+		action func() error,
+	) error {
+		hookContext.Stage = stage
+		hookContext.Completed = append([]string(nil), completed...)
+		if options.Hooks != nil {
+			if err := options.Hooks.Run(options.Context, before, hookContext); err != nil {
+				hookContext.ErrorStage = stage
+				hookContext.ErrorMessage = err.Error()
+				hookContext.ErrorExitCode = mirrorhooks.ExitCode(err)
+				options.Hooks.RunBestEffort(options.Context, onError, hookContext)
+				return err
+			}
+		}
+		if err := action(); err != nil {
+			hookContext.Completed = append([]string(nil), completed...)
+			hookContext.ErrorStage = stage
+			hookContext.ErrorMessage = err.Error()
+			hookContext.ErrorExitCode = mirrorhooks.ExitCode(err)
+			if options.Hooks != nil {
+				options.Hooks.RunBestEffort(options.Context, onError, hookContext)
+			}
+			return err
+		}
+		completed = append(completed, stage)
+		plan.Completed = append([]string(nil), completed...)
+		hookContext.Completed = append([]string(nil), completed...)
+		if options.Hooks != nil {
+			if err := options.Hooks.Run(options.Context, after, hookContext); err != nil {
+				hookContext.ErrorStage = stage
+				hookContext.ErrorMessage = err.Error()
+				hookContext.ErrorExitCode = mirrorhooks.ExitCode(err)
+				options.Hooks.RunBestEffort(options.Context, onError, hookContext)
+				return err
+			}
+		}
+		return nil
+	}
+
+	for index := 0; index < len(plan.Actions); {
+		action := plan.Actions[index]
+		if action.Type == "write-file" {
+			end := index
+			writeContext := baseHookContext
+			writeContext.FilePaths = []string{}
+			for end < len(plan.Actions) && plan.Actions[end].Type == "write-file" {
+				writeContext.FilePaths = append(writeContext.FilePaths, plan.Actions[end].Path)
+				end++
+			}
+			err := runStage("write", config.HookBeforeWrite, config.HookAfterWrite, config.HookOnWriteError, writeContext, func() error {
+				for _, writeAction := range plan.Actions[index:end] {
+					if err := writeVersionDocument(writeAction.Path, writeAction.Adapter, plan.NextVersion); err != nil {
+						return err
+					}
+				}
+				return nil
+			})
+			if err != nil {
 				rollbackFiles()
 				return err
 			}
+			index = end
+			continue
+		}
+
+		switch action.Type {
 		case "git-commit":
-			for _, path := range action.Paths {
-				if _, err := options.Runner.Run(absoluteCWD, "git", "add", "--", path); err != nil {
+			commitContext := baseHookContext
+			commitContext.CommitMessage = action.Message
+			commitContext.CommitPaths = append([]string(nil), action.Paths...)
+			err := runStage("commit", config.HookBeforeCommit, config.HookAfterCommit, config.HookOnCommitError, commitContext, func() error {
+				for _, path := range action.Paths {
+					if _, err := options.Runner.Run(absoluteCWD, "git", "add", "--", path); err != nil {
+						rollbackStaging(action.Paths)
+						return fmt.Errorf("stage version output %s: %w", path, err)
+					}
+				}
+				commitArgs := []string{"commit", "-m", action.Message, "--"}
+				commitArgs = append(commitArgs, action.Paths...)
+				if _, err := options.Runner.Run(absoluteCWD, "git", commitArgs...); err != nil {
 					rollbackStaging(action.Paths)
-					rollbackFiles()
-					return fmt.Errorf("stage version output %s: %w", path, err)
+					return fmt.Errorf("create release commit: %w", err)
 				}
-			}
-			commitArgs := []string{"commit", "-m", action.Message, "--"}
-			commitArgs = append(commitArgs, action.Paths...)
-			if _, err := options.Runner.Run(absoluteCWD, "git", commitArgs...); err != nil {
-				rollbackStaging(action.Paths)
+				filesCommitted = true
+				return nil
+			})
+			if err != nil {
 				rollbackFiles()
-				return fmt.Errorf("create release commit: %w", err)
+				return err
 			}
-			filesCommitted = true
 		case "git-tag":
-			if _, err := options.Runner.Run(absoluteCWD, "git", "tag", "-a", action.Tag, "-m", "Release "+action.Tag); err != nil {
+			tagContext := baseHookContext
+			tagContext.Tag = action.Tag
+			if err := runStage("tag", config.HookBeforeTag, config.HookAfterTag, config.HookOnTagError, tagContext, func() error {
+				if _, err := options.Runner.Run(absoluteCWD, "git", "tag", "-a", action.Tag, "-m", "Release "+action.Tag); err != nil {
+					return fmt.Errorf("create Git tag %s: %w", action.Tag, err)
+				}
+				tagCreated = true
+				return nil
+			}); err != nil {
 				rollbackFiles()
-				return fmt.Errorf("create Git tag %s: %w", action.Tag, err)
+				return err
 			}
-			tagCreated = true
 		case "git-push":
-			if action.IncludeCommit {
-				if _, err := options.Runner.Run(absoluteCWD, "git", "push", "origin", "HEAD"); err != nil {
-					return fmt.Errorf("push release commit: %w", err)
+			pushContext := baseHookContext
+			pushContext.PushCommit = action.IncludeCommit
+			pushContext.PushTag = action.IncludeTags
+			if err := runStage("push", config.HookBeforePush, config.HookAfterPush, config.HookOnPushError, pushContext, func() error {
+				if action.IncludeCommit {
+					if _, err := options.Runner.Run(absoluteCWD, "git", "push", "origin", "HEAD"); err != nil {
+						return fmt.Errorf("push release commit: %w", err)
+					}
+					completed = append(completed, "push:commit")
+					plan.Completed = append([]string(nil), completed...)
 				}
-			}
-			if action.IncludeTags {
-				ref := "refs/tags/" + plan.Tag
-				if _, err := options.Runner.Run(absoluteCWD, "git", "push", "origin", ref+":"+ref); err != nil {
-					return fmt.Errorf("push exact Git tag %s: %w", plan.Tag, err)
+				if action.IncludeTags {
+					ref := "refs/tags/" + plan.Tag
+					if _, err := options.Runner.Run(absoluteCWD, "git", "push", "origin", ref+":"+ref); err != nil {
+						return fmt.Errorf("push exact Git tag %s: %w", plan.Tag, err)
+					}
+					completed = append(completed, "push:tag")
+					plan.Completed = append([]string(nil), completed...)
 				}
+				return nil
+			}); err != nil {
+				return err
 			}
 		default:
 			if tagCreated {
@@ -372,6 +514,7 @@ func ApplyPlanWithOptions(plan *VersionPlan, cwd string, options ApplyOptions) e
 			rollbackFiles()
 			return fmt.Errorf("unsupported version plan action %q", action.Type)
 		}
+		index++
 	}
 	plan.Applied = true
 	return nil
@@ -595,7 +738,21 @@ func FormatPlanText(plan *VersionPlan) string {
 	if plan.Applied {
 		output.WriteString("applied: true\n")
 	}
+	if len(plan.HookResults) > 0 {
+		output.WriteString("hooks:\n")
+		for _, result := range plan.HookResults {
+			fmt.Fprintf(&output, "- %s[%d] %s exit=%s duration_ms=%d\n",
+				result.Event, result.Index, result.Status, formatHookExitCode(result.ExitCode), result.DurationMS)
+		}
+	}
 	return output.String()
+}
+
+func formatHookExitCode(exitCode *int) string {
+	if exitCode == nil {
+		return "-"
+	}
+	return strconv.Itoa(*exitCode)
 }
 
 func resolvePath(cwd, path string) string {

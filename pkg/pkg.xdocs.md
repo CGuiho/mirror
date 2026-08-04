@@ -4,6 +4,7 @@ description: Framework-independent Mirror domain packages.
 parent: mirror
 children:
   - mirror-pkg-config
+  - mirror-pkg-hooks
   - mirror-pkg-maintenance
   - mirror-pkg-release
   - mirror-pkg-semver
@@ -13,7 +14,7 @@ children:
 files: {}
 documents: {}
 tags: [go, domain]
-keywords: [configuration, versioning, upgrades, release matrix]
+keywords: [configuration, hooks, versioning, upgrades, release matrix]
 flags: []
 status: stable
 ---

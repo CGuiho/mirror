@@ -14,6 +14,28 @@ All Rights Reserved.
 
 # GUIHO Mirror TODO List
 
+## Mirror v4.1.0 Hooks
+
+- Status: implemented; pull-request checks pending
+- Created: `2026-08-04`
+- Updated: `2026-08-04`
+- Outcome: Add strict `mirror.yaml` lifecycle hooks with AI-agent instructions
+  at agent-controlled boundaries and trusted Go command hooks around planning,
+  applying, writing, committing, tagging, pushing, and nested errors.
+- Spec: [docs/todo/mirror-v4.1.0-hooks.md](docs/todo/mirror-v4.1.0-hooks.md)
+- Design:
+  [docs/2026-06-07-mirror-hooks-design.md](docs/2026-06-07-mirror-hooks-design.md)
+- Plan:
+  [docs/plans/mirror-v4.1.0-hooks.md](docs/plans/mirror-v4.1.0-hooks.md)
+- Review:
+  [docs/reviews/implementation/mirror-v4.1.0-hooks-review.md](docs/reviews/implementation/mirror-v4.1.0-hooks-review.md)
+- Validation:
+  [docs/validation/mirror-v4.1.0-hooks.md](docs/validation/mirror-v4.1.0-hooks.md)
+- External: GitHub issue
+  [#24](https://github.com/CGuiho/mirror/issues/24).
+- Release: implementation and pull-request publication are authorized; version
+  application, tagging, publication, and release remain separately authorized.
+
 ## POSIX sh Public Installer Pipe
 
 - Status: testing

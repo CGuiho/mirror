@@ -60,6 +60,14 @@ func newConfigShowCommand(deps Dependencies) *cobra.Command {
 			fmt.Fprintf(deps.Out, "git.commit: %t\n", cfg.Git.Commit)
 			fmt.Fprintf(deps.Out, "git.push: %t\n", cfg.Git.Push)
 			fmt.Fprintf(deps.Out, "git.allow_dirty: %t\n", cfg.Git.AllowDirty)
+			for _, event := range config.HookEvents() {
+				definition, configured := cfg.Hooks[event]
+				if !configured {
+					continue
+				}
+				fmt.Fprintf(deps.Out, "hooks.%s.instructions: %d\n", event, len(definition.Instructions))
+				fmt.Fprintf(deps.Out, "hooks.%s.commands: %d\n", event, len(definition.Commands))
+			}
 			return nil
 		},
 	}

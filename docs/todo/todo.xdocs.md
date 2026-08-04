@@ -6,6 +6,7 @@ children:
   - mirror-docs-todo-done
 files: {}
 documents:
+  mirror-v4.1.0-hooks.md: Defines typed YAML command and AI-instruction hooks for GitHub issue 24.
   global-mirror-schema.md: Tracks global TypeBox-derived schema persistence for GitHub issue 14.
   complete-yaml-configuration-migration.md: Tracks completion of the YAML-only configuration migration for GitHub issue 15.
   citty-cli-migration.md: Defines the required full migration from Mirror's handwritten CLI parser and router to Citty.
@@ -40,6 +41,7 @@ keywords:
   - YAML frontmatter
   - posix sh
   - curl pipe
+  - lifecycle hooks
 flags: []
 status: stable
 ---

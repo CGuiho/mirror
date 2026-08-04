@@ -83,17 +83,122 @@ type AgentsConfig struct {
 	ChangelogPath  string `yaml:"changelog_path,omitempty" json:"changelog_path"`
 }
 
-type HooksConfig map[string][]string
+type HookEvent string
+
+const (
+	HookBeforeEverything HookEvent = "before:everything"
+	HookAfterEverything  HookEvent = "after:everything"
+	HookBeforePlan       HookEvent = "before:plan"
+	HookAfterPlan        HookEvent = "after:plan"
+	HookOnPlanError      HookEvent = "on:plan-error"
+	HookBeforeApply      HookEvent = "before:apply"
+	HookAfterApply       HookEvent = "after:apply"
+	HookOnApplyError     HookEvent = "on:apply-error"
+	HookBeforeWrite      HookEvent = "before:write"
+	HookAfterWrite       HookEvent = "after:write"
+	HookOnWriteError     HookEvent = "on:write-error"
+	HookBeforeCommit     HookEvent = "before:commit"
+	HookAfterCommit      HookEvent = "after:commit"
+	HookOnCommitError    HookEvent = "on:commit-error"
+	HookBeforeTag        HookEvent = "before:tag"
+	HookAfterTag         HookEvent = "after:tag"
+	HookOnTagError       HookEvent = "on:tag-error"
+	HookBeforePush       HookEvent = "before:push"
+	HookAfterPush        HookEvent = "after:push"
+	HookOnPushError      HookEvent = "on:push-error"
+	HookOnError          HookEvent = "on:error"
+)
+
+var hookEvents = []HookEvent{
+	HookBeforeEverything, HookAfterEverything,
+	HookBeforePlan, HookAfterPlan, HookOnPlanError,
+	HookBeforeApply, HookAfterApply, HookOnApplyError,
+	HookBeforeWrite, HookAfterWrite, HookOnWriteError,
+	HookBeforeCommit, HookAfterCommit, HookOnCommitError,
+	HookBeforeTag, HookAfterTag, HookOnTagError,
+	HookBeforePush, HookAfterPush, HookOnPushError,
+	HookOnError,
+}
+
+var supportedHookEvents = func() map[HookEvent]struct{} {
+	events := make(map[HookEvent]struct{}, len(hookEvents))
+	for _, event := range hookEvents {
+		events[event] = struct{}{}
+	}
+	return events
+}()
+
+var hookAliases = map[string]HookEvent{
+	"before_everything": HookBeforeEverything,
+	"after_everything":  HookAfterEverything,
+	"before_plan":       HookBeforePlan,
+	"after_plan":        HookAfterPlan,
+	"on_plan_error":     HookOnPlanError,
+	"before_apply":      HookBeforeApply,
+	"after_apply":       HookAfterApply,
+	"on_apply_error":    HookOnApplyError,
+	"before_write":      HookBeforeWrite,
+	"after_write":       HookAfterWrite,
+	"on_write_error":    HookOnWriteError,
+	"before_commit":     HookBeforeCommit,
+	"after_commit":      HookAfterCommit,
+	"on_commit_error":   HookOnCommitError,
+	"before_tag":        HookBeforeTag,
+	"after_tag":         HookAfterTag,
+	"on_tag_error":      HookOnTagError,
+	"before_push":       HookBeforePush,
+	"after_push":        HookAfterPush,
+	"on_push_error":     HookOnPushError,
+	"on_error":          HookOnError,
+}
+
+type HookDefinition struct {
+	Instructions []string `yaml:"instructions,omitempty" json:"instructions,omitempty"`
+	Commands     []string `yaml:"commands,omitempty" json:"commands,omitempty"`
+}
+
+type HooksConfig map[HookEvent]HookDefinition
+
+func HookEvents() []HookEvent {
+	return append([]HookEvent(nil), hookEvents...)
+}
+
+func (hooks HooksConfig) HasCommands() bool {
+	for _, definition := range hooks {
+		if len(definition.Commands) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func (hooks HooksConfig) CommandCount() int {
+	count := 0
+	for _, definition := range hooks {
+		count += len(definition.Commands)
+	}
+	return count
+}
+
+func (hooks HooksConfig) CommandEvents() []HookEvent {
+	events := make([]HookEvent, 0)
+	for _, event := range hookEvents {
+		if len(hooks[event].Commands) > 0 {
+			events = append(events, event)
+		}
+	}
+	return events
+}
 
 type rawConfig struct {
-	Schema  *int              `yaml:"schema"`
-	Project *rawProjectConfig `yaml:"project"`
-	Version *rawVersionConfig `yaml:"version"`
-	Package *rawPackageConfig `yaml:"package"`
-	JSR     *rawJSRConfig     `yaml:"jsr"`
-	Git     *rawGitConfig     `yaml:"git"`
-	Agents  *rawAgentsConfig  `yaml:"agents"`
-	Hooks   map[string]any    `yaml:"hooks"`
+	Schema  *int                 `yaml:"schema"`
+	Project *rawProjectConfig    `yaml:"project"`
+	Version *rawVersionConfig    `yaml:"version"`
+	Package *rawPackageConfig    `yaml:"package"`
+	JSR     *rawJSRConfig        `yaml:"jsr"`
+	Git     *rawGitConfig        `yaml:"git"`
+	Agents  *rawAgentsConfig     `yaml:"agents"`
+	Hooks   map[string]yaml.Node `yaml:"hooks"`
 }
 
 type rawProjectConfig struct {
@@ -278,20 +383,21 @@ func normalize(raw rawConfig) (*MirrorConfig, error) {
 		}
 	}
 	for name, value := range raw.Hooks {
-		switch typed := value.(type) {
-		case string:
-			cfg.Hooks[name] = []string{typed}
-		case []any:
-			for _, item := range typed {
-				command, ok := item.(string)
-				if !ok {
-					return nil, fmt.Errorf("hooks.%s must contain only strings", name)
-				}
-				cfg.Hooks[name] = append(cfg.Hooks[name], command)
-			}
-		default:
-			return nil, fmt.Errorf("hooks.%s must be a command string or list of command strings", name)
+		event, err := normalizeHookEvent(name)
+		if err != nil {
+			return nil, err
 		}
+		if _, duplicate := cfg.Hooks[event]; duplicate {
+			return nil, fmt.Errorf("hooks defines duplicate event %q", event)
+		}
+		definition, err := normalizeHookDefinition(name, value)
+		if err != nil {
+			return nil, err
+		}
+		if name != string(event) && len(definition.Instructions) > 0 {
+			return nil, fmt.Errorf("hooks.%s is a command-only compatibility alias; use %q for instructions", name, event)
+		}
+		cfg.Hooks[event] = definition
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -354,20 +460,171 @@ func (cfg *MirrorConfig) Validate() error {
 	if strings.TrimSpace(cfg.Agents.ChangelogPath) == "" {
 		return fmt.Errorf("agents.changelog_path cannot be empty")
 	}
-	for name, commands := range cfg.Hooks {
-		if strings.TrimSpace(name) == "" || len(commands) == 0 {
-			return fmt.Errorf("hooks entries require a non-empty name and at least one command")
+	for event, definition := range cfg.Hooks {
+		if _, supported := supportedHookEvents[event]; !supported {
+			return fmt.Errorf("hooks contains unsupported event %q", event)
 		}
-		for _, command := range commands {
+		if len(definition.Instructions) == 0 && len(definition.Commands) == 0 {
+			return fmt.Errorf("hooks.%s requires instructions, commands, or both", event)
+		}
+		if !supportsInstructionHooks(event) && len(definition.Instructions) > 0 {
+			return fmt.Errorf("hooks.%s does not support AI-agent instructions", event)
+		}
+		for _, instruction := range definition.Instructions {
+			if strings.TrimSpace(instruction) == "" {
+				return fmt.Errorf("hooks.%s cannot contain an empty instruction", event)
+			}
+		}
+		for _, command := range definition.Commands {
 			if strings.TrimSpace(command) == "" {
-				return fmt.Errorf("hooks.%s cannot contain an empty command", name)
+				return fmt.Errorf("hooks.%s cannot contain an empty command", event)
 			}
 		}
 	}
 	return nil
 }
 
+func normalizeHookEvent(name string) (HookEvent, error) {
+	event := HookEvent(name)
+	if _, supported := supportedHookEvents[event]; supported {
+		return event, nil
+	}
+	if canonical, supported := hookAliases[name]; supported {
+		return canonical, nil
+	}
+	return "", fmt.Errorf("hooks contains unsupported event %q", name)
+}
+
+func normalizeHookDefinition(name string, node yaml.Node) (HookDefinition, error) {
+	node = dereferenceYAMLNode(node)
+	path := "hooks." + name
+	switch node.Kind {
+	case yaml.ScalarNode, yaml.SequenceNode:
+		commands, err := decodeHookStrings(node, path)
+		return HookDefinition{Commands: commands}, err
+	case yaml.MappingNode:
+		definition := HookDefinition{}
+		seen := map[string]struct{}{}
+		for index := 0; index < len(node.Content); index += 2 {
+			field := node.Content[index]
+			value := node.Content[index+1]
+			if field.Kind != yaml.ScalarNode || field.Tag != "!!str" {
+				return HookDefinition{}, fmt.Errorf("%s fields must be strings", path)
+			}
+			if _, duplicate := seen[field.Value]; duplicate {
+				return HookDefinition{}, fmt.Errorf("%s contains duplicate field %q", path, field.Value)
+			}
+			seen[field.Value] = struct{}{}
+			values, err := decodeHookStrings(*value, path+"."+field.Value)
+			if err != nil {
+				return HookDefinition{}, err
+			}
+			switch field.Value {
+			case "instructions":
+				definition.Instructions = values
+			case "commands":
+				definition.Commands = values
+			default:
+				return HookDefinition{}, fmt.Errorf("%s contains unknown field %q", path, field.Value)
+			}
+		}
+		return definition, nil
+	default:
+		return HookDefinition{}, fmt.Errorf("%s must be a command string, command list, or hook object", path)
+	}
+}
+
+func decodeHookStrings(node yaml.Node, path string) ([]string, error) {
+	node = dereferenceYAMLNode(node)
+	switch node.Kind {
+	case yaml.ScalarNode:
+		if node.Tag != "!!str" {
+			return nil, fmt.Errorf("%s must be a string or list of strings", path)
+		}
+		return []string{node.Value}, nil
+	case yaml.SequenceNode:
+		if len(node.Content) == 0 {
+			return nil, fmt.Errorf("%s cannot be an empty list", path)
+		}
+		values := make([]string, 0, len(node.Content))
+		for _, item := range node.Content {
+			normalized := dereferenceYAMLNode(*item)
+			if normalized.Kind != yaml.ScalarNode || normalized.Tag != "!!str" {
+				return nil, fmt.Errorf("%s must contain only strings", path)
+			}
+			values = append(values, normalized.Value)
+		}
+		return values, nil
+	default:
+		return nil, fmt.Errorf("%s must be a string or list of strings", path)
+	}
+}
+
+func dereferenceYAMLNode(node yaml.Node) yaml.Node {
+	for node.Kind == yaml.AliasNode && node.Alias != nil {
+		node = *node.Alias
+	}
+	return node
+}
+
+func supportsInstructionHooks(event HookEvent) bool {
+	switch event {
+	case HookBeforeEverything, HookAfterEverything,
+		HookBeforePlan, HookAfterPlan, HookOnPlanError,
+		HookBeforeApply, HookAfterApply, HookOnApplyError,
+		HookOnError:
+		return true
+	default:
+		return false
+	}
+}
+
 func JSONSchema() string {
+	stringOrList := []any{
+		map[string]any{"type": "string", "minLength": 1},
+		map[string]any{"type": "array", "minItems": 1, "items": map[string]any{"type": "string", "minLength": 1}},
+	}
+	hookObject := map[string]any{
+		"type":                 "object",
+		"additionalProperties": false,
+		"anyOf": []any{
+			map[string]any{"required": []string{"instructions"}},
+			map[string]any{"required": []string{"commands"}},
+		},
+		"properties": map[string]any{
+			"instructions": map[string]any{"oneOf": stringOrList},
+			"commands":     map[string]any{"oneOf": stringOrList},
+		},
+	}
+	commandHookObject := map[string]any{
+		"type":                 "object",
+		"additionalProperties": false,
+		"required":             []string{"commands"},
+		"properties": map[string]any{
+			"commands": map[string]any{"oneOf": stringOrList},
+		},
+	}
+	hookValue := func(instructions bool) map[string]any {
+		object := commandHookObject
+		if instructions {
+			object = hookObject
+		}
+		return map[string]any{
+			"oneOf": []any{
+				map[string]any{"type": "string", "minLength": 1},
+				map[string]any{"type": "array", "minItems": 1, "items": map[string]any{"type": "string", "minLength": 1}},
+				object,
+			},
+		}
+	}
+	hookProperties := map[string]any{}
+	for _, event := range hookEvents {
+		hookProperties[string(event)] = hookValue(supportsInstructionHooks(event))
+	}
+	for alias := range hookAliases {
+		hookProperties[alias] = hookValue(false)
+	}
+
 	schema := map[string]any{
 		"$schema":              "https://json-schema.org/draft/2020-12/schema",
 		"title":                "GUIHO Mirror YAML Configuration",
@@ -430,13 +687,9 @@ func JSONSchema() string {
 				},
 			},
 			"hooks": map[string]any{
-				"type": "object",
-				"additionalProperties": map[string]any{
-					"oneOf": []any{
-						map[string]any{"type": "string", "minLength": 1},
-						map[string]any{"type": "array", "minItems": 1, "items": map[string]any{"type": "string", "minLength": 1}},
-					},
-				},
+				"type":                 "object",
+				"additionalProperties": false,
+				"properties":           hookProperties,
 			},
 		},
 	}

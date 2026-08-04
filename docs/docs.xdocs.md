@@ -13,7 +13,7 @@ children:
 files: {}
 documents:
   "2026-05-16-mirror-v3-open-source-readiness.md": "Markdown companion document in docs."
-  "2026-06-07-mirror-hooks-design.md": "Markdown companion document in docs."
+  "2026-06-07-mirror-hooks-design.md": "Proposed Go and YAML v4.1.0 architecture for AI instruction hooks, command hooks, lifecycle errors, safety, and reporting."
   "cli-contextual-help-design.md": "Approved design and implementation plan for contextual CLI help and usage errors."
   "xdocs-overview.md": "Generated companion overview that links back to this directory xdocs descriptor."
 tags:

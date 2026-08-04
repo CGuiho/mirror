@@ -5,6 +5,7 @@ parent: mirror-docs-reviews
 children: []
 files: {}
 documents:
+  mirror-v4.1.0-hooks-review.md: Reviews the typed hook contract, execution lifecycle, trust boundary, error routing, and release boundary for issue 24.
   mirror-go-production-migration-review.md: Accepts the local Go/Cobra production migration and records the public-release boundary.
   mirror-3.6.0-schema-and-yaml-review.md: Reviews issues 14 and 15 implementation and residual release risk.
   rfc-0034-cli-compliance-migration-review.md: Reviews the implemented Mirror RFC 0034 migration against MR-01 through MR-16.
@@ -28,6 +29,7 @@ keywords:
   - YAML frontmatter
   - posix sh
   - curl pipe
+  - lifecycle hooks
 flags: []
 status: stable
 ---

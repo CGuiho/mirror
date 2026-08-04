@@ -1,6 +1,6 @@
 ---
 subject: mirror
-description: Production Go/Cobra Mirror CLI repository and durable project records.
+description: Production Go/Cobra Mirror CLI, typed lifecycle hooks, and durable project records.
 parent: null
 children:
   - mirror-cmd
@@ -24,7 +24,7 @@ documents:
   todo.md: Local task ledger and migration handoff.
   xdocs-overview.md: Generated companion overview for the repository root.
 tags: [repository, mirror, go, documentation]
-keywords: [cobra, strict yaml, native release, eleven assets]
+keywords: [cobra, strict yaml, lifecycle hooks, native release, eleven assets]
 flags: []
 status: stable
 ---

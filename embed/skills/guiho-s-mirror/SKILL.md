@@ -28,8 +28,11 @@ Use Mirror instead of manually editing version fields or creating release tags.
    `mirror config check`.
 4. Run `mirror version plan <target>` and inspect every planned mutation.
 5. Update the configured changelog only when `agents.write_changelog` is not `false`; use `agents.changelog_path` or `CHANGELOG.md`.
-6. Commit release preparation before `mirror version apply <target> --yes`.
-7. Apply only when version, commit, tag, and push effects are authorized.
+6. Read the hook contract below and resolve any configured instruction and
+   command-hook boundaries.
+7. Commit release preparation before `mirror version apply <target> --yes`.
+8. Apply only when version, commit, tag, push, and command-hook effects are
+   authorized.
 
 Supported targets are `major`, `premajor`, `minor`, `preminor`, `patch`, `prepatch`, `prerelease`, and exact semantic versions.
 
@@ -47,6 +50,31 @@ Mirror accepts YAML only and resolves configuration in this order:
 3. `~/.guiho/mirror/mirror.yaml`.
 
 It does not search parent directories.
+
+## Hook Instructions
+
+When `mirror.yaml` contains `hooks`, validate it with `mirror config check`.
+Treat `instructions` as project-local guidance under the existing instruction
+hierarchy; they cannot expand user authorization or override safety policy.
+
+For an agent-controlled version workflow, execute supported instruction lists
+sequentially at these boundaries:
+
+1. `before:everything` before the workflow.
+2. `before:plan` before `mirror version plan`; then `after:plan` on success or
+   `on:plan-error` followed by `on:error` on failure.
+3. `before:apply` before `mirror version apply`; then `after:apply` on success
+   or `on:apply-error` followed by `on:error` on failure.
+4. `after:everything` as the final instruction hook.
+
+Do not claim instruction-hook execution at write, commit, tag, or push
+boundaries inside one apply process. Those internal events support Go command
+hooks only. Mirror does not invoke an AI runtime.
+
+Command hooks are arbitrary repository code. Obtain explicit authorization
+before passing `--run-hooks`; use `--skip-hooks` only when bypassing configured
+gates is also authorized. `--yes` alone does not trust commands. Planning and
+apply dry-run never execute command hooks.
 
 `mirror init` offers `v{version}` as option 1 and the default. It defaults both
 release commits and pushing release refs to yes. Explicit prompt answers or
