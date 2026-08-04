@@ -5,6 +5,7 @@ parent: "mirror-docs"
 children: []
 files: {}
 documents:
+  "mirror-v4.1.0-hooks.md": "Local typed-config, lifecycle, trust, JSON, Go quality, exact-asset, CLI, and XDocs evidence for issue 24."
   "mirror-go-production-migration.md": "Local Go source, exact asset, Windows binary, installer, workflow, and release-boundary evidence."
   "mirror-3.6.0-schema-and-yaml.md": "Validation evidence for global schema persistence, YAML migration, welcome behavior, and the 3.6.0 release."
   "cli-contextual-help.md": "Validation evidence for contextual CLI help and usage errors."
@@ -34,6 +35,7 @@ keywords:
   - YAML frontmatter
   - posix sh
   - curl pipe
+  - lifecycle hooks
 flags: []
 status: stable
 ---

@@ -13,9 +13,9 @@ keywords: [strict yaml, transactional upgrade, release matrix]
 
 `main.go` passes linker-injected build metadata into `cmd.NewRootCommand` and
 maps typed failures to stable process exit codes. `cmd/` constructs one fresh
-Cobra tree per execution. `pkg/` contains configuration, versioning, update,
-upgrade, maintenance, SemVer, and release-matrix domains; these packages do not
-own CLI routing.
+Cobra tree per execution. `pkg/` contains configuration, hooks, versioning,
+update, upgrade, maintenance, SemVer, and release-matrix domains; these
+packages do not own CLI routing.
 
 The argument-free root route synchronously bootstraps embedded agent resources
 before rendering its banner. Skill replacement is a two-root transaction and
@@ -27,6 +27,19 @@ Configuration uses `go.yaml.in/yaml/v3` with known-field rejection and typed
 validation. Lookup order is explicit `--config`, the effective working
 directory, then the user's global Mirror directory. TOML and Viper are not part
 of the production contract.
+
+`pkg/config` owns the closed event catalog and typed hook payloads. `pkg/hooks`
+owns the platform shell runner, private JSON context, environment projection,
+captured results, and primary/secondary error aggregation. `cmd/version.go`
+owns confirmation and hook trust plus the everything/plan/apply lifecycle.
+`pkg/versioning` owns the write/commit/tag/push boundaries and existing
+rollback behavior. The hook package imports neither Cobra nor an AI runtime.
+
+AI instructions remain configuration data consumed by the embedded
+`guiho-s-mirror` skill at agent-controlled major-action boundaries. They are
+not inserted into managed project instructions, elevated in instruction
+priority, or executed by the Go process. Read-only commands execute no command
+hooks, and JSON mode captures hook output inside one structured envelope.
 
 The foreground startup path reads local update state only. Detached workers use
 bounded HTTP clients and platform guards. Upgrade candidates are streamed to a

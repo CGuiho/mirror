@@ -8,13 +8,13 @@ files:
   errors.go: Stable process error categories and exit codes.
   helptree.go: Deterministic command-tree and Markdown help generation.
   config.go: Configuration commands.
-  version.go: Semantic-version commands.
+  version.go: Semantic-version commands, hook trust, and top-level hook lifecycle.
   agent.go: Explicit embedded skill, raw prompt, and metadata-free instruction commands.
   upgrade.go: Native release check, catalog, upgrade, and rollback commands.
   uninstall.go: Cross-platform uninstall command.
 documents: {}
 tags: [go, cobra, cli]
-keywords: [command tree, help docs, exit codes, managed instruction]
+keywords: [command tree, help docs, exit codes, managed instruction, hook trust]
 flags: []
 status: stable
 ---

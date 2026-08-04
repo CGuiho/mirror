@@ -95,6 +95,81 @@ func TestJSONSchema(t *testing.T) {
 	assert.Contains(t, schema, "project")
 	assert.Contains(t, schema, "version")
 	assert.Contains(t, schema, "git")
+	assert.Contains(t, schema, `"before:apply"`)
+	assert.Contains(t, schema, `"on_push_error"`)
+	assert.Contains(t, schema, `"instructions"`)
+	assert.Contains(t, schema, `"commands"`)
+}
+
+func TestLoadNormalizesCanonicalAndCompatibilityHooks(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "mirror.yaml")
+	require.NoError(t, os.WriteFile(path, []byte(`schema: 1
+project: {name: mirror}
+version: {source: git, output: [git]}
+git: {tag_template: "{name}/v{version}"}
+hooks:
+  "before:apply":
+    instructions: Review the release plan.
+    commands: ["go test ./...", "go vet ./..."]
+  on_push_error: ./devops/report-failure.sh
+`), 0o644))
+
+	cfg, err := Load(path)
+	require.NoError(t, err)
+	assert.Equal(t, HookDefinition{
+		Instructions: []string{"Review the release plan."},
+		Commands:     []string{"go test ./...", "go vet ./..."},
+	}, cfg.Hooks[HookBeforeApply])
+	assert.Equal(t, []string{"./devops/report-failure.sh"}, cfg.Hooks[HookOnPushError].Commands)
+	assert.True(t, cfg.Hooks.HasCommands())
+	assert.Equal(t, 3, cfg.Hooks.CommandCount())
+	assert.Equal(t, []HookEvent{HookBeforeApply, HookOnPushError}, cfg.Hooks.CommandEvents())
+}
+
+func TestLoadRejectsInvalidHookContracts(t *testing.T) {
+	tests := map[string]string{
+		"unknown event": `hooks:
+  before_release: echo no
+`,
+		"duplicate alias": `hooks:
+  before_apply: echo one
+  "before:apply": echo two
+`,
+		"unknown field": `hooks:
+  "before:apply": {command: echo no}
+`,
+		"empty definition": `hooks:
+  "before:apply": {}
+`,
+		"empty list": `hooks:
+  "before:apply": {commands: []}
+`,
+		"empty instruction list with commands": `hooks:
+  "before:apply": {instructions: [], commands: echo no}
+`,
+		"non-string command": `hooks:
+  "before:apply": {commands: [true]}
+`,
+		"internal instruction": `hooks:
+  "before:commit": {instructions: Review the commit.}
+`,
+		"alias instruction": `hooks:
+  before_apply: {instructions: Review the plan.}
+`,
+	}
+	for name, hooks := range tests {
+		t.Run(name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "mirror.yaml")
+			content := `schema: 1
+project: {name: mirror}
+version: {source: git, output: [git]}
+git: {tag_template: "{name}/v{version}"}
+` + hooks
+			require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
+			_, err := Load(path)
+			require.Error(t, err)
+		})
+	}
 }
 
 func TestLoadRejectsMultipleDocuments(t *testing.T) {

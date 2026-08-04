@@ -81,6 +81,33 @@ Relative targets are rejected until the initial exact version exists.
 Inspect the complete generated interface with `mirror --help-tree` or
 `mirror --help-docs`. Use `--format json` for machine-readable output.
 
+## Hooks
+
+`mirror.yaml` can attach AI-agent instructions and executable commands to the
+version lifecycle:
+
+```yaml
+hooks:
+  "before:apply":
+    instructions:
+      - Review the release plan and confirm the changelog is complete.
+    commands:
+      - go test -count=1 ./...
+  "on:push-error":
+    commands:
+      - ./devops/report-release-failure.sh
+```
+
+Mirror-aware agents follow instructions at the agent-controlled everything,
+plan, and apply boundaries. The Go CLI executes commands around plan, apply,
+the write batch, commit, tag, push, and their errors. Read-only commands and
+`version apply --dry-run` never execute command hooks.
+
+Command hooks are repository-controlled code and require a separate trust
+choice from `--yes`: pass `--run-hooks` to execute them or `--skip-hooks` to
+apply without them. Hook output is captured in structured results and cannot
+corrupt `--format json` stdout.
+
 ## Upgrade
 
 ```text

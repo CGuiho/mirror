@@ -16,6 +16,7 @@ import (
 	"time"
 
 	embedFS "github.com/CGuiho/mirror/embed"
+	"github.com/CGuiho/mirror/pkg/hooks"
 	"github.com/CGuiho/mirror/pkg/maintenance"
 	"github.com/CGuiho/mirror/pkg/update"
 	"github.com/CGuiho/mirror/pkg/updater"
@@ -41,6 +42,7 @@ type Dependencies struct {
 	Getwd            func() (string, error)
 	HomeDir          func() (string, error)
 	Runner           versioning.Runner
+	HookRunner       hooks.CommandRunner
 	HTTPClient       *http.Client
 	Now              func() time.Time
 	Executable       func() (string, error)
@@ -220,6 +222,9 @@ func normalizeDependencies(deps Dependencies) Dependencies {
 	}
 	if deps.Runner == nil {
 		deps.Runner = versioning.ExecRunner{}
+	}
+	if deps.HookRunner == nil {
+		deps.HookRunner = hooks.ExecRunner{}
 	}
 	if deps.Now == nil {
 		deps.Now = time.Now

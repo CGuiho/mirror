@@ -5,6 +5,7 @@ parent: mirror-docs
 children: []
 files: {}
 documents:
+  mirror-v4.1.0-hooks.md: Approved execution plan for typed hook configuration, runtime lifecycle, agent guidance, validation, and PR delivery.
   mirror-go-production-migration.md: Executed plan making Go/Cobra the production and delivery authority.
   mirror-3.6.0-schema-and-yaml.md: Approved implementation and release plan for issues 14 and 15 and shared CLI startup behavior.
   rfc-0034-cli-compliance-migration.md: Approved breaking migration plan for TypeBox, YAML, startup, help, agents, upgrades, installers, npm bootstrap, fourteen assets, docs, and validation.
@@ -27,6 +28,7 @@ keywords:
   - download progress
   - linux upgrade
   - publish channels
+  - lifecycle hooks
 flags: []
 status: stable
 ---

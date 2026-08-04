@@ -1,6 +1,8 @@
 package versioning
 
 import (
+	"context"
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -8,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/CGuiho/mirror/pkg/config"
+	mirrorhooks "github.com/CGuiho/mirror/pkg/hooks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -133,6 +136,74 @@ func TestApplyPushesOnlyPlannedTag(t *testing.T) {
 	assert.Contains(t, joined, "push origin refs/tags/mirror/v2.0.0:refs/tags/mirror/v2.0.0")
 }
 
+func TestApplyRunsOneWriteBatchAndRollsBackWhenAfterWriteHookFails(t *testing.T) {
+	root := t.TempDir()
+	first := filepath.Join(root, "package.json")
+	second := filepath.Join(root, "secondary.json")
+	for _, path := range []string{first, second} {
+		require.NoError(t, os.WriteFile(path, []byte("{\"name\":\"example\",\"version\":\"1.2.3\"}\n"), 0o644))
+	}
+	plan := &VersionPlan{
+		CurrentVersion: "1.2.3", NextVersion: "1.2.4", Source: "package.json", Output: []string{"package.json"},
+		Actions: []VersionPlanAction{
+			{Type: "write-file", Adapter: "package.json", Path: first, CurrentVersion: "1.2.3", NextVersion: "1.2.4"},
+			{Type: "write-file", Adapter: "package.json", Path: second, CurrentVersion: "1.2.3", NextVersion: "1.2.4"},
+		},
+	}
+	hookRunner := &versionHookRunner{failures: map[string]int{"after": 6}}
+	session, err := mirrorhooks.NewSession(mirrorhooks.Options{
+		Config: config.HooksConfig{
+			config.HookBeforeWrite:  {Commands: []string{"before"}},
+			config.HookAfterWrite:   {Commands: []string{"after"}},
+			config.HookOnWriteError: {Commands: []string{"error"}},
+		},
+		CWD: root, Runner: hookRunner, TempDir: t.TempDir(), JSON: true,
+	})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, session.Cleanup()) })
+
+	err = ApplyPlanWithOptions(plan, root, ApplyOptions{
+		Confirmed: true, Context: context.Background(), Hooks: session,
+	})
+	require.ErrorContains(t, err, "exit code 6")
+	assert.Equal(t, []string{"before:write", "after:write", "on:write-error"}, hookRunner.events)
+	assert.Empty(t, plan.Completed)
+	for _, path := range []string{first, second} {
+		content, readErr := os.ReadFile(path)
+		require.NoError(t, readErr)
+		assert.Contains(t, string(content), `"version":"1.2.3"`)
+	}
+}
+
+func TestApplyReportsPartialPushEffectsToErrorHook(t *testing.T) {
+	root := t.TempDir()
+	plan := &VersionPlan{
+		Tag:         "mirror/v2.0.0",
+		AllowDirty:  true,
+		PushEnabled: true,
+		Actions: []VersionPlanAction{
+			{Type: "git-push", IncludeCommit: true, IncludeTags: true},
+		},
+	}
+	hookRunner := &versionHookRunner{}
+	session, err := mirrorhooks.NewSession(mirrorhooks.Options{
+		Config: config.HooksConfig{
+			config.HookOnPushError: {Commands: []string{"capture"}},
+		},
+		CWD: root, Runner: hookRunner, TempDir: t.TempDir(), JSON: true,
+	})
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, session.Cleanup()) })
+
+	err = ApplyPlanWithOptions(plan, root, ApplyOptions{
+		Confirmed: true, Runner: &failTagPushRunner{}, Context: context.Background(), Hooks: session,
+	})
+	require.ErrorContains(t, err, "push exact Git tag")
+	assert.Equal(t, []string{"push:commit"}, plan.Completed)
+	require.Len(t, hookRunner.contexts, 1)
+	assert.Equal(t, []string{"push:commit"}, hookRunner.contexts[0].Completed)
+}
+
 func validConfig() *config.MirrorConfig {
 	return &config.MirrorConfig{
 		Schema:  1,
@@ -169,6 +240,50 @@ func runGit(t *testing.T, cwd string, args ...string) string {
 
 type recordingRunner struct {
 	calls []string
+}
+
+type versionHookRunner struct {
+	events   []string
+	failures map[string]int
+	contexts []mirrorhooks.Context
+}
+
+func (runner *versionHookRunner) Run(_ context.Context, _ string, command string, environment []string) (mirrorhooks.CommandOutput, error) {
+	var contextPath string
+	for _, value := range environment {
+		if strings.HasPrefix(value, "MIRROR_HOOK_EVENT=") {
+			runner.events = append(runner.events, strings.TrimPrefix(value, "MIRROR_HOOK_EVENT="))
+		}
+		if strings.HasPrefix(value, "MIRROR_CONTEXT_PATH=") {
+			contextPath = strings.TrimPrefix(value, "MIRROR_CONTEXT_PATH=")
+		}
+	}
+	if contextPath != "" {
+		data, err := os.ReadFile(contextPath)
+		if err != nil {
+			return mirrorhooks.CommandOutput{}, err
+		}
+		var document struct {
+			Context mirrorhooks.Context `json:"context"`
+		}
+		if err := json.Unmarshal(data, &document); err != nil {
+			return mirrorhooks.CommandOutput{}, err
+		}
+		runner.contexts = append(runner.contexts, document.Context)
+	}
+	return mirrorhooks.CommandOutput{ExitCode: runner.failures[command]}, nil
+}
+
+type failTagPushRunner struct {
+	recordingRunner
+}
+
+func (runner *failTagPushRunner) Run(cwd, name string, args ...string) ([]byte, error) {
+	output, _ := runner.recordingRunner.Run(cwd, name, args...)
+	if name == "git" && len(args) > 2 && args[0] == "push" && strings.HasPrefix(args[2], "refs/tags/") {
+		return output, assert.AnError
+	}
+	return output, nil
 }
 
 type failCommitRunner struct {

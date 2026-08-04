@@ -5,8 +5,12 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
+	"strings"
+
 	"github.com/CGuiho/mirror/pkg/config"
+	"github.com/CGuiho/mirror/pkg/hooks"
 	"github.com/CGuiho/mirror/pkg/versioning"
 	"github.com/spf13/cobra"
 )
@@ -94,27 +98,48 @@ func newVersionPlanCommand(deps Dependencies) *cobra.Command {
 func newVersionApplyCommand(deps Dependencies) *cobra.Command {
 	var dryRun bool
 	var confirmed bool
+	var runHooks bool
+	var skipHooks bool
 	command := &cobra.Command{
 		Use:   "apply <target>",
 		Short: "Apply a version plan and its exact Git refs.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(command *cobra.Command, args []string) error {
-			plan, err := buildPlan(command, deps, args[0])
+			if runHooks && skipHooks {
+				return withExitCode(2, fmt.Errorf("--run-hooks and --skip-hooks are mutually exclusive"))
+			}
+			cfg, path, cwd, err := loadVersionInputs(command, deps)
 			if err != nil {
 				return err
 			}
 			if dryRun {
+				plan, err := versioning.BuildPlanWithRunner(cfg, path, args[0], cwd, deps.Runner)
+				if err != nil {
+					return err
+				}
 				plan.DryRun = true
 				return renderVersionPlan(command, deps, plan)
 			}
-			cwd, err := effectiveCWD(command, deps)
+			if !confirmed {
+				return fmt.Errorf("refusing to apply without confirmation; pass --yes")
+			}
+			executeHooks, err := resolveCommandHookTrust(deps, cfg.Hooks, runHooks, skipHooks)
 			if err != nil {
 				return err
 			}
-			if err := versioning.ApplyPlanWithOptions(plan, cwd, versioning.ApplyOptions{
-				Confirmed: confirmed,
-				Runner:    deps.Runner,
-			}); err != nil {
+			plan, results, stage, err := executeVersionApply(command, deps, cfg, path, cwd, args[0], executeHooks)
+			if err != nil {
+				if outputFormat(command) == "json" {
+					failure := map[string]any{"stage": stage, "error": err.Error(), "hooks": results}
+					if plan != nil {
+						failure["plan"] = plan
+					}
+					if writeErr := writeJSON(deps.Out, map[string]any{
+						"ok": false, "command": command.CommandPath(), "result": failure,
+					}); writeErr != nil {
+						return writeErr
+					}
+				}
 				return err
 			}
 			return renderVersionPlan(command, deps, plan)
@@ -122,7 +147,156 @@ func newVersionApplyCommand(deps Dependencies) *cobra.Command {
 	}
 	command.Flags().BoolVar(&dryRun, "dry-run", false, "Build the plan without mutation.")
 	command.Flags().BoolVar(&confirmed, "yes", false, "Apply without an interactive confirmation prompt.")
+	command.Flags().BoolVar(&runHooks, "run-hooks", false, "Trust and execute configured command hooks.")
+	command.Flags().BoolVar(&skipHooks, "skip-hooks", false, "Apply without executing configured command hooks.")
 	return command
+}
+
+func loadVersionInputs(command *cobra.Command, deps Dependencies) (*config.MirrorConfig, string, string, error) {
+	cfg, path, err := loadConfig(command, deps)
+	if err != nil {
+		return nil, "", "", err
+	}
+	if err := applyVersionOverrides(command, cfg); err != nil {
+		return nil, "", "", err
+	}
+	reportLoadedConfig(deps, path)
+	cwd, err := effectiveCWD(command, deps)
+	if err != nil {
+		return nil, "", "", err
+	}
+	return cfg, path, cwd, nil
+}
+
+func resolveCommandHookTrust(deps Dependencies, configured config.HooksConfig, runHooks, skipHooks bool) (bool, error) {
+	if !configured.HasCommands() {
+		return false, nil
+	}
+	events := configured.CommandEvents()
+	names := make([]string, 0, len(events))
+	for _, event := range events {
+		names = append(names, string(event))
+	}
+	fmt.Fprintf(deps.Err, "command hooks configured: %d across %s\n", configured.CommandCount(), strings.Join(names, ", "))
+	if runHooks {
+		return true, nil
+	}
+	if skipHooks {
+		return false, nil
+	}
+	if !deps.IsTerminal() {
+		return false, fmt.Errorf("command hooks are configured; pass --run-hooks to trust them or --skip-hooks to bypass them")
+	}
+	fmt.Fprint(deps.Err, "Run configured command hooks? [y/N] ")
+	answer, err := bufio.NewReader(deps.In).ReadString('\n')
+	if err != nil && strings.TrimSpace(answer) == "" {
+		return false, fmt.Errorf("read command-hook confirmation: %w", err)
+	}
+	switch strings.ToLower(strings.TrimSpace(answer)) {
+	case "y", "yes":
+		return true, nil
+	default:
+		return false, nil
+	}
+}
+
+func executeVersionApply(
+	command *cobra.Command,
+	deps Dependencies,
+	cfg *config.MirrorConfig,
+	path, cwd, target string,
+	executeHooks bool,
+) (*versioning.VersionPlan, []hooks.Result, string, error) {
+	if !executeHooks {
+		plan, err := versioning.BuildPlanWithRunner(cfg, path, target, cwd, deps.Runner)
+		if err != nil {
+			return nil, nil, "plan", err
+		}
+		err = versioning.ApplyPlanWithOptions(plan, cwd, versioning.ApplyOptions{
+			Confirmed: true, Runner: deps.Runner, Context: command.Context(),
+		})
+		return plan, nil, "apply", err
+	}
+
+	session, err := hooks.NewSession(hooks.Options{
+		Config: cfg.Hooks, CWD: cwd, ConfigPath: path, Target: target,
+		Runner: deps.HookRunner, Reporter: deps.Err, JSON: outputFormat(command) == "json",
+	})
+	if err != nil {
+		return nil, nil, "everything", err
+	}
+
+	var plan *versioning.VersionPlan
+	stage := "everything"
+	primary := func() error {
+		baseContext := hooks.Context{Stage: "everything"}
+		if err := session.Run(command.Context(), config.HookBeforeEverything, baseContext); err != nil {
+			return err
+		}
+		stage = "plan"
+		if err := session.Run(command.Context(), config.HookBeforePlan, hooks.Context{Stage: "plan"}); err != nil {
+			return err
+		}
+		built, err := versioning.BuildPlanWithRunner(cfg, path, target, cwd, deps.Runner)
+		if err != nil {
+			return err
+		}
+		plan = built
+		planContext := versioning.HookContextForPlan(plan)
+		if err := session.Run(command.Context(), config.HookAfterPlan, planContext); err != nil {
+			return err
+		}
+
+		stage = "apply"
+		planContext.Stage = "apply"
+		if err := session.Run(command.Context(), config.HookBeforeApply, planContext); err != nil {
+			return err
+		}
+		if err := versioning.ApplyPlanWithOptions(plan, cwd, versioning.ApplyOptions{
+			Confirmed: true, Runner: deps.Runner, Context: command.Context(), Hooks: session,
+		}); err != nil {
+			return err
+		}
+		planContext = versioning.HookContextForPlan(plan)
+		planContext.Stage = "apply"
+		if err := session.Run(command.Context(), config.HookAfterApply, planContext); err != nil {
+			return err
+		}
+		return nil
+	}()
+
+	secondary := session.SecondaryErrors()
+	finalContext := versioning.HookContextForPlan(plan)
+	if primary != nil {
+		finalContext.ErrorStage = stage
+		finalContext.ErrorMessage = primary.Error()
+		finalContext.ErrorExitCode = hooks.ExitCode(primary)
+		finalContext.Secondary = hooks.Strings(secondary)
+		switch stage {
+		case "plan":
+			secondary = append(secondary, session.RunBestEffort(command.Context(), config.HookOnPlanError, finalContext)...)
+		case "apply":
+			secondary = append(secondary, session.RunBestEffort(command.Context(), config.HookOnApplyError, finalContext)...)
+		}
+		finalContext.Secondary = hooks.Strings(secondary)
+		secondary = append(secondary, session.RunBestEffort(command.Context(), config.HookOnError, finalContext)...)
+	}
+	finalContext.Secondary = hooks.Strings(secondary)
+	finalizerFailures := session.RunBestEffort(command.Context(), config.HookAfterEverything, finalContext)
+	secondary = append(secondary, finalizerFailures...)
+	if cleanupErr := session.Cleanup(); cleanupErr != nil {
+		secondary = append(secondary, fmt.Errorf("remove hook context: %w", cleanupErr))
+	}
+	results := session.Results()
+	if plan != nil {
+		plan.HookResults = results
+	}
+	if primary == nil && len(secondary) > 0 {
+		primary = secondary[0]
+		secondary = secondary[1:]
+		stage = "everything"
+	}
+	return plan, results, stage, hooks.WithSecondary(primary, secondary)
 }
 
 func buildPlan(command *cobra.Command, deps Dependencies, target string) (*versioning.VersionPlan, error) {
