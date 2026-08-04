@@ -1,13 +1,4 @@
----
-name: GUIHO Mirror
-purpose: Introduce the production Go/Cobra Mirror CLI and its delivery contract.
-description: Repository overview for GUIHO Mirror.
-created: 2026-07-18
-owner: mirror
-flags: []
-tags: [mirror, cli, go, cobra]
-keywords: [semantic versioning, yaml, native binaries]
----
+#### &copy; 2026 [GUIHO](https://guiho.co) as represented by [Cristóvão GUIHO](https://guiho.co/cguiho) All Rights Reserved.
 
 # GUIHO Mirror
 
