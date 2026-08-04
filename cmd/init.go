@@ -58,7 +58,7 @@ func newInitCommand(deps Dependencies) *cobra.Command {
 			}
 
 			if source == "" {
-				source = detectSource(cwd)
+				source = "git"
 			}
 			resolvedTag := tagTemplate
 			if resolvedTag == "" {
@@ -103,7 +103,7 @@ func newInitCommand(deps Dependencies) *cobra.Command {
 			return renderInitResult(command, deps, path, "created")
 		},
 	}
-	command.Flags().StringVar(&source, "source", "", "Select package.json, jsr.json, or git; default detects the project.")
+	command.Flags().StringVar(&source, "source", "", "Select package.json, jsr.json, or git; default git.")
 	command.Flags().BoolVar(&force, "force", false, "Replace an existing valid configuration.")
 	command.Flags().StringVar(&tagTemplate, "tag-template", "", "Select v{version}, {name}@{version}, or {name}/v{version}; default v{version}.")
 	command.Flags().BoolVar(&commit, "commit", true, "Create release commits (default true).")
@@ -122,16 +122,6 @@ func renderInitResult(command *cobra.Command, deps Dependencies, path, status st
 	}
 	fmt.Fprintf(deps.Out, "%s: %s\n", status, path)
 	return nil
-}
-
-func detectSource(cwd string) string {
-	if _, err := os.Stat(filepath.Join(cwd, "package.json")); err == nil {
-		return "package.json"
-	}
-	if _, err := os.Stat(filepath.Join(cwd, "jsr.json")); err == nil {
-		return "jsr.json"
-	}
-	return "git"
 }
 
 func renderInitialConfig(cwd, source, tagTemplate string, commit, push bool) (string, error) {

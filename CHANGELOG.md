@@ -18,6 +18,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.1.0-alpha.1] - 2026-08-05
+
+### Changed
+
+- Made `mirror init` default to Git as the version source and only Git as the
+  generated output, even when `package.json` or `jsr.json` exists.
+- Preserved explicit `--source package.json` and `--source jsr.json` as
+  authoritative overrides, and kept release commit/push prompts yes-by-default.
+
 ## [4.1.0-alpha.0] - 2026-08-05
 
 ### Added

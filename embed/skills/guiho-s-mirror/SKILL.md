@@ -76,9 +76,10 @@ before passing `--run-hooks`; use `--skip-hooks` only when bypassing configured
 gates is also authorized. `--yes` alone does not trust commands. Planning and
 apply dry-run never execute command hooks.
 
-`mirror init` offers `v{version}` as option 1 and the default. It defaults both
-release commits and pushing release refs to yes. Explicit prompt answers or
-`--tag-template`, `--commit=false`, and `--push=false` remain authoritative.
+`mirror init` defaults to Git as version source and output, offers `v{version}`
+as option 1 and the default, and defaults both release commits and pushing
+release refs to yes. Explicit prompt answers or `--source`, `--tag-template`,
+`--commit=false`, and `--push=false` remain authoritative.
 
 ## Release Boundary
 

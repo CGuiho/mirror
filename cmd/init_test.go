@@ -12,16 +12,32 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestInitNonInteractiveDefaultsToSimpleTagCommitAndPush(t *testing.T) {
+func TestInitNonInteractiveDefaultsToGitSourceSimpleTagCommitAndPush(t *testing.T) {
 	root := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(root, "package.json"), []byte(`{"name":"example","version":"1.2.3"}`), 0o644))
 	deps := testDependenciesAt(root, &bytes.Buffer{}, &bytes.Buffer{})
-	require.NoError(t, ExecuteContext(context.Background(), deps, BuildInfo{Version: "dev"}, []string{"init", "--source", "git"}))
+	require.NoError(t, ExecuteContext(context.Background(), deps, BuildInfo{Version: "dev"}, []string{"init"}))
 	content, err := os.ReadFile(filepath.Join(root, "mirror.yaml"))
 	require.NoError(t, err)
 	text := string(content)
+	assert.Contains(t, text, `name: "`+filepath.Base(root)+`"`)
+	assert.Contains(t, text, `source: "git"`)
+	assert.Contains(t, text, `output: ["git"]`)
 	assert.Contains(t, text, `tag_template: "v{version}"`)
 	assert.Contains(t, text, "commit: true")
 	assert.Contains(t, text, "push: true")
+}
+
+func TestInitExplicitPackageSourceRemainsAuthoritative(t *testing.T) {
+	root := t.TempDir()
+	deps := testDependenciesAt(root, &bytes.Buffer{}, &bytes.Buffer{})
+	require.NoError(t, ExecuteContext(context.Background(), deps, BuildInfo{Version: "dev"}, []string{"init", "--source", "package.json"}))
+	content, err := os.ReadFile(filepath.Join(root, "mirror.yaml"))
+	require.NoError(t, err)
+	text := string(content)
+	assert.Contains(t, text, `name_source: "package.json"`)
+	assert.Contains(t, text, `source: "package.json"`)
+	assert.Contains(t, text, `output: ["package.json", "git"]`)
 }
 
 func TestInitInteractiveDefaultsAndExplicitSelections(t *testing.T) {

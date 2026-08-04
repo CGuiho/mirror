@@ -37,9 +37,10 @@ Stable exit codes are 0 success, 1 general failure, 2 usage, 3 configuration,
   only the prompt Markdown body, beginning with
   `## GUIHO Mirror Instruction Block`; release-asset frontmatter is excluded.
 - `mirror init` creates a YAML configuration without overwriting an existing
-  file unless explicitly requested. Its option-1 tag default is `v{version}`;
-  release commits and pushed refs default to yes. Explicit prompt answers or
-  flags remain authoritative.
+  file unless explicitly requested. Git is the default version source and only
+  default output; its option-1 tag default is `v{version}`; release commits and
+  pushed refs default to yes. Explicit prompt answers or flags remain
+  authoritative.
 - `mirror config check|show|schema` validates, displays, or emits the strict
   configuration contract. `schema --save` writes the global schema.
 - `mirror version current|next|plan|apply` reads, calculates, plans, or applies

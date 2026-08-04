@@ -60,9 +60,10 @@ mirror agent instruction apply
 mirror agent prompt list
 ```
 
-`mirror init` defaults to tag template `v{version}`, release commits enabled,
-and release-ref pushes enabled. Interactive option 1 and both `[Y/n]` prompts
-show those defaults; explicit answers and flags override them.
+`mirror init` defaults to Git as the version source and only Git as the output,
+tag template `v{version}`, release commits enabled, and release-ref pushes
+enabled. Interactive option 1 and both `[Y/n]` prompts show those defaults;
+explicit answers and flags override them.
 
 For a new Git-only repository with no version tags, start with an exact version,
 for example `mirror version plan 0.0.1` and `mirror version apply 0.0.1 --yes`.
