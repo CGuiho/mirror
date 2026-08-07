@@ -32,6 +32,31 @@ Installers map the host to an approved native asset, verify it against
 reconcile the managed instruction block without the prompt asset's YAML
 frontmatter, and verify `mirror v<version>`.
 
+### Alpha releases
+
+Pre-release versions such as `4.1.0-alpha.1` are published to GitHub Releases
+as prereleases. Both installers resolve `latest` to the newest stable release,
+so they skip alphas by default. Install a specific alpha by passing its exact
+version:
+
+PowerShell:
+
+```powershell
+$env:MIRROR_VERSION = '4.1.0-alpha.1'
+irm https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.ps1 | iex
+```
+
+Linux and macOS:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.sh | sh -s -- --version 4.1.0-alpha.1
+```
+
+An optional `mirror/v` or `v` prefix is accepted, for example
+`--version mirror/v4.1.0-alpha.1`. `MIRROR_VERSION` works for both installers
+and is the portable cross-shell choice. Alpha installs verify
+`mirror v<version>` exactly like stable installs.
+
 ## Quick Start
 
 ```text
