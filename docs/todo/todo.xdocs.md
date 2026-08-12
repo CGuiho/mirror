@@ -6,6 +6,7 @@ children:
   - mirror-docs-todo-done
 files: {}
 documents:
+  issue-28-instruction-hook-schema-parity.md: Defines the required generated, committed, and published schema parity outcome for GitHub issue 28.
   init-git-defaults.md: Tracks Git-first init defaults and yes-by-default release prompts for GitHub issue 26.
   mirror-v4.1.0-hooks.md: Defines typed YAML command and AI-instruction hooks for GitHub issue 24.
   global-mirror-schema.md: Tracks global TypeBox-derived schema persistence for GitHub issue 14.
@@ -44,6 +45,8 @@ keywords:
   - curl pipe
   - lifecycle hooks
   - init defaults
+  - issue 28
+  - schema parity
 flags: []
 status: stable
 ---

@@ -14,6 +14,24 @@ All Rights Reserved.
 
 # GUIHO Mirror TODO List
 
+## Issue 28 Instruction Hook Schema Parity
+
+- Status: in progress
+- Created: `2026-08-12T15:06:30+02:00`
+- Updated: `2026-08-12T17:59:03+02:00`
+- Outcome: Make the committed and subsequently published Mirror JSON Schema
+  exactly match the production Go generator so supported instruction-hook
+  objects no longer receive false editor diagnostics.
+- Spec:
+  [docs/todo/issue-28-instruction-hook-schema-parity.md](docs/todo/issue-28-instruction-hook-schema-parity.md)
+- Related files:
+  - [docs/plans/issue-28-instruction-hook-schema-parity.md](docs/plans/issue-28-instruction-hook-schema-parity.md) - Executable implementation and validation plan.
+- External: GitHub issue
+  [#28](https://github.com/CGuiho/mirror/issues/28).
+- Release boundary: a compatible patch is recommended after integration, but
+  version application, tagging, publication, and tagged-URL verification are
+  deferred pending separate authorization.
+
 ## Mirror Init Git Defaults
 
 - Status: testing

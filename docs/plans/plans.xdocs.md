@@ -5,6 +5,7 @@ parent: mirror-docs
 children: []
 files: {}
 documents:
+  issue-28-instruction-hook-schema-parity.md: Branch-aware executable plan for Go-generated schema parity, regression coverage, review, validation, integration, and deferred release verification.
   mirror-v4.1.0-hooks.md: Approved execution plan for typed hook configuration, runtime lifecycle, agent guidance, validation, and PR delivery.
   mirror-go-production-migration.md: Executed plan making Go/Cobra the production and delivery authority.
   mirror-3.6.0-schema-and-yaml.md: Approved implementation and release plan for issues 14 and 15 and shared CLI startup behavior.
@@ -29,6 +30,8 @@ keywords:
   - linux upgrade
   - publish channels
   - lifecycle hooks
+  - issue 28
+  - schema parity
 flags: []
 status: stable
 ---
