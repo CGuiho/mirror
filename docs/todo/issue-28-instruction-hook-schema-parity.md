@@ -3,6 +3,7 @@ name: Issue 28 Instruction Hook Schema Parity
 purpose: Define the required outcome and completion signals for GitHub issue 28.
 description: Tracks parity between Mirror's production Go JSON Schema generator and the committed schema served to YAML editors.
 created: 2026-08-12T15:06:30+02:00
+updated: 2026-08-12T23:59:00+02:00
 flags:
   - approved
   - implementation-ready
@@ -34,7 +35,7 @@ it.
 ## Todo Index
 
 - Task: `Issue 28 Instruction Hook Schema Parity`
-- Status: in progress
+- Status: testing
 - Index: [todo.md](../../todo.md)
 - External: [CGuiho/mirror#28](https://github.com/CGuiho/mirror/issues/28)
 - Plan: [issue-28-instruction-hook-schema-parity.md](../plans/issue-28-instruction-hook-schema-parity.md)
@@ -164,6 +165,35 @@ publication parity, not product behavior or architecture.
   until release effects are separately authorized.
 - Verify the raw `main` schema after merge and verify a tag-pinned URL only
   after an authorized release exists.
+
+## Execution State
+
+- Execution base: clean `main` at `9238b4e274fea918e6be0a08247a38c84a57d95e`.
+- Authorized deviation: the human explicitly authorized implementation directly
+  on `main` with commits and pushes, overriding the plan's branch, worktree,
+  and pull-request gates. No branch, worktree, or pull request was created;
+  parent Codex independently reviews the pushed `main` head. The
+  `0049`/`0050`/`0052` lifecycle gates are superseded by that direct-main
+  authorization.
+- Available-skill deviation: `guiho-s-0023-plan-executor` is not installed on
+  the execution machine; `guiho-a-0048-plan-executor` was followed directly.
+- S28-01 completed at commit `0e0a033`: exact generated-versus-committed parity
+  regression and hook-matrix structural assertions in `pkg/config/config_test.go`,
+  mechanically refreshed `mirror/schema/mirror.schema.json`.
+- S28-02 completed: `mirror/schema/schema.xdocs.md` no longer attributes the
+  artifact to TypeBox; `todo.md` and this spec moved to `testing`; local
+  validation evidence recorded in
+  [docs/validation/issue-28-instruction-hook-schema-parity.md](../validation/issue-28-instruction-hook-schema-parity.md).
+- No-change decisions: `README.md`, `mirror/DOCS.md`, `TECHNICAL.md`, and the
+  embedded Mirror skill already describe canonical hook objects correctly and
+  were left untouched.
+- Pre-existing XDocs blocker recorded: `xdocs.yaml` `scan.exclude` entries are
+  slash-delimited paths and fail with `scan.exclude entries must be non-empty
+  directory names`; `xdocs.yaml` was not edited and touched descriptors were
+  manually verified.
+- Mirror decision: recommend `patch` after integration; version application,
+  tagging, publication, and tag-pinned URL verification remain separately
+  authorized.
 
 ## References
 

@@ -21,6 +21,7 @@ documents:
   "powershell-invoke-expression-installer.md": "Parser, Go, exact-asset, stage-aware failure, and twice-run Invoke-Expression installer evidence for issue 19."
   "managed-mirror-instruction-body.md": "Raw prompt, metadata-free managed body, newline, idempotency, installer, and exact-asset evidence."
   "posix-sh-installer-pipe.md": "POSIX syntax, twice-run streamed installation, Go quality, exact assets, and hosted-gate evidence for issue 22."
+  "issue-28-instruction-hook-schema-parity.md": "Local generated-versus-committed schema parity, hook-matrix structural assertions, runtime fixtures, and delivery evidence for issue 28."
 tags:
   - "validation"
   - documentation
