@@ -3,7 +3,7 @@ name: Issue 28 Instruction Hook Schema Parity
 purpose: Define the required outcome and completion signals for GitHub issue 28.
 description: Tracks parity between Mirror's production Go JSON Schema generator and the committed schema served to YAML editors.
 created: 2026-08-12T15:06:30+02:00
-updated: 2026-08-12T23:59:00+02:00
+updated: 2026-08-13T11:24:33+02:00
 flags:
   - approved
   - implementation-ready
@@ -175,8 +175,9 @@ publication parity, not product behavior or architecture.
   parent Codex independently reviews the pushed `main` head. The
   `0049`/`0050`/`0052` lifecycle gates are superseded by that direct-main
   authorization.
-- Available-skill deviation: `guiho-s-0023-plan-executor` is not installed on
-  the execution machine; `guiho-a-0048-plan-executor` was followed directly.
+- Available-skill deviation: `guiho-s-0023-plan-executor` was unavailable in
+  OpenCode's installed skill registry; `guiho-a-0048-plan-executor` was
+  followed directly.
 - S28-01 completed at commit `0e0a033`: exact generated-versus-committed parity
   regression and hook-matrix structural assertions in `pkg/config/config_test.go`,
   mechanically refreshed `mirror/schema/mirror.schema.json`.
@@ -191,9 +192,14 @@ publication parity, not product behavior or architecture.
   slash-delimited paths and fail with `scan.exclude entries must be non-empty
   directory names`; `xdocs.yaml` was not edited and touched descriptors were
   manually verified.
-- Mirror decision: recommend `patch` after integration; version application,
-  tagging, publication, and tag-pinned URL verification remain separately
-  authorized.
+- Independent review accepted exact head
+  `f6685d017850839cbf201e36fa9f00cbd5853ede` with no blocker or high findings:
+  [issue comment](https://github.com/CGuiho/mirror/issues/28#issuecomment-5273331134).
+- The raw `main` schema returned HTTP 200, matched the local artifact exactly,
+  and exposed the supported `after:plan.instructions` object form.
+- Mirror decision: the human authorized the next alpha prerelease; the inspected
+  plan resolves to `mirror/v4.1.0-alpha.2`. Publication and tag-pinned schema
+  verification remain pending until the release workflow succeeds.
 
 ## References
 

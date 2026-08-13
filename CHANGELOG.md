@@ -18,6 +18,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.1.0-alpha.2] - 2026-08-13
+
+### Fixed
+
+- Regenerated the committed public JSON Schema from the production Go
+  generator so supported instruction-hook objects such as
+  `hooks."after:plan".instructions` validate correctly in YAML editors.
+- Added exact generated-artifact parity and parsed hook-contract regression
+  coverage to prevent future schema publication drift.
+
 ## [4.1.0-alpha.1] - 2026-08-05
 
 ### Changed
