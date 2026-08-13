@@ -3,7 +3,7 @@ name: Issue 28 Instruction Hook Schema Parity
 purpose: Define the required outcome and completion signals for GitHub issue 28.
 description: Tracks parity between Mirror's production Go JSON Schema generator and the committed schema served to YAML editors.
 created: 2026-08-12T15:06:30+02:00
-updated: 2026-08-13T11:24:33+02:00
+updated: 2026-08-13T11:32:39+02:00
 flags:
   - approved
   - implementation-ready
@@ -35,7 +35,7 @@ it.
 ## Todo Index
 
 - Task: `Issue 28 Instruction Hook Schema Parity`
-- Status: testing
+- Status: completed
 - Index: [todo.md](../../todo.md)
 - External: [CGuiho/mirror#28](https://github.com/CGuiho/mirror/issues/28)
 - Plan: [issue-28-instruction-hook-schema-parity.md](../plans/issue-28-instruction-hook-schema-parity.md)
@@ -197,9 +197,17 @@ publication parity, not product behavior or architecture.
   [issue comment](https://github.com/CGuiho/mirror/issues/28#issuecomment-5273331134).
 - The raw `main` schema returned HTTP 200, matched the local artifact exactly,
   and exposed the supported `after:plan.instructions` object form.
-- Mirror decision: the human authorized the next alpha prerelease; the inspected
-  plan resolves to `mirror/v4.1.0-alpha.2`. Publication and tag-pinned schema
-  verification remain pending until the release workflow succeeds.
+- Mirror release completed: `mirror/v4.1.0-alpha.2` targets release-preparation
+  commit `7f7c74df3249b97bea201291e7005c292d12b0f4`. Publication workflow
+  [31686771287](https://github.com/CGuiho/mirror/actions/runs/31686771287)
+  and tag CI [31686771264](https://github.com/CGuiho/mirror/actions/runs/31686771264)
+  succeeded. The public prerelease has exactly 11 assets; the downloaded Windows
+  AMD64 binary matched its SHA-256 manifest entry and reported
+  `mirror v4.1.0-alpha.2`; the tag-pinned schema returned HTTP 200 and matched
+  the committed artifact exactly.
+- Completion: implementation, independent review, local and CI validation,
+  release publication, public artifact verification, and issue-closure evidence
+  are complete.
 
 ## References
 

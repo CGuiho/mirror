@@ -5,7 +5,7 @@ description: Local evidence that the committed public schema equals the producti
 created: 2026-08-12
 updated: 2026-08-13
 owner: mirror-docs-validation
-flags: [local-complete, xdocs-blocked]
+flags: [complete, release-verified, xdocs-blocked]
 tags: [mirror, validation, schema, hooks]
 keywords: [issue 28, mirror.schema.json, schema parity, instruction hooks]
 ---
@@ -70,7 +70,7 @@ parent/child links are unchanged. No new XDocs error was introduced.
 - Commit `f6685d0` (S28-02): task state and validation evidence.
 - All three commits were pushed to `main` with plain pushes (no force).
 
-## Review, Public Main, and Release Boundary
+## Review and Public Main
 
 - Independent review accepted exact head
   `f6685d017850839cbf201e36fa9f00cbd5853ede` with no blocker or high findings:
@@ -79,5 +79,27 @@ parent/child links are unchanged. No new XDocs error was introduced.
   exactly at 53,360 characters, and exposed three `after:plan` alternatives
   including `instructions`, with hooks closed to unknown events.
 - The human authorized the next alpha prerelease. The inspected Mirror plan
-  resolves to `mirror/v4.1.0-alpha.2`; publication, exact 11-asset verification,
-  and tag-pinned schema verification remain pending until the workflow succeeds.
+  resolved to `mirror/v4.1.0-alpha.2`.
+
+## Release Verification
+
+- Release preparation commit:
+  `7f7c74df3249b97bea201291e7005c292d12b0f4`.
+- Canonical tag: `mirror/v4.1.0-alpha.2`, peeled to the release-preparation
+  commit and confirmed as an ancestor of `origin/main`.
+- Publication workflow:
+  [31686771287](https://github.com/CGuiho/mirror/actions/runs/31686771287),
+  successful, including source checks, exact release build, public asset-set
+  verification, and tag-pinned installer verification.
+- Tag CI: [31686771264](https://github.com/CGuiho/mirror/actions/runs/31686771264),
+  successful across Go quality, installers, and native Linux, macOS, Windows
+  AMD64, and Windows ARM64 smoke jobs.
+- Public release:
+  [`mirror/v4.1.0-alpha.2`](https://github.com/CGuiho/mirror/releases/tag/mirror/v4.1.0-alpha.2),
+  non-draft prerelease with exactly eight native executables,
+  `guiho-s-mirror.zip`, `guiho-i-mirror.md`, and `checksums.txt`.
+- Independent public download: `mirror-windows-amd64.exe` matched the SHA-256
+  value in `checksums.txt` and reported `mirror v4.1.0-alpha.2`.
+- Tag-pinned schema:
+  `https://raw.githubusercontent.com/CGuiho/mirror/mirror/v4.1.0-alpha.2/mirror/schema/mirror.schema.json`
+  returned HTTP 200 and matched the committed Go-generated artifact exactly.

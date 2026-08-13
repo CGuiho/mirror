@@ -16,9 +16,9 @@ All Rights Reserved.
 
 ## Issue 28 Instruction Hook Schema Parity
 
-- Status: testing
+- Status: completed
 - Created: `2026-08-12T15:06:30+02:00`
-- Updated: `2026-08-12T23:59:00+02:00`
+- Updated: `2026-08-13T11:32:39+02:00`
 - Outcome: Make the committed and subsequently published Mirror JSON Schema
   exactly match the production Go generator so supported instruction-hook
   objects no longer receive false editor diagnostics.
@@ -32,9 +32,10 @@ All Rights Reserved.
 - Execution: S28-01 (`0e0a033`) and S28-02 implemented directly on `main` with
   explicit human authorization, overriding the plan's branch/worktree/PR gates;
   parent Codex independently reviews the pushed `main` head.
-- Release boundary: a compatible patch is recommended after integration, but
-  version application, tagging, publication, and tagged-URL verification are
-  deferred pending separate authorization.
+- Release: published and independently verified as prerelease
+  [`mirror/v4.1.0-alpha.2`](https://github.com/CGuiho/mirror/releases/tag/mirror/v4.1.0-alpha.2)
+  with the exact 11-asset contract; tag CI and publication succeeded, and the
+  tag-pinned schema matches the production Go generator artifact.
 
 ## Mirror Init Git Defaults
 
