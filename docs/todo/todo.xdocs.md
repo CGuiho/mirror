@@ -6,6 +6,7 @@ children:
   - mirror-docs-todo-done
 files: {}
 documents:
+  guiho-convention-0001-cli-migration.md: Defines the approved breaking full-repository migration needed to satisfy GUIHO Convention 0001.
   issue-28-instruction-hook-schema-parity.md: Defines the required generated, committed, and published schema parity outcome for GitHub issue 28.
   init-git-defaults.md: Tracks Git-first init defaults and yes-by-default release prompts for GitHub issue 26.
   mirror-v4.1.0-hooks.md: Defines typed YAML command and AI-instruction hooks for GitHub issue 24.
@@ -47,6 +48,9 @@ keywords:
   - init defaults
   - issue 28
   - schema parity
+  - convention 0001
+  - stable launcher
+  - complete release
 flags: []
 status: stable
 ---

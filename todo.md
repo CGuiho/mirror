@@ -14,6 +14,40 @@ All Rights Reserved.
 
 # GUIHO Mirror TODO List
 
+## GUIHO Convention 0001 CLI Compliance Migration
+
+- Status: todo; plan approved; execution authorized subject to sequential unit gates
+- Created: `2026-08-16`
+- Updated: `2026-08-16`
+- Outcome: Replace the obsolete 11-asset/direct-payload/self-replacement model
+  with one Convention 0001-compliant Go/Cobra command, configuration, agent,
+  release, launcher, installation, upgrade, uninstall, documentation, and
+  validation architecture.
+- Audit:
+  [docs/reviews/implementation/guiho-convention-0001-cli-compliance-review.md](docs/reviews/implementation/guiho-convention-0001-cli-compliance-review.md)
+- Architecture:
+  [docs/architecture/guiho-convention-0001-cli-migration.md](docs/architecture/guiho-convention-0001-cli-migration.md)
+- Decisions:
+  [authority and supersession](docs/decisions/guiho-convention-0001-cli-authority.md),
+  [accepted identities](docs/decisions/guiho-convention-0001-cli-identities.md)
+- Reviews:
+  [architecture review](docs/reviews/architecture/guiho-convention-0001-cli-migration-review.md),
+  [plan review](docs/reviews/plans/guiho-convention-0001-cli-migration-review.md)
+- Plan:
+  [docs/plans/guiho-convention-0001-cli-migration.md](docs/plans/guiho-convention-0001-cli-migration.md)
+- Task:
+  [docs/todo/guiho-convention-0001-cli-migration.md](docs/todo/guiho-convention-0001-cli-migration.md)
+- Question ledger:
+  [docs/questions/guiho-convention-0001-cli-migration.md](docs/questions/guiho-convention-0001-cli-migration.md)
+- Execution authority: identities `mirror`, `guiho-s-mirror`, and
+  `guiho-p-mirror`, the digest-bound plan and reviews, the scoped Q-012
+  precedence exception, C0001-00 through C0001-09 implementation, branch
+  delivery, exact-head PR gates, and gated merges are accepted.
+- Release boundary: exact `5.0.0-alpha.0` version planning, version commit, and
+  tag push are authorized only after all units integrate and the merged-main
+  zero-finding audit passes. GitHub Release/publication, public lifecycle
+  execution, and production mutation remain unauthorized.
+
 ## Issue 28 Instruction Hook Schema Parity
 
 - Status: completed
