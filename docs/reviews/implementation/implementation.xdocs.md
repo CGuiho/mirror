@@ -5,6 +5,7 @@ parent: mirror-docs-reviews
 children: []
 files: {}
 documents:
+  guiho-convention-0001-cli-compliance-review.md: Audits the production Go CLI against GUIHO Convention 0001 across tooling, flags, configuration, agent artifacts, installation, upgrade, uninstall, release, documentation, and validation.
   mirror-v4.1.0-hooks-review.md: Reviews the typed hook contract, execution lifecycle, trust boundary, error routing, and release boundary for issue 24.
   mirror-go-production-migration-review.md: Accepts the local Go/Cobra production migration and records the public-release boundary.
   mirror-3.6.0-schema-and-yaml-review.md: Reviews issues 14 and 15 implementation and residual release risk.

@@ -1,10 +1,11 @@
 ---
 subject: mirror-docs-plans
-description: Approved executable implementation plans for Mirror engineering work.
+description: Proposed, approved, active, and historical implementation plans for Mirror engineering work; each document carries its own approval state.
 parent: mirror-docs
 children: []
 files: {}
 documents:
+  guiho-convention-0001-cli-migration.md: Approved ten-unit Convention 0001 migration plan revised through independent review; execution is authorized subject to its per-unit exact-head gates.
   issue-28-instruction-hook-schema-parity.md: Branch-aware executable plan for Go-generated schema parity, regression coverage, review, validation, integration, and deferred release verification.
   mirror-v4.1.0-hooks.md: Approved execution plan for typed hook configuration, runtime lifecycle, agent guidance, validation, and PR delivery.
   mirror-go-production-migration.md: Executed plan making Go/Cobra the production and delivery authority.
@@ -32,8 +33,13 @@ keywords:
   - lifecycle hooks
   - issue 28
   - schema parity
+  - convention 0001
+  - stable launcher
+  - complete release
 flags: []
 status: stable
 ---
 
-The `docs/plans/` module owns executable work breakdowns derived from approved Mirror architecture and specifications.
+The `docs/plans/` module owns proposed, approved, active, and historical work
+breakdowns; a module entry never substitutes for a plan's explicit approval
+state.
