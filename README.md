@@ -30,12 +30,12 @@ The Unix installer is POSIX `sh` compatible and does not require Bash.
 AI agents — give your agent this prompt:
 
 ```text
-Install the GUIHO Mirror CLI by following its default install prompt
-(guiho-i-mirror). Show it with `mirror agent prompt show guiho-i-mirror`, or
-read it from
-https://raw.githubusercontent.com/CGuiho/mirror/main/embed/prompts/guiho-i-mirror.md
-before the CLI is installed. Install Mirror by following that prompt, then
-report the installed version.
+Install the GUIHO Mirror CLI with the install command for your platform from
+this section. Verify with `mirror --version`. If installation fails, create an
+issue at https://github.com/CGuiho/mirror/issues/new. After installation, run
+`mirror init` in this project so the permanent Mirror instruction
+(guiho-i-mirror) is applied and every future agent session stays aware of the
+CLI.
 ```
 
 Verify the installation:
