@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.2.3] - 2026-08-22
+
+### Fixed
+
+- Added two blank lines before and two blank lines after the hello window as requested. The spacing applies only to the hello page (`mirror` with no arguments), not to any other command output.
+
 ## [4.2.2] - 2026-08-22
 
 ### Fixed
