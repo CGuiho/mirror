@@ -14,6 +14,19 @@ All Rights Reserved.
 
 # GUIHO Mirror TODO List
 
+## Remove Legacy TypeScript Implementation
+
+- Status: completed
+- Created: `2026-08-16`
+- Updated: `2026-08-16`
+- Outcome: Deleted the archived Bun/TypeScript implementation and its
+  TypeScript-only build/publish scaffolding while preserving the Go-owned
+  `mirror/schema/mirror.schema.json` artifact and non-TypeScript resources.
+- Validation: `gofmt -l .` clean, `go vet ./...` pass,
+  `go test -count=1 ./...` pass.
+- Task:
+  [docs/todo/remove-legacy-typescript-implementation.md](docs/todo/remove-legacy-typescript-implementation.md)
+
 ## GUIHO Convention 0001 CLI Compliance Migration
 
 - Status: todo; plan written; approval gates open
