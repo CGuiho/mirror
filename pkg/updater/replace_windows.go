@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-func replaceExecutable(executable, candidate, backup, targetVersion, checksum, lockPath, lockToken string, _ VerifyFunc) (bool, error) {
+func replaceExecutable(executable, candidate, _, targetVersion, checksum, lockPath, lockToken string, _ VerifyFunc) (bool, error) {
 	helperFile, err := os.CreateTemp(filepath.Dir(executable), ".mirror-upgrade-helper-*.exe")
 	if err != nil {
 		return false, fmt.Errorf("create Windows upgrade helper: %w", err)
@@ -27,6 +27,14 @@ func replaceExecutable(executable, candidate, backup, targetVersion, checksum, l
 	if err != nil {
 		helperFile.Close()
 		os.Remove(helper)
+		// If executable doesn't exist, just overwrite directly without helper.
+		if errors.Is(err, os.ErrNotExist) {
+			os.Remove(helper)
+			if err := os.Rename(candidate, executable); err != nil {
+				return false, fmt.Errorf("activate update: %w", err)
+			}
+			return false, VerifyExecutable(executable, targetVersion)
+		}
 		return false, fmt.Errorf("open current executable for helper: %w", err)
 	}
 	if _, err := io.Copy(helperFile, source); err != nil {
@@ -45,7 +53,7 @@ func replaceExecutable(executable, candidate, backup, targetVersion, checksum, l
 		"--pid", strconv.Itoa(os.Getpid()),
 		"--executable", executable,
 		"--candidate", candidate,
-		"--backup", backup,
+		"--backup", "",
 		"--target-version", targetVersion,
 		"--checksum", checksum,
 		"--lock", lockPath,
@@ -64,13 +72,13 @@ func replaceExecutable(executable, candidate, backup, targetVersion, checksum, l
 	return true, nil
 }
 
-func CompleteWindowsReplacement(executable, candidate, backup, targetVersion, checksum, helper, lockPath, lockToken string, parentPID int) (returnErr error) {
+func CompleteWindowsReplacement(executable, candidate, _, targetVersion, checksum, helper, lockPath, lockToken string, parentPID int) (returnErr error) {
 	completion := Completion{
 		TargetVersion: targetVersion,
 		Outcome:       "failed",
 		Verification:  "not run",
 		Rollback:      "not required",
-		Recovery:      fmt.Sprintf("restore %q to %q", backup, executable),
+		Recovery:      "",
 	}
 	defer func() {
 		if returnErr != nil {
@@ -88,37 +96,24 @@ func CompleteWindowsReplacement(executable, candidate, backup, targetVersion, ch
 	} else if calculated != checksum {
 		return fmt.Errorf("staged Windows candidate checksum changed: expected %s, got %s", checksum, calculated)
 	}
-	if err := os.Rename(executable, backup); err != nil {
-		return fmt.Errorf("backup current Windows executable: %w", err)
+	// Just overwrite — no backup. Treat as if binary doesn't exist.
+	if _, err := os.Stat(executable); err == nil {
+		if err := os.Remove(executable); err != nil {
+			return fmt.Errorf("remove current Windows executable: %w", err)
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("inspect current Windows executable: %w", err)
 	}
 	if err := os.Rename(candidate, executable); err != nil {
-		if rollbackErr := os.Rename(backup, executable); rollbackErr != nil {
-			completion.Rollback = "failed"
-			return fmt.Errorf("activate Windows update: %w; rollback also failed: %v", err, rollbackErr)
-		}
-		completion.Rollback = "succeeded"
 		return fmt.Errorf("activate Windows update: %w", err)
 	}
 	if err := VerifyExecutable(executable, targetVersion); err != nil {
 		completion.Verification = "failed"
-		failed := executable + ".failed"
-		_ = os.Remove(failed)
-		if moveErr := os.Rename(executable, failed); moveErr != nil {
-			completion.Rollback = "failed"
-			return fmt.Errorf("%w; stage failed replacement: %v", err, moveErr)
-		}
-		if rollbackErr := os.Rename(backup, executable); rollbackErr != nil {
-			completion.Rollback = "failed"
-			return fmt.Errorf("%w; rollback also failed: %v", err, rollbackErr)
-		}
-		_ = os.Remove(failed)
-		completion.Rollback = "succeeded"
 		return err
 	}
 	completion.Outcome = "succeeded"
 	completion.Verification = "succeeded"
 	completion.Rollback = "not required"
-	completion.Recovery = ""
 	return nil
 }
 
