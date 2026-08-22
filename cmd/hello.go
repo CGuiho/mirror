@@ -136,7 +136,7 @@ func RenderHello(info BuildInfo, latestVersion string, hasUpdate bool, useColor 
 	// Blank line after box
 	b.WriteString("\n\n")
 	b.WriteString(colorize(useColor, "GUIHO", ansiYellow+ansiBold))
-	b.WriteString(colorize(useColor, "  —  Deterministic semantic versioning  —  Go/Cobra Powered", ansiGray))
+	b.WriteString(colorize(useColor, "  —  Deterministic semantic versioning", ansiGray))
 	b.WriteString("\n\n")
 
 	// Creator
