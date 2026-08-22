@@ -18,26 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [4.1.0-alpha.2] - 2026-08-13
-
-### Fixed
-
-- Regenerated the committed public JSON Schema from the production Go
-  generator so supported instruction-hook objects such as
-  `hooks."after:plan".instructions` validate correctly in YAML editors.
-- Added exact generated-artifact parity and parsed hook-contract regression
-  coverage to prevent future schema publication drift.
-
-## [4.1.0-alpha.1] - 2026-08-05
-
-### Changed
-
-- Made `mirror init` default to Git as the version source and only Git as the
-  generated output, even when `package.json` or `jsr.json` exists.
-- Preserved explicit `--source package.json` and `--source jsr.json` as
-  authoritative overrides, and kept release commit/push prompts yes-by-default.
-
-## [4.1.0-alpha.0] - 2026-08-05
+## [4.1.0] - 2026-08-22
 
 ### Added
 
@@ -50,6 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Made `mirror init` default to Git as the version source and only Git as the
+  generated output, even when `package.json` or `jsr.json` exists; preserved
+  explicit `--source package.json` and `--source jsr.json` as authoritative
+  overrides, and kept release commit/push prompts yes-by-default.
 - Required explicit command-hook trust through `--run-hooks`, `--skip-hooks`,
   or an interactive answer; `--yes` no longer authorizes repository command
   hooks by itself.
@@ -63,6 +48,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   replacement, agent resources, managed instructions, and Bash execution.
 - Corrected Windows installer architecture fallback and managed instruction
   reconciliation edge cases while preserving checksum and rollback behavior.
+- Regenerated the committed public JSON Schema from the production Go
+  generator so supported instruction-hook objects such as
+  `hooks."after:plan".instructions` validate correctly in YAML editors, and
+  added exact generated-artifact parity plus parsed hook-contract regression
+  coverage to prevent future schema publication drift.
 
 ## [4.0.1] - 2026-08-02
 
