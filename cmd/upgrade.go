@@ -64,20 +64,16 @@ func newUpgradeCommand(deps Dependencies, info BuildInfo) *cobra.Command {
 					return cwdErr
 				}
 				if reconcileErr := deps.ReconcileBinary(result.ExecutablePath, cwd); reconcileErr != nil {
-					_, rollbackErr := updater.PerformRollback(result.ExecutablePath)
-					if rollbackErr != nil {
-						return withExitCode(5, fmt.Errorf("reconcile upgraded agent resources: %w; binary rollback failed: %v", reconcileErr, rollbackErr))
-					}
-					return withExitCode(5, fmt.Errorf("reconcile upgraded agent resources: %w; binary rolled back", reconcileErr))
+					return withExitCode(5, fmt.Errorf("reconcile upgraded agent resources: %w", reconcileErr))
 				}
 			}
 			if outputFormat(command) == "json" {
 				return writeJSON(deps.Out, successEnvelope{OK: true, Command: command.CommandPath(), Result: result})
 			}
 			if result.Scheduled {
-				fmt.Fprintf(deps.Out, "Mirror %s upgrade scheduled; completion will be reported on the next run.\nRecovery: %s\n", release.Version, result.Recovery)
+				fmt.Fprintf(deps.Out, "Mirror %s upgrade scheduled; completion will be reported on the next run.\n", release.Version)
 			} else {
-				fmt.Fprintf(deps.Out, "Mirror upgraded to %s. Backup: %s\n", release.Version, result.BackupPath)
+				fmt.Fprintf(deps.Out, "Mirror upgraded to %s.\n", release.Version)
 			}
 			return nil
 		},
