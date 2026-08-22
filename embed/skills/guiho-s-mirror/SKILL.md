@@ -89,5 +89,6 @@ and `checksums.txt`. Planning and building do not authorize `version apply`, a
 commit, tag, push, publication, or GitHub release. Obtain explicit approval for
 those effects.
 
-The production CLI is the repository-root Go/Cobra module. Do not use the
-archived Bun/TypeScript package as versioning or release authority.
+The production CLI is the repository-root Go/Cobra module. Install Mirror only
+with the canonical install commands in the repository README; never through a
+package manager such as npm or Bun.

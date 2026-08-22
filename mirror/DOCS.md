@@ -12,9 +12,7 @@ keywords: [semantic versioning, strict yaml, upgrades, agent resources]
 # GUIHO Mirror CLI
 
 The production Mirror executable is built from the Go module at the repository
-root. The directory containing this document also holds the archived
-Bun/TypeScript predecessor; it is not a build, CI, installer, or publication
-authority.
+root.
 
 ## Global Interface
 

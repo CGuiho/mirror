@@ -22,16 +22,15 @@ Stop if it cannot be found.
   reviewing, testing, packaging, installing, or releasing the Mirror CLI.
 - Use `guiho-s-xdocs` for structured documentation and `guiho-s-mirror` for
   semantic-version planning or release work.
-- Mirror is pre-1.0. Prefer the approved Go/Cobra contract over compatibility
-  with the archived Bun/TypeScript implementation.
+- Prefer the approved Go/Cobra contract for all Mirror behavior.
 
 # Repository Notes
 
 - The production Go module lives at the repository root. `main.go` is the thin
   executable entrypoint; `cmd/` owns the single Cobra command tree; `pkg/` owns
   domain behavior; `embed/` owns bundled agent resources.
-- The legacy `mirror/` Bun package is historical reference only. It is not a CI,
-  build, installer, publishing, or release authority.
+- Mirror is never distributed through a package manager. Agents must install it
+  only with the canonical README install commands or a manual verified binary.
 - Configuration is YAML only and strictly decoded into typed Go structures.
 - Use Go, Cobra, and the standard library. Do not add Viper or a second command
   parser. Builds are static (`CGO_ENABLED=0`).
@@ -85,8 +84,6 @@ Stop if it cannot be found.
   contract. Update both when user-visible behavior or delivery changes.
 - Keep `TECHNICAL.md`, the Go RFC, implementation plan, review, validation, TODO,
   XDocs descriptors, and embedded skill consistent with shipped behavior.
-- Historical Bun documents may remain as evidence but must not be presented as
-  current authority.
 
 ## Semantic Project Versioning
 

@@ -7,10 +7,6 @@ implementation is the Go module at this repository root. One Cobra tree owns
 routing, help, aliases, and generated developer documentation; typed Go
 structures and strict YAML decoding own configuration.
 
-The former Bun/TypeScript package under `mirror/` is retained as historical
-reference only. Go source, tests, installers, CI, and release workflows are the
-delivery authority.
-
 ## Install
 
 Windows (PowerShell):
@@ -30,12 +26,27 @@ The Unix installer is POSIX `sh` compatible and does not require Bash.
 AI agents — give your agent this prompt:
 
 ```text
-Install the GUIHO Mirror CLI with the install command for your platform from
-this section. Verify with `mirror --version`. If installation fails, create an
-issue at https://github.com/CGuiho/mirror/issues/new. After installation, run
-`mirror init` in this project so the permanent Mirror instruction
-(guiho-i-mirror) is applied and every future agent session stays aware of the
-CLI.
+Install the GUIHO Mirror CLI by running exactly one command, chosen by the
+host operating system:
+
+- Windows (PowerShell):
+  irm https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.ps1 | iex
+- macOS or Linux (POSIX sh):
+  curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.sh | sh
+
+Never install Mirror through a package manager (npm, Bun, pip, or similar);
+no such package exists or is supported. When the installer finishes, verify
+with `mirror --version`.
+
+If the installer fails, fall back to a manual binary installation:
+1. Download the asset matching the host platform from
+   https://github.com/CGuiho/mirror/releases/latest — for example
+   `mirror-windows-amd64.exe` or `mirror-linux-amd64` — and verify its SHA-256
+   digest against the release's `checksums.txt`.
+2. Place the binary at `$HOME/.guiho/bin/mirror` (`mirror.exe` on Windows),
+   creating the directory when needed.
+3. On macOS and Linux, mark it executable with `chmod +x`. Ensure
+   `$HOME/.guiho/bin` is on the `PATH`, then verify with `mirror --version`.
 ```
 
 Verify the installation:

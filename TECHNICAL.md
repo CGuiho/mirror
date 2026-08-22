@@ -62,5 +62,4 @@ skill ZIP, instruction prompt, and sorted checksum manifest. The exact set is
 GitHub Actions runs Go formatting, tidy stability, tests, vet, exact asset
 build/verification, installer contract checks, and native smokes. Publication
 listens to `mirror/v*`, rebuilds from the tag, reconciles an idempotent GitHub
-release, and asserts the exact public asset set. It does not publish the legacy
-Bun package.
+release, and asserts the exact public asset set.
