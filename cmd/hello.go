@@ -12,15 +12,21 @@ import (
 )
 
 const (
-	ansiReset  = "\x1b[0m"
-	ansiBold   = "\x1b[1m"
-	ansiDim    = "\x1b[2m"
-	ansiOrange = "\x1b[38;5;208m"
-	ansiPink   = "\x1b[38;5;204m"
-	ansiCyan   = "\x1b[36m"
-	ansiGreen  = "\x1b[32m"
-	ansiYellow = "\x1b[33m"
-	ansiGray   = "\x1b[90m"
+	ansiReset = "\x1b[0m"
+	ansiBold  = "\x1b[1m"
+	ansiDim   = "\x1b[2m"
+	// Palette from user: 001524, 15616D, FFECD1, FF7D00, 78290F — truecolor
+	ansiNavy   = "\x1b[38;2;0;21;36m"
+	ansiTeal   = "\x1b[38;2;21;97;109m"
+	ansiCream  = "\x1b[38;2;255;236;209m"
+	ansiOrange = "\x1b[38;2;255;125;0m"
+	ansiBrown  = "\x1b[38;2;120;41;15m"
+	// Legacy aliases mapped to palette for compatibility
+	ansiPink   = ansiOrange
+	ansiCyan   = ansiTeal
+	ansiGreen  = ansiTeal
+	ansiYellow = ansiOrange
+	ansiGray   = ansiCream + ansiDim // muted cream for secondary text
 )
 
 // mirrorLogo is the ANSI Shadow rendering of "MIRROR" (6 letters, 6 rows).
@@ -75,65 +81,42 @@ func latestAvailable(currentVersion string, now time.Time) (string, bool) {
 func RenderHello(info BuildInfo, latestVersion string, hasUpdate bool, useColor bool) string {
 	var b strings.Builder
 
-	// Determine box width: widest logo line + 4 spaces padding (2 each side)
+	// Borderless layout — no box around the logo per user request.
+	// Keep centered alignment using the same innerWidth calculation
+	// but render only the logo + tagline with palette colors.
 	innerWidth := 0
 	for _, line := range mirrorLogo {
-		// logo lines contain only block characters counted as width 1 each in
-		// monospace. Use rune count (all single-width in this alphabet).
 		if l := len([]rune(line)); l > innerWidth {
 			innerWidth = l
 		}
 	}
-	// Add 4 for "  " padding on each side
 	innerWidth += 4
-	// Tagline inside box must fit; guarantee at least 52.
 	if innerWidth < 56 {
 		innerWidth = 56
 	}
 
 	tagline := "Deterministic semantic versioning"
-	borderColor := ansiOrange
-	logoColor := ansiPink
+	logoColor := ansiOrange + ansiBold
+	taglineColor := ansiCream + ansiDim
 
-	// Top border
-	b.WriteString(colorize(useColor, "╭"+strings.Repeat("─", innerWidth)+"╮", borderColor))
-	b.WriteString("\n")
-	// Empty line
-	b.WriteString(colorize(useColor, "│"+strings.Repeat(" ", innerWidth)+"│", borderColor))
-	b.WriteString("\n")
-	// Logo lines centered
+	// Logo lines centered without borders — palette: FF7D00 orange on dark bg
 	for _, line := range mirrorLogo {
-		lineRunes := []rune(line)
-		lineLen := len(lineRunes)
+		lineLen := len([]rune(line))
 		totalPad := innerWidth - lineLen
 		left := totalPad / 2
-		right := totalPad - left
-		inner := strings.Repeat(" ", left) + line + strings.Repeat(" ", right)
-		b.WriteString(colorize(useColor, "│", borderColor))
+		inner := strings.Repeat(" ", left) + line
 		b.WriteString(colorize(useColor, inner, logoColor))
-		b.WriteString(colorize(useColor, "│", borderColor))
 		b.WriteString("\n")
 	}
-	// Empty line between logo and tagline
-	b.WriteString(colorize(useColor, "│"+strings.Repeat(" ", innerWidth)+"│", borderColor))
-	b.WriteString("\n")
-	// Tagline centered
+	// Tagline centered below logo, no box — palette: FFECD1 cream dimmed
 	tagPad := innerWidth - len([]rune(tagline))
 	left := tagPad / 2
-	right := tagPad - left
-	tagInner := strings.Repeat(" ", left) + tagline + strings.Repeat(" ", right)
-	b.WriteString(colorize(useColor, "│", borderColor))
-	b.WriteString(colorize(useColor, tagInner, ansiDim))
-	b.WriteString(colorize(useColor, "│", borderColor))
+	tagInner := strings.Repeat(" ", left) + tagline
+	b.WriteString(colorize(useColor, tagInner, taglineColor))
 	b.WriteString("\n")
-	// Empty line
-	b.WriteString(colorize(useColor, "│"+strings.Repeat(" ", innerWidth)+"│", borderColor))
-	b.WriteString("\n")
-	// Bottom border
-	b.WriteString(colorize(useColor, "╰"+strings.Repeat("─", innerWidth)+"╯", borderColor))
 
-	// ── Metadata outside the box ─────────────────────────────
-	// Blank line after box
+	// ── Metadata ─────────────────────────────────────────────
+	// Blank line after header
 	b.WriteString("\n\n")
 	b.WriteString(colorize(useColor, "GUIHO", ansiYellow+ansiBold))
 	b.WriteString(colorize(useColor, "  —  Deterministic semantic versioning", ansiGray))

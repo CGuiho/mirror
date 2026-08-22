@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.2.2] - 2026-08-22
+
+### Fixed
+
+- Removed the orange boxed border from the hello window as requested. The window is now borderless and honors the requested true-color palette (`#001524`, `#15616D`, `#FFECD1`, `#FF7D00`, `#78290F`): orange `MIRROR` logo, cream secondary text, teal accents for `GUIHO`/version/`--help`, with no orange border.
+
 ## [4.2.1] - 2026-08-22
 
 ### Fixed
