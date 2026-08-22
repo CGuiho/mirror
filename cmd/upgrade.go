@@ -4,14 +4,38 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 
 	"github.com/CGuiho/mirror/pkg/update"
 	"github.com/CGuiho/mirror/pkg/updater"
 	"github.com/spf13/cobra"
 )
+
+func upgradeRecoveryCommand(version string) string {
+	if version == "" {
+		return "curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.sh | sh"
+	}
+	return fmt.Sprintf("curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.sh | sh -s -- --version %s", version)
+}
+
+func upgradeRecoveryCommandWindows(version string) string {
+	if version == "" {
+		return "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.ps1')))\""
+	}
+	return fmt.Sprintf("powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.ps1'))) -Version '%s'\"", version)
+}
+
+func printUpgradeRecoveryBlock(out io.Writer, version string) {
+	fmt.Fprintln(out, "If the upgrade fails, reinstall Mirror with this command:")
+	fmt.Fprintln(out, upgradeRecoveryCommand(version))
+	if strings.Contains(runtime.GOOS, "windows") || version != "" {
+		fmt.Fprintln(out, upgradeRecoveryCommandWindows(version))
+	}
+}
 
 func newUpgradeCommand(deps Dependencies, info BuildInfo) *cobra.Command {
 	var requested string
@@ -21,8 +45,14 @@ func newUpgradeCommand(deps Dependencies, info BuildInfo) *cobra.Command {
 		Short: "Upgrade the installed Mirror native binary.",
 		Args:  cobra.NoArgs,
 		RunE: func(command *cobra.Command, _ []string) error {
+			requestedVersionForRecovery := strings.TrimPrefix(requested, "v")
+			if requestedVersionForRecovery == "" {
+				requestedVersionForRecovery = strings.TrimPrefix(info.Version, "v")
+			}
+			printUpgradeRecoveryBlock(deps.Out, requestedVersionForRecovery)
 			release, asset, manifest, err := resolveUpgrade(command.Context(), deps, requested, info.Target)
 			if err != nil {
+				printUpgradeRecoveryBlock(deps.Out, requestedVersionForRecovery)
 				return withExitCode(4, err)
 			}
 			if dryRun {
@@ -32,13 +62,16 @@ func newUpgradeCommand(deps Dependencies, info BuildInfo) *cobra.Command {
 					"checksums": manifest.BrowserDownloadURL, "dryRun": true,
 				}
 				if outputFormat(command) == "json" {
+					printUpgradeRecoveryBlock(deps.Out, release.Version)
 					return writeJSON(deps.Out, successEnvelope{OK: true, Command: command.CommandPath(), Result: result})
 				}
 				fmt.Fprintf(deps.Out, "Mirror %s -> %s\nAsset: %s\nURL: %s\nChecksums: %s\n", info.Version, release.Version, asset.Name, asset.BrowserDownloadURL, manifest.BrowserDownloadURL)
+				printUpgradeRecoveryBlock(deps.Out, release.Version)
 				return nil
 			}
 			checksum, err := updater.FetchChecksum(command.Context(), deps.HTTPClient, manifest.BrowserDownloadURL, asset.Name)
 			if err != nil {
+				printUpgradeRecoveryBlock(deps.Out, release.Version)
 				return withExitCode(4, err)
 			}
 			var progress func(updater.DownloadProgress)
@@ -56,18 +89,22 @@ func newUpgradeCommand(deps Dependencies, info BuildInfo) *cobra.Command {
 				ExpectedChecksum: checksum, HTTPClient: deps.HTTPClient, Progress: progress,
 			})
 			if err != nil {
+				printUpgradeRecoveryBlock(deps.Out, release.Version)
 				return withExitCode(5, err)
 			}
 			if !result.Scheduled {
 				cwd, cwdErr := effectiveCWD(command, deps)
 				if cwdErr != nil {
+					printUpgradeRecoveryBlock(deps.Out, release.Version)
 					return cwdErr
 				}
 				if reconcileErr := deps.ReconcileBinary(result.ExecutablePath, cwd); reconcileErr != nil {
+					printUpgradeRecoveryBlock(deps.Out, release.Version)
 					return withExitCode(5, fmt.Errorf("reconcile upgraded agent resources: %w", reconcileErr))
 				}
 			}
 			if outputFormat(command) == "json" {
+				printUpgradeRecoveryBlock(deps.Out, release.Version)
 				return writeJSON(deps.Out, successEnvelope{OK: true, Command: command.CommandPath(), Result: result})
 			}
 			if result.Scheduled {
@@ -75,6 +112,7 @@ func newUpgradeCommand(deps Dependencies, info BuildInfo) *cobra.Command {
 			} else {
 				fmt.Fprintf(deps.Out, "Mirror upgraded to %s.\n", release.Version)
 			}
+			printUpgradeRecoveryBlock(deps.Out, release.Version)
 			return nil
 		},
 	}
