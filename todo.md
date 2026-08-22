@@ -14,6 +14,57 @@ All Rights Reserved.
 
 # GUIHO Mirror TODO List
 
+## GUIHO Convention 0001 CLI Compliance Migration
+
+- Status: todo; plan written; approval gates open
+- Created: `2026-08-16`
+- Updated: `2026-08-16`
+- Outcome: Replace the obsolete 11-asset/direct-payload/self-replacement model
+  with one Convention 0001-compliant Go/Cobra command, configuration, agent,
+  release, launcher, installation, upgrade, uninstall, documentation, and
+  validation architecture.
+- Audit:
+  [docs/reviews/implementation/guiho-convention-0001-cli-compliance-review.md](docs/reviews/implementation/guiho-convention-0001-cli-compliance-review.md)
+- Architecture:
+  [docs/architecture/guiho-convention-0001-cli-migration.md](docs/architecture/guiho-convention-0001-cli-migration.md)
+- Decisions:
+  [authority and supersession](docs/decisions/guiho-convention-0001-cli-authority.md),
+  [proposed identities](docs/decisions/guiho-convention-0001-cli-identities.md)
+- Reviews:
+  [architecture review](docs/reviews/architecture/guiho-convention-0001-cli-migration-review.md),
+  [plan review](docs/reviews/plans/guiho-convention-0001-cli-migration-review.md)
+- Plan:
+  [docs/plans/guiho-convention-0001-cli-migration.md](docs/plans/guiho-convention-0001-cli-migration.md)
+- Task:
+  [docs/todo/guiho-convention-0001-cli-migration.md](docs/todo/guiho-convention-0001-cli-migration.md)
+- Question ledger:
+  [docs/questions/guiho-convention-0001-cli-migration.md](docs/questions/guiho-convention-0001-cli-migration.md)
+- Execution gates: confirm CLI home `mirror`, main skill `guiho-s-mirror`, and
+  main prompt `guiho-p-mirror`; approve architecture/plan; integrate the
+  planning package into an exact clean `origin/main` base; coordinate the stale
+  shared Go CLI skill; then separately authorize C0001-00.
+- Release boundary: no implementation, version apply, tag, push, publication,
+  public lifecycle execution, or production mutation is authorized by this
+  planning work.
+
+## XDocs Scan Exclusion Configuration
+
+- Status: completed
+- Created: `2026-08-13T11:50:40+02:00`
+- Updated: `2026-08-13T11:55:20+02:00`
+- Outcome: Restore repository-wide XDocs validation by removing invalid and
+  redundant path-shaped `scan.exclude` entries while preserving the intended
+  generated-directory exclusions.
+- Spec:
+  [docs/todo/xdocs-scan-exclusion-configuration.md](docs/todo/xdocs-scan-exclusion-configuration.md)
+- Validation:
+  [docs/validation/xdocs-scan-exclusion-configuration.md](docs/validation/xdocs-scan-exclusion-configuration.md)
+- Plan: a dedicated plan is unnecessary for this bounded configuration repair;
+  the installed XDocs v0.10.0 validation error and source contract fully define
+  the change and its validation matrix.
+- Release boundary: configuration-only documentation tooling fix; no Mirror
+  version or release is planned without separate authorization.
+
 ## Issue 28 Instruction Hook Schema Parity
 
 - Status: completed
