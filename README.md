@@ -13,13 +13,13 @@ delivery authority.
 
 ## Install
 
-PowerShell:
+Windows (PowerShell):
 
 ```powershell
 irm https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.ps1 | iex
 ```
 
-Linux and macOS:
+macOS and Linux:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.sh | sh
@@ -27,35 +27,35 @@ curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.s
 
 The Unix installer is POSIX `sh` compatible and does not require Bash.
 
-Installers map the host to an approved native asset, verify it against
+AI agents — give your agent this prompt:
+
+```text
+Install the GUIHO Mirror CLI by following its default install prompt
+(guiho-i-mirror). Show it with `mirror agent prompt show guiho-i-mirror`, or
+read it from
+https://raw.githubusercontent.com/CGuiho/mirror/main/embed/prompts/guiho-i-mirror.md
+before the CLI is installed. Install Mirror by following that prompt, then
+report the installed version.
+```
+
+Verify the installation:
+
+```text
+mirror --version
+```
+
+Both installers map the host to an approved native asset, verify it against
 `checksums.txt`, install the bundled skill into both global agent roots,
 reconcile the managed instruction block without the prompt asset's YAML
 frontmatter, and verify `mirror v<version>`.
 
-### Alpha releases
-
-Pre-release versions such as `4.1.0-alpha.1` are published to GitHub Releases
-as prereleases. Both installers resolve `latest` to the newest stable release,
-so they skip alphas by default. Install a specific alpha by passing its exact
-version:
-
-PowerShell:
-
-```powershell
-$env:MIRROR_VERSION = '4.1.0-alpha.1'
-irm https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.ps1 | iex
-```
-
-Linux and macOS:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.sh | sh -s -- --version 4.1.0-alpha.1
-```
-
-An optional `mirror/v` or `v` prefix is accepted, for example
-`--version mirror/v4.1.0-alpha.1`. `MIRROR_VERSION` works for both installers
-and is the portable cross-shell choice. Alpha installs verify
-`mirror v<version>` exactly like stable installs.
+By default both installers select the latest stable release. Pass an exact
+version instead with `-Version` or `MIRROR_VERSION` in PowerShell and
+`--version` in `sh`; an optional `mirror/v` or `v` prefix is accepted, for
+example `4.1.0-alpha.1`. A channel selects the highest published release whose
+first prerelease identifier matches: use `-Channel` / `--channel`, where
+`stable` means the newest release without a prerelease component. Exact
+version and channel selection are mutually exclusive.
 
 ## Quick Start
 
