@@ -179,7 +179,8 @@ func writeHello(deps Dependencies, command *cobra.Command, info BuildInfo) error
 		latest, hasUpdate = latestAvailable(info.Version, deps.Now())
 	}
 	text := RenderHello(info, latest, hasUpdate, useColor)
-	_, err := fmt.Fprintln(deps.Out, text)
+	// Two blank lines before and two after the whole hello window — only for the hello page.
+	_, err := fmt.Fprintf(deps.Out, "\n\n%s\n\n\n", text)
 	return err
 }
 
