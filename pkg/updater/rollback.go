@@ -50,24 +50,12 @@ func performRollbackFiles(executable, backup string) error {
 }
 
 func CanRollback(execPath string) bool {
-	path, err := executablePath(execPath)
-	if err != nil {
-		return false
-	}
-	info, err := os.Stat(path + ".old")
-	return err == nil && !info.IsDir()
+	// No backup is retained — upgrade just overwrites. No rollback available.
+	return false
 }
 
 func PerformRollback(execPath string) (bool, error) {
-	path, err := executablePath(execPath)
-	if err != nil {
-		return false, err
-	}
-	backup := path + ".old"
-	if !CanRollback(path) {
-		return false, errors.New("no backup executable (.old) found for rollback")
-	}
-	return performRollback(path, backup)
+	return false, errors.New("no backup executable (.old) found for rollback — upgrade overwrites directly; reinstall via install script if needed")
 }
 
 func executablePath(path string) (string, error) {
