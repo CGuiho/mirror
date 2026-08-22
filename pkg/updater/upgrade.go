@@ -115,8 +115,8 @@ func Upgrade(opts UpgradeOptions) (UpgradeResult, error) {
 		executable = resolved
 	}
 	result.ExecutablePath = executable
-	result.BackupPath = executable + ".old"
-	result.Recovery = fmt.Sprintf("restore %q to %q", result.BackupPath, executable)
+	result.BackupPath = ""
+	result.Recovery = ""
 
 	lockPath := executable + ".upgrade.lock"
 	lockToken, release, err := acquireTransaction(lockPath)
@@ -129,14 +129,6 @@ func Upgrade(opts UpgradeOptions) (UpgradeResult, error) {
 			release()
 		}
 	}()
-	// Force replace: any stale backup from a previous interrupted upgrade must be
-	// removed before creating a new one. The upgrade must never fail merely
-	// because a previous .old remains — just delete it and proceed.
-	if _, err := os.Stat(result.BackupPath); err == nil {
-		_ = os.Remove(result.BackupPath)
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return result, fmt.Errorf("inspect upgrade backup: %w", err)
-	}
 
 	emitProgress := func(progress DownloadProgress) {
 		result.Progress = append(result.Progress, progress)
@@ -165,19 +157,20 @@ func Upgrade(opts UpgradeOptions) (UpgradeResult, error) {
 		replace = replaceExecutable
 	}
 	scheduled, err := replace(
-		executable, candidate, result.BackupPath, result.TargetVersion, expected,
+		executable, candidate, "", result.TargetVersion, expected,
 		lockPath, lockToken, verify,
 	)
 	if err != nil {
 		return result, err
 	}
 	result.Scheduled = scheduled
+	if !scheduled {
+		// Clean any stray legacy backup — upgrade is pure overwrite, no .old retained.
+		_ = os.Remove(executable + ".old")
+	}
 	if scheduled {
 		candidate = ""
 		releaseOnReturn = false
-	}
-	if !scheduled {
-		result.Recovery = ""
 	}
 	return result, nil
 }
