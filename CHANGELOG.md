@@ -18,6 +18,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.2.0] - 2026-08-22
+
+### Added
+
+- Added a beautiful hello window for plain `mirror`: boxed ANSI Shadow `MIRROR` logo, centered tagline, `GUIHO — Deterministic semantic versioning` header, creator and version lines, `Run mirror --help` hint, and an inline update notice (`▲ New version available: vX.Y.Z` / `run mirror upgrade to update`) driven by the cached `upgrade check`. The window is color-aware (`--color` / `NO_COLOR` / TTY) and renders as structured JSON with `--format json`.
+
+### Changed
+
+- Restructured repository layout: moved `mirror/*` artifacts to `agent/*` and `schema/*`, relocated install scripts to the repository root, and removed the legacy `mirror/` historical-reference directory.
+- Removed the deprecated npm/Bun package-manager install path from every agent-facing surface (`README.md`, embedded `guiho-s-mirror` skill, `AGENTS.md`, `mirror/DOCS.md`, `TECHNICAL.md`) and replaced it with deterministic install commands plus a manual binary fallback (download from `releases/latest`, verify `checksums.txt`, place at `$HOME/.guiho/bin/mirror[.exe]`).
+- Aligned `README.md` install section with GUIHO Convention 0001: exactly three install blocks (Windows PowerShell, macOS/Linux POSIX `sh`, AI prompt) plus `mirror --version` verification, with version/channel selection documented as prose.
+- Dropped the “Go/Cobra Powered” tagline from the hello window per feedback.
+
 ## [4.1.0] - 2026-08-22
 
 ### Added
