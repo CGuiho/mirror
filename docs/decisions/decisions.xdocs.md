@@ -19,6 +19,8 @@ keywords:
   - transactional upgrade
   - convention authority
   - CLI identities
+  - convention authority
+  - CLI identities
 flags: []
 status: stable
 ---
