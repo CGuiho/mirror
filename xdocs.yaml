@@ -15,9 +15,6 @@ scan:
     - bin
     - build
     - library
-    - devops/build-binaries
     - coverage
-    - mirror/node_modules
-    - mirror/bin
 project:
   name: mirror
