@@ -129,8 +129,11 @@ func Upgrade(opts UpgradeOptions) (UpgradeResult, error) {
 			release()
 		}
 	}()
+	// Force replace: any stale backup from a previous interrupted upgrade must be
+	// removed before creating a new one. The upgrade must never fail merely
+	// because a previous .old remains — just delete it and proceed.
 	if _, err := os.Stat(result.BackupPath); err == nil {
-		return result, fmt.Errorf("upgrade backup already exists at %s; rollback or remove it before upgrading", result.BackupPath)
+		_ = os.Remove(result.BackupPath)
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return result, fmt.Errorf("inspect upgrade backup: %w", err)
 	}

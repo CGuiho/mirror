@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.2.4] - 2026-08-22
+
+### Fixed
+
+- Fixed `mirror upgrade` failing with “upgrade backup already exists at …mirror.exe.old; rollback or remove it before upgrading” when a stale `.old` was left from an interrupted previous upgrade. The upgrade now deletes any existing `.old` beside the executable and force-replaces the binary: delete stale `.old`, move current executable to `.old`, then move the verified candidate into place. Convention 0001 § Synchronous Upgrade Transaction now explicitly requires this force-replace behavior.
+
 ## [4.2.3] - 2026-08-22
 
 ### Fixed
