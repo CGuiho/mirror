@@ -46,19 +46,17 @@ func TestPerformSelfUpgradeAndRollback(t *testing.T) {
 			}
 		},
 		Verify: func(string, string) error { return nil },
-		Replace: func(executable, candidate, backup, _, _, _, _ string, _ VerifyFunc) (bool, error) {
-			if err := os.Rename(executable, backup); err != nil {
-				return false, err
-			}
+		Replace: func(executable, candidate, _, _, _, _, _ string, _ VerifyFunc) (bool, error) {
+			// Just overwrite — mirrors installer behavior, no backup.
+			_ = os.Remove(executable)
 			if err := os.Rename(candidate, executable); err != nil {
-				_ = os.Rename(backup, executable)
 				return false, err
 			}
 			return false, nil
 		},
 	}
 
-	// Upgrade
+	// Upgrade — should just overwrite, no .old retained.
 	err := PerformSelfUpgrade(opts)
 	if err != nil {
 		t.Fatalf("PerformSelfUpgrade failed: %v", err)
@@ -73,24 +71,15 @@ func TestPerformSelfUpgradeAndRollback(t *testing.T) {
 		t.Errorf("Expected upgraded binary content %q, got %q", string(newBinaryContent), string(currentData))
 	}
 
-	// Verify rollback availability
-	if !CanRollback(originalExec) {
-		t.Error("Expected CanRollback to return true after upgrade")
+	// No backup retained — rollback must be unavailable.
+	if CanRollback(originalExec) {
+		t.Error("Expected CanRollback to return false after overwrite upgrade")
 	}
-
-	// Test Rollback
-	err = performRollbackFiles(originalExec, originalExec+".old")
-	if err != nil {
-		t.Fatalf("PerformRollback failed: %v", err)
+	if _, err := PerformRollback(originalExec); err == nil {
+		t.Fatal("expected PerformRollback to fail without backup")
 	}
-
-	// Verify rolled-back binary content
-	rolledBackData, err := os.ReadFile(originalExec)
-	if err != nil {
-		t.Fatalf("Failed to read rolled-back binary: %v", err)
-	}
-	if string(rolledBackData) != string(initialContent) {
-		t.Errorf("Expected rolled back content %q, got %q", string(initialContent), string(rolledBackData))
+	if _, err := os.Stat(originalExec + ".old"); !os.IsNotExist(err) {
+		t.Fatalf("expected no .old backup, got stat err: %v", err)
 	}
 }
 
