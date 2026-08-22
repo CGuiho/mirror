@@ -2,8 +2,8 @@
 name: Issue 28 Instruction Hook Schema Parity
 purpose: Define the required outcome and completion signals for GitHub issue 28.
 description: Tracks parity between Mirror's production Go JSON Schema generator and the committed schema served to YAML editors.
-created: 2026-08-12T15:06:30+02:00
-updated: 2026-08-13T11:32:39+02:00
+created: 2026-08-12
+updated: 2026-08-13
 flags:
   - approved
   - implementation-ready
@@ -192,6 +192,10 @@ publication parity, not product behavior or architecture.
   slash-delimited paths and fail with `scan.exclude entries must be non-empty
   directory names`; `xdocs.yaml` was not edited and touched descriptors were
   manually verified.
+- Follow-up resolution: the bounded
+  [XDocs scan exclusion repair](xdocs-scan-exclusion-configuration.md) removed
+  the invalid path-shaped entries; repository-wide strict metadata, hierarchy,
+  and doctor validation now pass.
 - Independent review accepted exact head
   `f6685d017850839cbf201e36fa9f00cbd5853ede` with no blocker or high findings:
   [issue comment](https://github.com/CGuiho/mirror/issues/28#issuecomment-5273331134).

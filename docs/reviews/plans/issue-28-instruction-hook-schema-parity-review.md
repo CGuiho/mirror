@@ -2,7 +2,7 @@
 name: Issue 28 Instruction Hook Schema Parity Plan Review
 purpose: Gate the issue 28 schema-parity plan for safe unattended execution.
 description: Independently reviews traceability, schema proof, ownership, sequencing, lifecycle gates, XDocs handling, and release boundaries for the instruction-hook schema correction.
-created: 2026-08-12T15:20:16+02:00
+created: 2026-08-12
 flags:
   - approved
   - ready-for-execution

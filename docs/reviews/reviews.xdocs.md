@@ -3,6 +3,7 @@ subject: mirror-docs-reviews
 description: Engineering review reports for Mirror plans, architecture, and implementation.
 parent: mirror-docs
 children:
+  - mirror-docs-reviews-architecture
   - mirror-docs-reviews-implementation
   - mirror-docs-reviews-plans
 files: {}
@@ -13,6 +14,7 @@ tags:
 keywords:
   - engineering reviews
   - plan review
+  - architecture review
 flags: []
 status: stable
 ---

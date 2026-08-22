@@ -2,7 +2,7 @@
 name: Issue 28 Instruction Hook Schema Parity Implementation Plan
 purpose: Provide branch-aware, question-sealed execution units for GitHub issue 28.
 description: Defines the source-of-truth, static artifact, regression-test, XDocs, review, validation, integration, and deferred release work needed to keep the published schema aligned with Mirror's Go runtime.
-created: 2026-08-12T15:06:30+02:00
+created: 2026-08-12
 flags:
   - approved
   - implementation-ready

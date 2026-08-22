@@ -5,6 +5,7 @@ parent: "mirror-docs"
 children: []
 files: {}
 documents:
+  "xdocs-scan-exclusion-configuration.md": "Repository-wide XDocs configuration, coverage, metadata, hierarchy, and doctor validation evidence."
   "init-git-defaults.md": "Validation evidence for Git-first mirror init defaults and release-prompt behavior in issue 26."
   "mirror-v4.1.0-hooks.md": "Local typed-config, lifecycle, trust, JSON, Go quality, exact-asset, CLI, and XDocs evidence for issue 24."
   "mirror-go-production-migration.md": "Local Go source, exact asset, Windows binary, installer, workflow, and release-boundary evidence."

@@ -5,7 +5,7 @@ description: Local evidence that the committed public schema equals the producti
 created: 2026-08-12
 updated: 2026-08-13
 owner: mirror-docs-validation
-flags: [complete, release-verified, xdocs-blocked]
+flags: [complete, release-verified]
 tags: [mirror, validation, schema, hooks]
 keywords: [issue 28, mirror.schema.json, schema parity, instruction hooks]
 ---
@@ -54,14 +54,13 @@ keywords: [issue 28, mirror.schema.json, schema parity, instruction hooks]
 
 ## XDocs Validation
 
-`xdocs meta`, `xdocs tree`, and `xdocs doctor` remain blocked by the
-repository's existing `xdocs.yaml` `scan.exclude` shape:
-`scan.exclude entries must be non-empty directory names` (slash-delimited
-entries such as `devops/build-binaries`). The failure reproduces unchanged and
-pre-dates this task; `xdocs.yaml` was not edited. Touched descriptors
-(`mirror/schema/schema.xdocs.md`, `docs/validation/validation.xdocs.md`) were
-manually verified: frontmatter is valid, document-map entries are accurate, and
-parent/child links are unchanged. No new XDocs error was introduced.
+The original implementation run was blocked by the repository's former
+path-shaped `scan.exclude` entries and therefore used manual changed-scope
+verification. The follow-up
+[XDocs scan exclusion repair](xdocs-scan-exclusion-configuration.md) removed the
+invalid entries and normalized the issue-28 companion dates exposed by the
+restored scan. Repository-wide strict metadata, tree, and doctor validation now
+pass with 0 errors and 0 warnings.
 
 ## Delivery
 
