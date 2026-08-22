@@ -1,17 +1,24 @@
 
+# General
+.DS_Store
+
 # Environment-related
-*.env
+.env
+**/.env
+.env.keys
 
 # Application-related
+**/.tmp/
 **/.temp/
 **/build/
 **/dist/
 **/node_modules/
+
+## React Router
+**/.react-router/
 
 
 # Library-related
 **/library/
 **/bundle/
 **/bin/
-
-.opencode
