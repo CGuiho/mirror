@@ -55,7 +55,7 @@ jobs:
           trap 'rm -rf "$bootstrap_root"' EXIT
           mkdir -p "$bootstrap_root/home" "$bootstrap_root/project"
           test "$(bin/mirror-linux-amd64 --version)" = 'mirror v0.0.0-ci'
-          test "$(MIRROR_HOME_DIR="$bootstrap_root/home" bin/mirror-linux-amd64 --cwd "$bootstrap_root/project")" = 'Hello Windows - mirror v0.0.0-ci'
+          hello="$(MIRROR_HOME_DIR="$bootstrap_root/home" bin/mirror-linux-amd64 --cwd "$bootstrap_root/project")"; echo "$hello" | grep -F "v0.0.0-ci"; echo "$hello" | grep -F "GUIHO"
           test -s "$bootstrap_root/home/.agents/skills/guiho-s-mirror/SKILL.md"
           test -s "$bootstrap_root/home/.claude/skills/guiho-s-mirror/SKILL.md"
           test "$(grep -Fc '<!-- BEGIN MIRROR — DO NOT EDIT THIS SECTION -->' "$bootstrap_root/project/AGENTS.md")" -eq 1
@@ -146,7 +146,7 @@ jobs:
           mkdir -p "$bootstrap_root/home" "$bootstrap_root/project"
           chmod +x "bin/${{ matrix.asset }}"
           test "$("bin/${{ matrix.asset }}" --version)" = 'mirror v0.0.0-ci'
-          test "$(MIRROR_HOME_DIR="$bootstrap_root/home" "bin/${{ matrix.asset }}" --cwd "$bootstrap_root/project")" = 'Hello Windows - mirror v0.0.0-ci'
+          hello="$("MIRROR_HOME_DIR="$bootstrap_root/home" "bin/${{ matrix.asset }}" --cwd "$bootstrap_root/project")"; echo "$hello" | grep -F "v0.0.0-ci"; echo "$hello" | grep -F "GUIHO"
           "bin/${{ matrix.asset }}" agent prompt list --names | grep -Fx guiho-i-mirror
 
       - name: Smoke Windows target
@@ -161,7 +161,7 @@ jobs:
           $project = Join-Path $bootstrapRoot 'project'
           New-Item -ItemType Directory -Force -Path $env:MIRROR_HOME_DIR, $project | Out-Null
           if ((& $binary --version | Out-String).Trim() -ne 'mirror v0.0.0-ci') { exit 1 }
-          if ((& $binary --cwd $project | Out-String).Trim() -ne 'Hello Windows - mirror v0.0.0-ci') { exit 1 }
+          $hello = (& $binary --cwd $project | Out-String); if (-not ($hello.Contains("v0.0.0-ci") -and $hello.Contains("GUIHO"))) { Write-Error "Hello window missing GUIHO or version"; exit 1 }
           if ((& $binary agent prompt list --names | Out-String).Trim() -ne 'guiho-i-mirror') { exit 1 }
 
   windows-installer:

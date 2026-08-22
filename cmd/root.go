@@ -92,13 +92,18 @@ func NewRootCommand(deps Dependencies, info BuildInfo) *cobra.Command {
 				return fmt.Errorf("bootstrap Mirror agent resources: %w", err)
 			}
 			if outputFormat(command) == "json" {
-				return writeJSON(deps.Out, successEnvelope{
-					OK: true, Command: command.CommandPath(),
-					Result: map[string]string{"message": "Hello Windows - mirror v" + info.Version},
-				})
+				latest, hasUpdate := latestAvailable(info.Version, deps.Now())
+				result := map[string]any{
+					"message": "mirror v" + info.Version,
+					"version": info.Version,
+				}
+				if hasUpdate {
+					result["updateAvailable"] = true
+					result["latestVersion"] = latest
+				}
+				return writeJSON(deps.Out, successEnvelope{OK: true, Command: command.CommandPath(), Result: result})
 			}
-			fmt.Fprintf(deps.Out, "Hello Windows - mirror v%s\n", info.Version)
-			return nil
+			return writeHello(deps, command, info)
 		},
 		PersistentPreRunE: func(command *cobra.Command, _ []string) error {
 			format := outputFormat(command)
@@ -137,7 +142,11 @@ func NewRootCommand(deps Dependencies, info BuildInfo) *cobra.Command {
 						}
 					}
 				}
-				if notice := deps.ReadUpdateNotice(info.Version, deps.Now()); notice != "" {
+				if !showVersion && command.Name() == "mirror" {
+					// Plain `mirror` renders its own update line inside the hello
+					// window (see RenderHello) — suppress the generic stderr notice
+					// to avoid duplication. Other commands still print to stderr.
+				} else if notice := deps.ReadUpdateNotice(info.Version, deps.Now()); notice != "" {
 					fmt.Fprint(deps.Err, notice)
 				}
 				if executable, err := deps.Executable(); err == nil {

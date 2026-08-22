@@ -30,7 +30,8 @@ func TestFreshRootTreesHaveIndependentState(t *testing.T) {
 	second.SetArgs(nil)
 	require.NoError(t, second.Execute())
 	assert.Equal(t, "mirror v1.2.3\n", firstOut.String())
-	assert.Equal(t, "Hello Windows - mirror v9.8.7\n", secondOut.String())
+	assert.Contains(t, secondOut.String(), "v9.8.7")
+	assert.Contains(t, secondOut.String(), "GUIHO")
 }
 
 func TestStartupUsesOnlyCachedNoticeAndDetachedLauncher(t *testing.T) {
@@ -46,8 +47,12 @@ func TestStartupUsesOnlyCachedNoticeAndDetachedLauncher(t *testing.T) {
 	}
 	err := ExecuteContext(context.Background(), deps, BuildInfo{Version: "1.0.0"}, nil)
 	require.NoError(t, err)
-	assert.Equal(t, "Hello Windows - mirror v1.0.0\n", stdout.String())
-	assert.Equal(t, "A newer Mirror version is available.\n", stderr.String())
+	assert.Contains(t, stdout.String(), "v1.0.0")
+	assert.Contains(t, stdout.String(), "GUIHO")
+	// Hello window now renders the cached update notice inline instead of on
+	// stderr to keep the update visible in the landing page.
+	assert.Contains(t, stdout.String(), "New version available")
+	assert.Equal(t, "", stderr.String())
 	assert.Equal(t, 1, launches)
 }
 
@@ -71,7 +76,8 @@ func TestPlainMirrorBootstrapsAgentResourcesIdempotently(t *testing.T) {
 			deps := testDependenciesAt(root, stdout, &bytes.Buffer{})
 			deps.BootstrapAgents = nil
 			require.NoError(t, ExecuteContext(context.Background(), deps, BuildInfo{Version: "1.2.3"}, nil))
-			assert.Equal(t, "Hello Windows - mirror v1.2.3\n", stdout.String())
+			assert.Contains(t, stdout.String(), "v1.2.3")
+			assert.Contains(t, stdout.String(), "GUIHO")
 
 			modifications := map[string]time.Time{}
 			for _, name := range test.expected {
