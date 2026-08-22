@@ -14,18 +14,35 @@ import (
 	"github.com/spf13/pflag"
 )
 
-func RenderHelpTree(command *cobra.Command, maxDepth int) {
-	renderHelpTree(command.OutOrStdout(), command, maxDepth)
+func RenderHelpTree(command *cobra.Command, maxDepth int, showGlobalFlags bool) {
+	renderHelpTree(command.OutOrStdout(), command, maxDepth, showGlobalFlags)
 }
 
-func renderHelpTree(writer io.Writer, command *cobra.Command, maxDepth int) {
+func renderHelpTree(writer io.Writer, command *cobra.Command, maxDepth int, showGlobalFlags bool) {
 	fmt.Fprintln(writer, "COMMAND TREE")
 	fmt.Fprintln(writer)
+	if !showGlobalFlags {
+		global := globalFlags(command)
+		if len(global) > 0 {
+			fmt.Fprintln(writer, "Global Flags:")
+			for _, flag := range global {
+				name := "--" + flag.Name
+				if flag.Shorthand != "" {
+					name = "-" + flag.Shorthand + ", " + name
+				}
+				if flag.NoOptDefVal == "" {
+					name += " <" + flagValueHint(flag) + ">"
+				}
+				fmt.Fprintln(writer, "  "+treeLabel(name, flag.Usage))
+			}
+			fmt.Fprintln(writer)
+		}
+	}
 	fmt.Fprintln(writer, command.Name())
-	renderTreeChildren(writer, command, "", 0, maxDepth)
+	renderTreeChildren(writer, command, "", 0, maxDepth, showGlobalFlags)
 }
 
-func renderTreeChildren(writer io.Writer, command *cobra.Command, prefix string, depth, maxDepth int) {
+func renderTreeChildren(writer io.Writer, command *cobra.Command, prefix string, depth, maxDepth int, showGlobalFlags bool) {
 	if maxDepth > 0 && depth >= maxDepth {
 		return
 	}
@@ -43,7 +60,7 @@ func renderTreeChildren(writer io.Writer, command *cobra.Command, prefix string,
 		entries = append(entries, entry{label: treeLabel(child.Use, child.Short), command: child})
 	}
 
-	flags := visibleFlags(command)
+	flags := visibleFlagsForTree(command, showGlobalFlags)
 	for _, flag := range flags {
 		name := "--" + flag.Name
 		if flag.Shorthand != "" {
@@ -63,7 +80,7 @@ func renderTreeChildren(writer io.Writer, command *cobra.Command, prefix string,
 		}
 		fmt.Fprintln(writer, prefix+connector+item.label)
 		if item.command != nil {
-			renderTreeChildren(writer, item.command, nextPrefix, depth+1, maxDepth)
+			renderTreeChildren(writer, item.command, nextPrefix, depth+1, maxDepth, showGlobalFlags)
 		}
 	}
 }
@@ -118,6 +135,22 @@ func renderCommandMarkdown(writer io.Writer, command *cobra.Command, level int) 
 }
 
 func visibleFlags(command *cobra.Command) []*pflag.Flag {
+	return visibleFlagsForTree(command, true)
+}
+
+func globalFlags(command *cobra.Command) []*pflag.Flag {
+	root := command.Root()
+	flags := make([]*pflag.Flag, 0)
+	root.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
+		if !flag.Hidden {
+			flags = append(flags, flag)
+		}
+	})
+	sort.Slice(flags, func(i, j int) bool { return flags[i].Name < flags[j].Name })
+	return flags
+}
+
+func visibleFlagsForTree(command *cobra.Command, showGlobalFlags bool) []*pflag.Flag {
 	command.InitDefaultHelpFlag()
 	flagsByName := map[string]*pflag.Flag{}
 	command.NonInheritedFlags().VisitAll(func(flag *pflag.Flag) {
@@ -125,11 +158,13 @@ func visibleFlags(command *cobra.Command) []*pflag.Flag {
 			flagsByName[flag.Name] = flag
 		}
 	})
-	command.InheritedFlags().VisitAll(func(flag *pflag.Flag) {
-		if !flag.Hidden {
-			flagsByName[flag.Name] = flag
-		}
-	})
+	if showGlobalFlags {
+		command.InheritedFlags().VisitAll(func(flag *pflag.Flag) {
+			if !flag.Hidden {
+				flagsByName[flag.Name] = flag
+			}
+		})
+	}
 	flags := make([]*pflag.Flag, 0, len(flagsByName))
 	for _, flag := range flagsByName {
 		flags = append(flags, flag)

@@ -113,14 +113,18 @@ func NewRootCommand(deps Dependencies, info BuildInfo) *cobra.Command {
 			tree, _ := command.Flags().GetBool("help-tree")
 			docs, _ := command.Flags().GetBool("help-docs")
 			depth, _ := command.Flags().GetInt("help-tree-depth")
+			globalFlags, _ := command.Flags().GetBool("help-tree-global-flags")
 			if command.Flags().Changed("help-tree-depth") && depth <= 0 {
 				return fmt.Errorf("help-tree-depth must be a positive integer")
 			}
 			if tree && docs {
 				return fmt.Errorf("help-tree and help-docs are mutually exclusive")
 			}
+			if globalFlags && !tree {
+				return fmt.Errorf("help-tree-global-flags requires help-tree")
+			}
 			if tree {
-				renderHelpTree(deps.Out, command, depth)
+				renderHelpTree(deps.Out, command, depth, globalFlags)
 				return errHelpRendered
 			}
 			if docs {
@@ -172,6 +176,7 @@ func NewRootCommand(deps Dependencies, info BuildInfo) *cobra.Command {
 	flags.Bool("verbose", false, "Show full error details.")
 	flags.Bool("help-tree", false, "Show command hierarchy.")
 	flags.Int("help-tree-depth", 0, "Limit help-tree recursion depth.")
+	flags.Bool("help-tree-global-flags", false, "Repeat inherited global flags under every command.")
 	flags.Bool("help-docs", false, "Emit deterministic Markdown documentation.")
 	root.Flags().BoolVarP(&showVersion, "version", "v", false, "Show the Mirror version.")
 
