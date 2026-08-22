@@ -7,7 +7,7 @@ import (
 )
 
 func performRollback(executable, backup string) (bool, error) {
-	return false, performRollbackFiles(executable, backup)
+	return false, errors.New("no backup executable (.old) found for rollback — upgrade overwrites directly; reinstall via install script if needed")
 }
 
 func CompleteWindowsRollback(string, string, string, int) error {
