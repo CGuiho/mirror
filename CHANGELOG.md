@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.2.1] - 2026-08-22
+
+### Fixed
+
+- Corrected all four installer entry points (`devops/install.sh`, `devops/install.ps1`, `install.sh`, `install.ps1`) to install the stable launcher to the convention-mandated shared directory `$HOME/.guiho/bin` (`%USERPROFILE%\.guiho\bin\mirror.exe` on Windows) instead of the non-compliant `$HOME/.local/bin`. Help text, `MIRROR_INSTALL_DIR` / `--install-dir` / `-InstallDir` overrides, and `PATH` update logic now consistently target `.guiho/bin`.
+
 ## [4.2.0] - 2026-08-22
 
 ### Added

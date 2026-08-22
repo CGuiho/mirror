@@ -1,6 +1,6 @@
 param(
   [string]$Version = $(if ($env:MIRROR_VERSION) { $env:MIRROR_VERSION } else { 'latest' }),
-  [string]$InstallDir = $(if ($env:MIRROR_INSTALL_DIR) { $env:MIRROR_INSTALL_DIR } elseif (-not [string]::IsNullOrWhiteSpace([string]$HOME)) { Join-Path $HOME '.local\bin' } else { '' })
+  [string]$InstallDir = $(if ($env:MIRROR_INSTALL_DIR) { $env:MIRROR_INSTALL_DIR } elseif (-not [string]::IsNullOrWhiteSpace([string]$HOME)) { Join-Path $HOME '.guiho\bin' } else { '' })
 )
 
 $ErrorActionPreference = 'Stop'

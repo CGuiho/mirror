@@ -23,14 +23,14 @@ Parameters:
   -Version      Exact semantic version to install, including prerelease (default: latest stable)
   -Arch         Force architecture: x64 | arm64
   -Variant      Force x64 variant: baseline | default | modern
-  -InstallDir   Install directory (default: `$HOME\.local\bin)
+  -InstallDir   Install directory (default: `$HOME\.guiho\bin)
 "@
   return
 }
 
 if ([string]::IsNullOrWhiteSpace($Version)) { $Version = if ($env:MIRROR_VERSION) { $env:MIRROR_VERSION } else { 'latest' } }
 if ([string]::IsNullOrWhiteSpace($Repo)) { $Repo = if ($env:MIRROR_REPO) { $env:MIRROR_REPO } else { 'CGuiho/mirror' } }
-if ([string]::IsNullOrWhiteSpace($InstallDir)) { $InstallDir = if ($env:MIRROR_INSTALL_DIR) { $env:MIRROR_INSTALL_DIR } else { Join-Path $UserHome '.local\bin' } }
+if ([string]::IsNullOrWhiteSpace($InstallDir)) { $InstallDir = if ($env:MIRROR_INSTALL_DIR) { $env:MIRROR_INSTALL_DIR } else { Join-Path $UserHome '.guiho\bin' } }
 if ([string]::IsNullOrWhiteSpace($ApiBaseUrl)) { $ApiBaseUrl = if ($env:MIRROR_GITHUB_API_URL) { $env:MIRROR_GITHUB_API_URL.TrimEnd('/') } else { 'https://api.github.com' } }
 
 function Assert-SecureUri { param([string]$Uri)

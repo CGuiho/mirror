@@ -5,7 +5,7 @@ repo="${MIRROR_REPO:-CGuiho/mirror}"
 version="${MIRROR_VERSION:-latest}"
 api_base_url="${MIRROR_GITHUB_API_URL:-https://api.github.com}"
 release_base_url="${MIRROR_RELEASE_BASE_URL:-https://github.com/${repo}/releases/download}"
-install_dir="${MIRROR_INSTALL_DIR:-$HOME/.local/bin}"
+install_dir="${MIRROR_INSTALL_DIR:-$HOME/.guiho/bin}"
 arch_override=""
 variant_override=""
 os=""
@@ -33,7 +33,7 @@ Flags:
   -v, --version VERSION   Exact semantic version, including prerelease (default: latest stable)
   --arch ARCH             Force architecture: x64 | arm64
   --variant VARIANT       Force x64 variant: baseline | default | modern
-  --install-dir DIR       Install directory (default: \$HOME/.local/bin)
+  --install-dir DIR       Install directory (default: \$HOME/.guiho/bin)
   -h, --help              Show this help
 EOF
 }
