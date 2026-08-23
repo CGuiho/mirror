@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Corrected the canonical installation and uninstallation prompt artifact IDs to `guiho-p-mirror-install` and `guiho-p-mirror-uninstall`, added required `metadata.version` fields, embedded both prompts, and removed the instruction ID `guiho-i-mirror` from `agent prompt` lookup per GUIHO Agent Artifacts Convention 0002.
+
 ## [4.2.5] - 2026-08-22
 
 ### Added
