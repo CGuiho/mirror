@@ -15,21 +15,26 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/CGuiho/mirror/pkg/launcher"
 )
 
 const maxBinaryBytes int64 = 256 << 20
 const transactionMaxAge = 10 * time.Minute
 
 type VerifyFunc func(path, targetVersion string) error
+type SelfTestFunc func(path string) error
 type ReplaceFunc func(executable, candidate, backup, targetVersion, checksum, lockPath, lockToken string, verify VerifyFunc) (bool, error)
 
 type UpgradeOptions struct {
 	CurrentExecutablePath string
+	UserHome              string
 	TargetVersion         string
 	DownloadURL           string
 	ExpectedChecksum      string
 	HTTPClient            *http.Client
 	Verify                VerifyFunc
+	SelfTest              SelfTestFunc
 	Replace               ReplaceFunc
 	Progress              func(DownloadProgress)
 }
@@ -41,12 +46,14 @@ type DownloadProgress struct {
 }
 
 type UpgradeResult struct {
-	ExecutablePath string             `json:"executablePath"`
-	BackupPath     string             `json:"backupPath"`
-	TargetVersion  string             `json:"targetVersion"`
-	Scheduled      bool               `json:"scheduled"`
-	Recovery       string             `json:"recovery"`
-	Progress       []DownloadProgress `json:"progress,omitempty"`
+	ExecutablePath   string             `json:"executablePath"`
+	PayloadPath      string             `json:"payloadPath,omitempty"`
+	PreviousVersion  string             `json:"previousVersion,omitempty"`
+	BackupPath       string             `json:"backupPath,omitempty"`
+	TargetVersion    string             `json:"targetVersion"`
+	LegacyTransition bool               `json:"legacyTransition,omitempty"`
+	Recovery         string             `json:"recovery,omitempty"`
+	Progress         []DownloadProgress `json:"progress,omitempty"`
 }
 
 func GetTargetAssetName(goos, goarch string) string {
@@ -118,7 +125,22 @@ func Upgrade(opts UpgradeOptions) (UpgradeResult, error) {
 	result.BackupPath = ""
 	result.Recovery = ""
 
-	lockPath := executable + ".upgrade.lock"
+	var paths launcher.Paths
+	if opts.UserHome != "" {
+		paths, err = launcher.ResolvePaths(opts.UserHome)
+	} else {
+		paths, err = launcher.UserPaths()
+	}
+	if err != nil {
+		return result, err
+	}
+	if err := os.MkdirAll(paths.CLIHome, 0o755); err != nil {
+		return result, fmt.Errorf("create Mirror home: %w", err)
+	}
+	if err := os.MkdirAll(paths.SharedTemp, 0o755); err != nil {
+		return result, fmt.Errorf("create shared GUIHO temporary directory: %w", err)
+	}
+	lockPath := paths.UpgradeLock
 	lockToken, release, err := acquireTransaction(lockPath)
 	if err != nil {
 		return result, err
@@ -130,13 +152,23 @@ func Upgrade(opts UpgradeOptions) (UpgradeResult, error) {
 		}
 	}()
 
+	operationDir, err := os.MkdirTemp(paths.SharedTemp, "mirror-upgrade-")
+	if err != nil {
+		return result, fmt.Errorf("create confined upgrade staging directory: %w", err)
+	}
+	removeOperationDir := true
+	defer func() {
+		if removeOperationDir {
+			_ = os.RemoveAll(operationDir)
+		}
+	}()
 	emitProgress := func(progress DownloadProgress) {
 		result.Progress = append(result.Progress, progress)
 		if opts.Progress != nil {
 			opts.Progress(progress)
 		}
 	}
-	candidate, calculated, err := downloadCandidate(opts, filepath.Dir(executable), emitProgress)
+	candidate, calculated, err := downloadCandidate(opts, operationDir, emitProgress)
 	if err != nil {
 		return result, err
 	}
@@ -152,27 +184,96 @@ func Upgrade(opts UpgradeOptions) (UpgradeResult, error) {
 	if verify == nil {
 		verify = VerifyExecutable
 	}
+	if err := verify(candidate, result.TargetVersion); err != nil {
+		return result, fmt.Errorf("verify staged update: %w", err)
+	}
+	selfTest := opts.SelfTest
+	if selfTest == nil {
+		selfTest = VerifySelfTest
+	}
+	if err := selfTest(candidate); err != nil {
+		return result, fmt.Errorf("self-test staged update: %w", err)
+	}
+
+	state, stateErr := launcher.ReadState(paths)
+	if stateErr == nil {
+		activePath, pathErr := launcher.PayloadPath(paths, state.Active)
+		if pathErr != nil {
+			return result, pathErr
+		}
+		if !sameExecutablePath(executable, activePath) {
+			return result, fmt.Errorf("running executable is not the active launcher payload: %s", executable)
+		}
+		entry, payloadPath, installErr := launcher.InstallPayload(paths, candidate, result.TargetVersion, expected)
+		if installErr != nil {
+			return result, installErr
+		}
+		previousState, activateErr := launcher.Activate(paths, entry)
+		if activateErr != nil {
+			return result, fmt.Errorf("activate launcher payload: %w", activateErr)
+		}
+		if verifyErr := verify(paths.Launcher, result.TargetVersion); verifyErr != nil {
+			if restoreErr := launcher.Restore(paths, previousState); restoreErr != nil {
+				return result, fmt.Errorf("verify activated launcher payload: %w; restore previous pointer: %v", verifyErr, restoreErr)
+			}
+			return result, fmt.Errorf("verify activated launcher payload: %w; previous pointer restored", verifyErr)
+		}
+		if selfTestErr := selfTest(paths.Launcher); selfTestErr != nil {
+			if restoreErr := launcher.Restore(paths, previousState); restoreErr != nil {
+				return result, fmt.Errorf("self-test activated launcher payload: %w; restore previous pointer: %v", selfTestErr, restoreErr)
+			}
+			return result, fmt.Errorf("self-test activated launcher payload: %w; previous pointer restored", selfTestErr)
+		}
+		result.ExecutablePath = paths.Launcher
+		result.PayloadPath = payloadPath
+		if previousState != nil {
+			result.PreviousVersion = previousState.Active.Version
+		}
+		return result, nil
+	}
+	if !errors.Is(stateErr, os.ErrNotExist) {
+		return result, fmt.Errorf("read launcher state before upgrade: %w", stateErr)
+	}
+
+	// A direct legacy installation must transition once to the stable launcher.
+	// Unix can replace the unlinked running image synchronously. Windows must use
+	// the legacy helper because the running executable is locked; the candidate
+	// bootstraps current.json and its immutable payload during helper verification.
 	replace := opts.Replace
 	if replace == nil {
 		replace = replaceExecutable
 	}
-	scheduled, err := replace(
+	legacyAsync, err := replace(
 		executable, candidate, "", result.TargetVersion, expected,
 		lockPath, lockToken, verify,
 	)
 	if err != nil {
 		return result, err
 	}
-	result.Scheduled = scheduled
-	if !scheduled {
-		// Clean any stray legacy backup — upgrade is pure overwrite, no .old retained.
+	result.LegacyTransition = legacyAsync
+	if !legacyAsync {
 		_ = os.Remove(executable + ".old")
 	}
-	if scheduled {
+	if legacyAsync {
 		candidate = ""
 		releaseOnReturn = false
+		removeOperationDir = false
 	}
 	return result, nil
+}
+
+func sameExecutablePath(left, right string) bool {
+	leftAbs, leftErr := filepath.Abs(left)
+	rightAbs, rightErr := filepath.Abs(right)
+	if leftErr != nil || rightErr != nil {
+		return false
+	}
+	leftAbs = filepath.Clean(leftAbs)
+	rightAbs = filepath.Clean(rightAbs)
+	if runtime.GOOS == "windows" {
+		return strings.EqualFold(leftAbs, rightAbs)
+	}
+	return leftAbs == rightAbs
 }
 
 func downloadCandidate(opts UpgradeOptions, destinationDir string, emit func(DownloadProgress)) (string, string, error) {

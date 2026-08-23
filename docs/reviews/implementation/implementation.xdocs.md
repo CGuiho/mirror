@@ -5,6 +5,7 @@ parent: mirror-docs-reviews
 children: []
 files: {}
 documents:
+  windows-upgrade-bridge-stable-launcher.md: Reviews the v4.2.4 bridge, stable launcher, synchronous pointer activation, recovery output, and residual transition risk.
   guiho-convention-0001-cli-compliance-review.md: Audits the production Go CLI against GUIHO Convention 0001 across tooling, flags, configuration, agent artifacts, installation, upgrade, uninstall, release, documentation, and validation.
   mirror-v4.1.0-hooks-review.md: Reviews the typed hook contract, execution lifecycle, trust boundary, error routing, and release boundary for issue 24.
   mirror-go-production-migration-review.md: Accepts the local Go/Cobra production migration and records the public-release boundary.
@@ -31,6 +32,8 @@ keywords:
   - posix sh
   - curl pipe
   - lifecycle hooks
+  - stable launcher
+  - Windows upgrade bridge
 flags: []
 status: stable
 ---

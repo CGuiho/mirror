@@ -13,8 +13,9 @@ files:
   .gitignore: Ignore rules for generated and local files.
   go.mod: Go module and direct dependency contract.
   go.sum: Go dependency integrity checksums.
-  main.go: Thin executable entrypoint with linker build metadata and exit mapping.
+  main.go: Thin entrypoint with linker metadata, stable-launcher dispatch, exact child exit propagation, CLI execution, and final recovery output.
   mirror.yaml: Self-hosting semantic-version configuration using mirror/v tags.
+  runx.yaml: RunX v2 catalog for formatting, tests, vet, release assets, help, and stable-upgrade proofs.
   xdocs.yaml: YAML configuration for XDocs discovery and validation.
 documents:
   AGENTS.md: Current Go CLI engineering, delivery, documentation, and release boundaries.
@@ -25,7 +26,7 @@ documents:
   todo.md: Local task ledger and migration handoff.
   xdocs-overview.md: Generated companion overview for the repository root.
 tags: [repository, mirror, go, documentation]
-keywords: [cobra, strict yaml, lifecycle hooks, native release, eleven assets]
+keywords: [cobra, strict yaml, stable launcher, immutable payload, lifecycle hooks, native release, eleven assets]
 flags: []
 status: stable
 ---

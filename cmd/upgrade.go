@@ -16,25 +16,22 @@ import (
 )
 
 func upgradeRecoveryCommand(version string) string {
+	version = strings.TrimPrefix(strings.TrimSpace(version), "v")
+	if runtime.GOOS == "windows" {
+		if version == "" {
+			return "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.ps1')))\""
+		}
+		return fmt.Sprintf("powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.ps1'))) -Version '%s'\"", version)
+	}
 	if version == "" {
 		return "curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.sh | sh"
 	}
 	return fmt.Sprintf("curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.sh | sh -s -- --version %s", version)
 }
 
-func upgradeRecoveryCommandWindows(version string) string {
-	if version == "" {
-		return "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.ps1')))\""
-	}
-	return fmt.Sprintf("powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"& ([scriptblock]::Create((Invoke-RestMethod 'https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.ps1'))) -Version '%s'\"", version)
-}
-
 func printUpgradeRecoveryBlock(out io.Writer, version string) {
 	fmt.Fprintln(out, "If the upgrade fails, reinstall Mirror with this command:")
 	fmt.Fprintln(out, upgradeRecoveryCommand(version))
-	if strings.Contains(runtime.GOOS, "windows") || version != "" {
-		fmt.Fprintln(out, upgradeRecoveryCommandWindows(version))
-	}
 }
 
 func newUpgradeCommand(deps Dependencies, info BuildInfo) *cobra.Command {
@@ -45,24 +42,39 @@ func newUpgradeCommand(deps Dependencies, info BuildInfo) *cobra.Command {
 		Short: "Upgrade the installed Mirror native binary.",
 		Args:  cobra.NoArgs,
 		RunE: func(command *cobra.Command, _ []string) error {
-			requestedVersionForRecovery := strings.TrimPrefix(requested, "v")
-			if requestedVersionForRecovery == "" {
-				requestedVersionForRecovery = strings.TrimPrefix(info.Version, "v")
+			textOutput := outputFormat(command) == "text"
+			recoveryVersion := strings.TrimPrefix(strings.TrimSpace(requested), "v")
+			if textOutput {
+				printUpgradeRecoveryBlock(deps.Out, recoveryVersion)
 			}
-			printUpgradeRecoveryBlock(deps.Out, requestedVersionForRecovery)
+			fail := func(code int, err error) error {
+				return withExitCode(code, withUpgradeRecovery(err, upgradeRecoveryCommand(recoveryVersion)))
+			}
+
 			release, asset, manifest, err := resolveUpgrade(command.Context(), deps, requested, info.Target)
 			if err != nil {
-				printUpgradeRecoveryBlock(deps.Out, requestedVersionForRecovery)
-				return withExitCode(4, err)
+				return fail(4, err)
+			}
+			recoveryVersion = release.Version
+			if requested == "" && update.CompareVersions(release.Version, info.Version) <= 0 {
+				if !textOutput {
+					return writeJSON(deps.Out, successEnvelope{OK: true, Command: command.CommandPath(), Result: map[string]any{
+						"currentVersion": info.Version, "targetVersion": release.Version,
+						"upToDate": true, "recoveryCommand": upgradeRecoveryCommand(release.Version),
+					}})
+				}
+				fmt.Fprintf(deps.Out, "Mirror is already up to date at %s.\n", info.Version)
+				printUpgradeRecoveryBlock(deps.Out, release.Version)
+				return nil
 			}
 			if dryRun {
 				result := map[string]any{
 					"currentVersion": info.Version, "targetVersion": release.Version,
 					"asset": asset.Name, "url": asset.BrowserDownloadURL,
 					"checksums": manifest.BrowserDownloadURL, "dryRun": true,
+					"recoveryCommand": upgradeRecoveryCommand(release.Version),
 				}
-				if outputFormat(command) == "json" {
-					printUpgradeRecoveryBlock(deps.Out, release.Version)
+				if !textOutput {
 					return writeJSON(deps.Out, successEnvelope{OK: true, Command: command.CommandPath(), Result: result})
 				}
 				fmt.Fprintf(deps.Out, "Mirror %s -> %s\nAsset: %s\nURL: %s\nChecksums: %s\n", info.Version, release.Version, asset.Name, asset.BrowserDownloadURL, manifest.BrowserDownloadURL)
@@ -71,11 +83,10 @@ func newUpgradeCommand(deps Dependencies, info BuildInfo) *cobra.Command {
 			}
 			checksum, err := updater.FetchChecksum(command.Context(), deps.HTTPClient, manifest.BrowserDownloadURL, asset.Name)
 			if err != nil {
-				printUpgradeRecoveryBlock(deps.Out, release.Version)
-				return withExitCode(4, err)
+				return fail(4, err)
 			}
 			var progress func(updater.DownloadProgress)
-			if outputFormat(command) == "text" {
+			if textOutput {
 				progress = func(event updater.DownloadProgress) {
 					if event.Total > 0 {
 						fmt.Fprintf(deps.Out, "Download progress: %.1f%% (%d/%d bytes)\n", event.Percent, event.Bytes, event.Total)
@@ -89,29 +100,24 @@ func newUpgradeCommand(deps Dependencies, info BuildInfo) *cobra.Command {
 				ExpectedChecksum: checksum, HTTPClient: deps.HTTPClient, Progress: progress,
 			})
 			if err != nil {
-				printUpgradeRecoveryBlock(deps.Out, release.Version)
-				return withExitCode(5, err)
+				return fail(5, err)
 			}
-			if !result.Scheduled {
-				cwd, cwdErr := effectiveCWD(command, deps)
-				if cwdErr != nil {
-					printUpgradeRecoveryBlock(deps.Out, release.Version)
-					return cwdErr
-				}
-				if reconcileErr := deps.ReconcileBinary(result.ExecutablePath, cwd); reconcileErr != nil {
-					printUpgradeRecoveryBlock(deps.Out, release.Version)
-					return withExitCode(5, fmt.Errorf("reconcile upgraded agent resources: %w", reconcileErr))
-				}
+			if result.LegacyTransition {
+				return fail(5, fmt.Errorf("legacy Windows installation cannot complete activation synchronously; the compatibility helper was started, but success is not reported until a verified launcher is installed"))
 			}
-			if outputFormat(command) == "json" {
-				printUpgradeRecoveryBlock(deps.Out, release.Version)
-				return writeJSON(deps.Out, successEnvelope{OK: true, Command: command.CommandPath(), Result: result})
+			cwd, cwdErr := effectiveCWD(command, deps)
+			if cwdErr != nil {
+				return fail(5, cwdErr)
 			}
-			if result.Scheduled {
-				fmt.Fprintf(deps.Out, "Mirror %s upgrade scheduled; completion will be reported on the next run.\n", release.Version)
-			} else {
-				fmt.Fprintf(deps.Out, "Mirror upgraded to %s.\n", release.Version)
+			if reconcileErr := deps.ReconcileBinary(result.ExecutablePath, cwd); reconcileErr != nil {
+				return fail(5, fmt.Errorf("reconcile upgraded agent resources: %w", reconcileErr))
 			}
+			if !textOutput {
+				return writeJSON(deps.Out, successEnvelope{OK: true, Command: command.CommandPath(), Result: map[string]any{
+					"upgrade": result, "recoveryCommand": upgradeRecoveryCommand(release.Version),
+				}})
+			}
+			fmt.Fprintf(deps.Out, "Mirror upgraded synchronously to %s.\nLauncher: %s\nPayload: %s\n", release.Version, result.ExecutablePath, result.PayloadPath)
 			printUpgradeRecoveryBlock(deps.Out, release.Version)
 			return nil
 		},
@@ -120,10 +126,8 @@ func newUpgradeCommand(deps Dependencies, info BuildInfo) *cobra.Command {
 	command.Flags().BoolVar(&dryRun, "dry-run", false, "Preview without replacing the executable.")
 	command.AddCommand(newUpgradeCheckCommand(deps, info))
 	command.AddCommand(newUpgradeListCommand(deps))
-	command.AddCommand(newUpgradeRollbackCommand())
 	command.AddCommand(newUpdateWorkerCommand())
 	command.AddCommand(newWindowsReplacementCommand())
-	command.AddCommand(newWindowsRollbackCommand())
 	return command
 }
 
@@ -195,46 +199,6 @@ func newUpgradeListCommand(deps Dependencies) *cobra.Command {
 	command.Flags().IntVar(&page, "page", 1, "Select a positive result page.")
 	command.Flags().IntVar(&perPage, "per-page", 8, "Select 1 to 100 results per page.")
 	command.Flags().BoolVar(&includePrereleases, "pre-releases", false, "Include prerelease versions.")
-	return command
-}
-
-func newUpgradeRollbackCommand() *cobra.Command {
-	return &cobra.Command{
-		Use:   "rollback",
-		Short: "Restore the previous Mirror executable.",
-		Args:  cobra.NoArgs,
-		RunE: func(command *cobra.Command, _ []string) error {
-			scheduled, err := updater.PerformRollback("")
-			if err != nil {
-				return withExitCode(5, err)
-			}
-			if scheduled {
-				fmt.Fprintln(command.OutOrStdout(), "Mirror rollback scheduled; completion will be reported on the next run.")
-			} else {
-				fmt.Fprintln(command.OutOrStdout(), "Restored the previous Mirror executable.")
-			}
-			return nil
-		},
-	}
-}
-
-func newWindowsRollbackCommand() *cobra.Command {
-	var pid int
-	var executable string
-	var backup string
-	var helper string
-	command := &cobra.Command{
-		Use:    "__rollback-windows",
-		Hidden: true,
-		Args:   cobra.NoArgs,
-		RunE: func(command *cobra.Command, _ []string) error {
-			return updater.CompleteWindowsRollback(executable, backup, helper, pid)
-		},
-	}
-	command.Flags().IntVar(&pid, "pid", 0, "Internal parent process ID.")
-	command.Flags().StringVar(&executable, "executable", "", "Internal executable path.")
-	command.Flags().StringVar(&backup, "backup", "", "Internal backup path.")
-	command.Flags().StringVar(&helper, "helper", "", "Internal helper path.")
 	return command
 }
 

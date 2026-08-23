@@ -182,6 +182,14 @@ func TestShellInstallerRunsTwiceThroughPOSIXPipe(t *testing.T) {
 	if err != nil || strings.TrimSpace(string(versionOutput)) != "0.0.0-test" {
 		t.Fatalf("installed fixture binary failed verification: %v\n%s", err, versionOutput)
 	}
+	for _, installed := range []string{
+		filepath.Join(homeDir, ".guiho", "mirror", "current.json"),
+		filepath.Join(homeDir, ".guiho", "mirror", "versions", "0.0.0-test", "mirror"),
+	} {
+		if _, err := os.Stat(installed); err != nil {
+			t.Fatalf("installer did not create stable launcher state %s: %v", installed, err)
+		}
+	}
 	for _, skill := range []string{
 		filepath.Join(homeDir, ".agents", "skills", "guiho-s-mirror", "SKILL.md"),
 		filepath.Join(homeDir, ".claude", "skills", "guiho-s-mirror", "SKILL.md"),
@@ -215,7 +223,7 @@ func pathForShell(path string) string {
 func writeShellInstallerFixtureAssets(t *testing.T, directory, version string) {
 	t.Helper()
 	assets := map[string][]byte{
-		"mirror-linux-amd64": []byte("#!/bin/sh\nprintf '" + version + "\\n'\n"),
+		"mirror-linux-amd64": []byte("#!/bin/sh\n[ \"${1:-}\" = __self-test ] && exit 0\nprintf '" + version + "\\n'\n"),
 		"guiho-i-mirror.md":  []byte("---\nname: guiho-i-mirror\n---\n## GUIHO Mirror Instruction Block\n\nFixture instructions.\n"),
 	}
 	var archive bytes.Buffer

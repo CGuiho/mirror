@@ -86,6 +86,7 @@ func CompleteWindowsReplacement(executable, candidate, _, targetVersion, checksu
 		}
 		_ = WriteCompletion(completion)
 		releaseOwnedLock(lockPath, lockToken)
+		_ = os.Remove(filepath.Dir(candidate))
 		scheduleDelete(helper)
 	}()
 	if err := waitForProcessExit(uint32(parentPID), 120*time.Second); err != nil {

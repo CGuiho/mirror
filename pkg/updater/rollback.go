@@ -1,6 +1,7 @@
 package updater
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -11,15 +12,37 @@ import (
 )
 
 func VerifyExecutable(path, targetVersion string) error {
-	command := exec.Command(path, "--version")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, path, "--version")
 	output, err := command.CombinedOutput()
 	if err != nil {
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			return fmt.Errorf("verify replacement executable: timed out after 10s")
+		}
 		return fmt.Errorf("verify replacement executable: %w (%s)", err, strings.TrimSpace(string(output)))
 	}
 	expected := strings.TrimPrefix(targetVersion, "v")
 	observed := strings.TrimSpace(string(output))
 	if observed != expected {
 		return fmt.Errorf("verify replacement executable: expected %q, got %q", expected, observed)
+	}
+	return nil
+}
+
+func VerifySelfTest(path string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, path, "__self-test")
+	output, err := command.CombinedOutput()
+	if err != nil {
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			return fmt.Errorf("verify replacement self-test: timed out after 10s")
+		}
+		return fmt.Errorf("verify replacement self-test: %w (%s)", err, strings.TrimSpace(string(output)))
+	}
+	if observed := strings.TrimSpace(string(output)); observed != "" {
+		return fmt.Errorf("verify replacement self-test: expected no output, got %q", observed)
 	}
 	return nil
 }

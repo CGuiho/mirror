@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/CGuiho/mirror/pkg/launcher"
 )
 
 func TestPerformSelfUpgradeAndRollback(t *testing.T) {
@@ -36,6 +38,7 @@ func TestPerformSelfUpgradeAndRollback(t *testing.T) {
 
 	opts := UpgradeOptions{
 		CurrentExecutablePath: originalExec,
+		UserHome:              tempDir,
 		TargetVersion:         "3.8.0",
 		DownloadURL:           server.URL,
 		ExpectedChecksum:      expectedChecksum,
@@ -45,7 +48,8 @@ func TestPerformSelfUpgradeAndRollback(t *testing.T) {
 				t.Fatal("progress must report downloaded bytes")
 			}
 		},
-		Verify: func(string, string) error { return nil },
+		Verify:   func(string, string) error { return nil },
+		SelfTest: func(string) error { return nil },
 		Replace: func(executable, candidate, _, _, _, _, _ string, _ VerifyFunc) (bool, error) {
 			// Just overwrite — mirrors installer behavior, no backup.
 			_ = os.Remove(executable)
@@ -81,6 +85,114 @@ func TestPerformSelfUpgradeAndRollback(t *testing.T) {
 	if _, err := os.Stat(originalExec + ".old"); !os.IsNotExist(err) {
 		t.Fatalf("expected no .old backup, got stat err: %v", err)
 	}
+}
+
+func TestStableLauncherUpgradeActivatesSynchronously(t *testing.T) {
+	home := t.TempDir()
+	paths, err := launcher.ResolvePaths(home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	currentSource, currentChecksum := writeUpgradeFixture(t, home, "current")
+	currentEntry, currentPath, err := launcher.InstallPayload(paths, currentSource, "4.2.5", currentChecksum)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := launcher.Activate(paths, currentEntry); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(paths.Launcher), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(paths.Launcher, []byte("launcher"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	candidateContent := []byte("candidate")
+	digest := sha256.Sum256(candidateContent)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(candidateContent)
+	}))
+	defer server.Close()
+	result, err := Upgrade(UpgradeOptions{
+		CurrentExecutablePath: currentPath,
+		UserHome:              home,
+		TargetVersion:         "4.2.6",
+		DownloadURL:           server.URL,
+		ExpectedChecksum:      hex.EncodeToString(digest[:]),
+		HTTPClient:            server.Client(),
+		Verify:                func(string, string) error { return nil },
+		SelfTest:              func(string) error { return nil },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.LegacyTransition {
+		t.Fatalf("stable upgrade returned deferred result: %+v", result)
+	}
+	state, err := launcher.ReadState(paths)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.Active.Version != "4.2.6" || state.Previous == nil || state.Previous.Version != "4.2.5" {
+		t.Fatalf("unexpected state after upgrade: %+v", state)
+	}
+}
+
+func TestStableLauncherUpgradeRestoresPointerWhenLauncherVerificationFails(t *testing.T) {
+	home := t.TempDir()
+	paths, err := launcher.ResolvePaths(home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	currentSource, currentChecksum := writeUpgradeFixture(t, home, "current")
+	currentEntry, currentPath, err := launcher.InstallPayload(paths, currentSource, "4.2.5", currentChecksum)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := launcher.Activate(paths, currentEntry); err != nil {
+		t.Fatal(err)
+	}
+	candidateContent := []byte("candidate")
+	digest := sha256.Sum256(candidateContent)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write(candidateContent)
+	}))
+	defer server.Close()
+	_, err = Upgrade(UpgradeOptions{
+		CurrentExecutablePath: currentPath,
+		UserHome:              home,
+		TargetVersion:         "4.2.6",
+		DownloadURL:           server.URL,
+		ExpectedChecksum:      hex.EncodeToString(digest[:]),
+		HTTPClient:            server.Client(),
+		Verify: func(path, _ string) error {
+			if sameExecutablePath(path, paths.Launcher) {
+				return fmt.Errorf("launcher verification failed")
+			}
+			return nil
+		},
+		SelfTest: func(string) error { return nil },
+	})
+	if err == nil || !strings.Contains(err.Error(), "previous pointer restored") {
+		t.Fatalf("expected verified rollback error, got %v", err)
+	}
+	state, readErr := launcher.ReadState(paths)
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if state.Active.Version != "4.2.5" {
+		t.Fatalf("active version after rollback = %q", state.Active.Version)
+	}
+}
+
+func writeUpgradeFixture(t *testing.T, directory, content string) (string, string) {
+	t.Helper()
+	path := filepath.Join(directory, content+".bin")
+	if err := os.WriteFile(path, []byte(content), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	digest := sha256.Sum256([]byte(content))
+	return path, hex.EncodeToString(digest[:])
 }
 
 func TestTargetAssetPreservesEmbeddedARMVariant(t *testing.T) {

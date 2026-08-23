@@ -131,7 +131,7 @@ func NewRootCommand(deps Dependencies, info BuildInfo) *cobra.Command {
 				renderHelpDocs(deps.Out, command)
 				return errHelpRendered
 			}
-			if !startupDone && !showVersion && command.Name() != "__update-worker" {
+			if !startupDone && !showVersion && command.Name() != "__update-worker" && command.Name() != "__self-test" && !strings.HasPrefix(command.CommandPath(), "mirror upgrade") {
 				startupDone = true
 				if completion, err := deps.ConsumeUpgrade(); err == nil && completion != nil {
 					fmt.Fprintf(deps.Err, "Mirror upgrade %s: %s (verification: %s, rollback: %s)\n", completion.TargetVersion, completion.Outcome, completion.Verification, completion.Rollback)
@@ -186,6 +186,7 @@ func NewRootCommand(deps Dependencies, info BuildInfo) *cobra.Command {
 	root.AddCommand(newVersionCommand(deps))
 	root.AddCommand(newUpgradeCommand(deps, info))
 	root.AddCommand(newUninstallCommand(deps))
+	root.AddCommand(newSelfTestCommand(info))
 	return root
 }
 

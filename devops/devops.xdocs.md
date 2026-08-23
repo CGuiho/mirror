@@ -7,12 +7,12 @@ children:
   - mirror-devops-verify-release-assets
 files:
   build-binaries.go: Build the exact 11-asset release set from the Go manifest.
-  install.ps1: Null-safe standalone Windows installer with layered architecture detection, transactional rollback, and prompt frontmatter stripping.
-  install.sh: POSIX sh Linux and Darwin installer with verified assets, transactional replacement, and prompt frontmatter stripping.
+  install.ps1: Windows installer for verified stable launcher, immutable payload, atomic current pointer, rollback, agent resources, and PATH.
+  install.sh: POSIX installer for verified stable launcher, immutable payload, atomic current pointer, rollback, agent resources, and PATH.
 documents:
   xdocs-overview.md: Generated companion overview for DevOps automation.
 tags: [automation, go, release]
-keywords: [static binaries, checksums, installer, posix sh, curl pipe, invoke-expression, architecture fallback, stage-aware errors, frontmatter stripping]
+keywords: [static binaries, checksums, stable launcher, immutable payload, current.json, installer, posix sh, curl pipe, invoke-expression, architecture fallback, stage-aware errors, frontmatter stripping]
 flags: []
 status: stable
 ---

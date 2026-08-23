@@ -5,6 +5,7 @@ parent: "mirror-docs"
 children: []
 files: {}
 documents:
+  "windows-upgrade-bridge-stable-launcher.md": "Local and native evidence for the v4.2.4 bridge, stable launcher, synchronous activation, recovery output, installers, and release matrix."
   "xdocs-scan-exclusion-configuration.md": "Repository-wide XDocs configuration, coverage, metadata, hierarchy, and doctor validation evidence."
   "init-git-defaults.md": "Validation evidence for Git-first mirror init defaults and release-prompt behavior in issue 26."
   "mirror-v4.1.0-hooks.md": "Local typed-config, lifecycle, trust, JSON, Go quality, exact-asset, CLI, and XDocs evidence for issue 24."
@@ -40,6 +41,8 @@ keywords:
   - curl pipe
   - lifecycle hooks
   - init defaults
+  - stable launcher
+  - Windows upgrade bridge
 flags: []
 status: stable
 ---
