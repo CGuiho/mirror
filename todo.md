@@ -14,6 +14,20 @@ All Rights Reserved.
 
 # GUIHO Mirror TODO List
 
+## Canonical Mirror Lifecycle Prompt Identities
+
+- Status: testing
+- Created: `2026-08-23`
+- Updated: `2026-08-23`
+- Outcome: Correct the install and uninstall prompts to the human-confirmed
+  Convention 0002 IDs `guiho-p-mirror-install` and
+  `guiho-p-mirror-uninstall`, coordinate all active references and embedded
+  lookup, then follow the uninstall prompt for the local CLI installation.
+- Task:
+  [docs/todo/canonical-lifecycle-prompt-identities.md](docs/todo/canonical-lifecycle-prompt-identities.md)
+- Plan: dedicated multi-unit plan waived because the conventions and explicit
+  human-confirmed IDs fully define this bounded correction.
+
 ## Remove Legacy TypeScript Implementation
 
 - Status: completed
@@ -52,8 +66,9 @@ All Rights Reserved.
   [docs/todo/guiho-convention-0001-cli-migration.md](docs/todo/guiho-convention-0001-cli-migration.md)
 - Question ledger:
   [docs/questions/guiho-convention-0001-cli-migration.md](docs/questions/guiho-convention-0001-cli-migration.md)
-- Execution gates: confirm CLI home `mirror`, main skill `guiho-s-mirror`, and
-  main prompt `guiho-p-mirror`; approve architecture/plan; integrate the
+- Execution gates: CLI home `mirror`, main skill `guiho-s-mirror`, and lifecycle
+  prompts `guiho-p-mirror-install` / `guiho-p-mirror-uninstall` are confirmed;
+  approve architecture/plan; integrate the
   planning package into an exact clean `origin/main` base; coordinate the stale
   shared Go CLI skill; then separately authorize C0001-00.
 - Release boundary: no implementation, version apply, tag, push, publication,
