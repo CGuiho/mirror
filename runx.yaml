@@ -1,0 +1,27 @@
+schema: 1
+namespace: mirror
+commands:
+  - uid: mirror-fmt
+    id: fmt
+    run: gofmt -l .
+    desc: Check Go formatting
+  - uid: mirror-test
+    id: test
+    run: go test -count=1 ./...
+    desc: Run all Go tests
+  - uid: mirror-vet
+    id: vet
+    run: go vet ./...
+    desc: Vet all Go packages
+  - uid: mirror-build
+    id: build
+    run: go run ./devops/build-binaries.go --version 0.0.0-dev --commit local --build-date 2026-01-01T00:00:00Z
+    desc: Build exact 11-asset release matrix
+  - uid: mirror-verify-assets
+    id: verify-assets
+    run: go run ./devops/verify-release-assets --dir bin
+    desc: Verify release assets
+  - uid: mirror-help-tree
+    id: help-tree
+    run: go run . --help-tree
+    desc: Show command hierarchy
