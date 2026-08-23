@@ -3,12 +3,41 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
+	"io"
 	"strings"
 )
 
 type exitError struct {
 	code int
 	err  error
+}
+
+type upgradeRecoveryError struct {
+	err     error
+	command string
+}
+
+func (err *upgradeRecoveryError) Error() string { return err.err.Error() }
+func (err *upgradeRecoveryError) Unwrap() error { return err.err }
+
+func withUpgradeRecovery(err error, command string) error {
+	if err == nil {
+		return nil
+	}
+	return &upgradeRecoveryError{err: err, command: command}
+}
+
+// WriteFinalRecovery writes an upgrade recovery block after the ordinary error
+// diagnostic so the directly executable installer command is the final output.
+func WriteFinalRecovery(err error, out io.Writer) bool {
+	var recovery *upgradeRecoveryError
+	if !errors.As(err, &recovery) {
+		return false
+	}
+	fmt.Fprintln(out, "If the upgrade fails, reinstall Mirror with this command:")
+	fmt.Fprintln(out, recovery.command)
+	return true
 }
 
 func (err *exitError) Error() string {

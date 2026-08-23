@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/CGuiho/mirror/cmd"
+	"github.com/CGuiho/mirror/pkg/launcher"
 )
 
 var (
@@ -19,6 +20,19 @@ var (
 )
 
 func main() {
+	handled, exitCode, launchErr := launcher.Dispatch(os.Args[1:], version, launcher.Streams{
+		In: os.Stdin, Out: os.Stdout, Err: os.Stderr,
+	})
+	if handled {
+		if launchErr != nil {
+			fmt.Fprintln(os.Stderr, launchErr)
+		}
+		if exitCode != 0 {
+			os.Exit(exitCode)
+		}
+		return
+	}
+
 	err := cmd.Execute(cmd.BuildInfo{
 		Version: version, Commit: commit, BuildDate: buildDate, Target: buildTarget,
 	})
@@ -26,5 +40,6 @@ func main() {
 		return
 	}
 	fmt.Fprintln(os.Stderr, err)
+	cmd.WriteFinalRecovery(err, os.Stdout)
 	os.Exit(cmd.ExitCode(err))
 }

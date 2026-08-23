@@ -5,6 +5,7 @@ parent: mirror
 children:
   - mirror-pkg-config
   - mirror-pkg-hooks
+  - mirror-pkg-launcher
   - mirror-pkg-maintenance
   - mirror-pkg-release
   - mirror-pkg-semver
@@ -14,7 +15,7 @@ children:
 files: {}
 documents: {}
 tags: [go, domain]
-keywords: [configuration, hooks, versioning, upgrades, release matrix]
+keywords: [configuration, hooks, stable launcher, versioning, upgrades, release matrix]
 flags: []
 status: stable
 ---
