@@ -25,7 +25,7 @@ keywords:
 | --- | --- | --- | --- |
 | Q-001 | What is the confirmed CLI home name? | `mirror` | C0001-00 through C0001-09 |
 | Q-002 | What is the confirmed main skill ID? | `guiho-s-mirror` | C0001-00 through C0001-09 |
-| Q-003 | What is the confirmed main install/setup prompt ID? | `guiho-p-mirror` | C0001-00 through C0001-09 |
+| Q-003 | What are the confirmed lifecycle prompt IDs? | `guiho-p-mirror-install` and `guiho-p-mirror-uninstall` (confirmed 2026-08-23; supersedes the earlier proposed `guiho-p-mirror`) | C0001-00 through C0001-09 |
 | Q-012 | How is the contradictory canonical Go CLI skill resolved for execution? | Update/version-pin the Superiority skill; otherwise explicitly accept the scoped owner/expiry exception. | C0001-00 through C0001-09 |
 
 Approval means marking the corresponding identity decision Accepted and
