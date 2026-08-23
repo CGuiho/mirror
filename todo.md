@@ -16,13 +16,14 @@ All Rights Reserved.
 
 ## Canonical Mirror Lifecycle Prompt Identities
 
-- Status: testing
+- Status: completed
 - Created: `2026-08-23`
 - Updated: `2026-08-23`
-- Outcome: Correct the install and uninstall prompts to the human-confirmed
+- Outcome: Corrected the install and uninstall prompts to the human-confirmed
   Convention 0002 IDs `guiho-p-mirror-install` and
-  `guiho-p-mirror-uninstall`, coordinate all active references and embedded
-  lookup, then follow the uninstall prompt for the local CLI installation.
+  `guiho-p-mirror-uninstall`, coordinated active references and embedded
+  lookup, and removed the local Mirror CLI installation while preserving shared
+  GUIHO infrastructure.
 - Task:
   [docs/todo/canonical-lifecycle-prompt-identities.md](docs/todo/canonical-lifecycle-prompt-identities.md)
 - Plan: dedicated multi-unit plan waived because the conventions and explicit
