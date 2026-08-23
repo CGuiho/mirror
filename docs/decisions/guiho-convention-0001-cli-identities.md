@@ -1,12 +1,11 @@
 ---
 name: GUIHO Convention 0001 Mirror Identities
-purpose: Record the proposed CLI home, main skill, and main prompt identities that require human confirmation.
-description: Proposes names consistent with existing Mirror identity and GUIHO agent naming while keeping publication and installation blocked until explicitly confirmed.
+purpose: Record the confirmed CLI home, main skill, and canonical prompt identities for Mirror.
+description: Defines the human-confirmed Mirror identities required by GUIHO Conventions 0001 and 0002.
 created: 2026-08-16
 owner: mirror-docs-decisions
 flags:
-  - proposed
-  - approval-required
+  - accepted
 tags:
   - mirror
   - decision
@@ -14,7 +13,8 @@ tags:
 keywords:
   - CLI home
   - guiho-s-mirror
-  - guiho-p-mirror
+  - guiho-p-mirror-install
+  - guiho-p-mirror-uninstall
   - human confirmation
 ---
 
@@ -22,37 +22,37 @@ keywords:
 
 ## Status
 
-**Proposed; human confirmation required.** Convention 0001 forbids inferring
-these identifiers. Existing repository usage is supporting evidence, not a
-substitute for confirmation.
+**Accepted.** On 2026-08-23 the human explicitly confirmed the canonical
+installation and uninstallation prompt IDs after directing the implementation
+to apply GUIHO Conventions 0001 and 0002.
 
-## Proposed Decision
+## Decision
 
-| Identity | Proposed value | Consequence |
+| Identity | Confirmed value | Consequence |
 | --- | --- | --- |
 | CLI home name | `mirror` | Canonical home is `$HOME/.guiho/mirror/`. |
 | Main skill ID | `guiho-s-mirror` | Release and installed skill asset is `guiho-s-mirror.zip`. |
-| Main prompt ID | `guiho-p-mirror` | Release and installed setup prompt is `guiho-p-mirror.md`. |
+| Installation prompt ID | `guiho-p-mirror-install` | Canonical prompt file is `guiho-p-mirror-install.md`. |
+| Uninstallation prompt ID | `guiho-p-mirror-uninstall` | Canonical prompt file is `guiho-p-mirror-uninstall.md`. |
 
-The existing managed instruction ID remains `guiho-i-mirror`; it is an
-instruction artifact and cannot substitute for the required main prompt.
+The managed instruction ID remains `guiho-i-mirror`; it is an instruction
+artifact and is not exposed through the prompt command tree.
 
 ## Rationale
 
 `mirror` is the public command and current project identity.
 `guiho-s-mirror` is the existing installed skill identity referenced by the
-repository. `guiho-p-mirror` follows the established GUIHO prompt namespace
-without conflating a setup prompt with the managed instruction resource.
+repository. The prompt IDs use the mandatory `guiho-p-` artifact prefix and
+make each one-time lifecycle operation explicit without conflating either
+prompt with the permanent managed instruction.
 
 ## Gate
 
-No implementation unit may publish a release manifest, install canonical
-paths, create the new main prompt, or migrate user state until the human marks
-this decision **Accepted** (or records different values). If a value changes,
-the architecture, plan, release count/names, tests, schemas/examples, docs, and
-TODO acceptance signals must be updated together before execution approval.
+The identity gate is satisfied. Any later rename is a breaking artifact
+identity change and requires coordinated updates to all references, registries,
+manifests, installers, documentation, and consumers.
 
-## Consequences If Accepted
+## Consequences
 
 - The current manifest design has 25 assets: eight payloads, eight launchers,
   seven neutral content assets, the manifest, and checksums. This count is
