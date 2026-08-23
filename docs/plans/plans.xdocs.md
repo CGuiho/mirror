@@ -1,7 +1,6 @@
 ---
 subject: mirror-docs-plans
 description: Proposed, approved, active, and historical implementation plans for Mirror engineering work; each document carries its own approval state.
-description: Proposed, approved, active, and historical implementation plans for Mirror engineering work; each document carries its own approval state.
 parent: mirror-docs
 children: []
 files: {}
@@ -44,9 +43,6 @@ flags: []
 status: stable
 ---
 
-The `docs/plans/` module owns proposed, approved, active, and historical work
-breakdowns; a module entry never substitutes for a plan's explicit approval
-state.
 The `docs/plans/` module owns proposed, approved, active, and historical work
 breakdowns; a module entry never substitutes for a plan's explicit approval
 state.
