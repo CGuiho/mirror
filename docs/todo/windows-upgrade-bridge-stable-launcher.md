@@ -13,7 +13,10 @@ keywords: [v4.2.4 bridge, raw semver, current.json, immutable payload, synchrono
 
 ## Status
 
-Testing (`2026-08-23`).
+Completed on 2026-08-23. Implemented on
+`fix/mirror-synchronous-upgrade`, reviewed, validated, merged as PR
+[#30](https://github.com/CGuiho/mirror/pull/30) (`a17fcbd`), and released as
+Mirror `4.2.6`.
 
 ## Failure Being Corrected
 
