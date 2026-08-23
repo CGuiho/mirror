@@ -16,12 +16,13 @@ All Rights Reserved.
 
 ## Windows Upgrade Bridge and Stable Launcher
 
-- Status: testing
+- Status: completed
 - Created: `2026-08-23`
 - Updated: `2026-08-23`
-- Outcome: Bridge the released v4.2.4 decorated-version verifier and migrate
+- Outcome: Bridged the released v4.2.4 decorated-version verifier, migrated
   Mirror to a stable shared-bin launcher with immutable version payloads and
-  synchronous pointer activation.
+  synchronous pointer activation, merged PR #30 (`a17fcbd`), and published the
+  repair as Mirror `4.2.6`.
 - Task:
   [docs/todo/windows-upgrade-bridge-stable-launcher.md](docs/todo/windows-upgrade-bridge-stable-launcher.md)
 - Plan: emergency accepted C0001-05 through C0001-07 stable-launcher slice;
