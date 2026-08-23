@@ -1,12 +1,14 @@
 ---
-name: mirror-uninstall
-description: Uninstall the GUIHO Mirror CLI and optionally preserve config or data.
-purpose: Provide the one-time uninstall prompt for Mirror.
+name: guiho-p-mirror-uninstall
+description: Uninstall the GUIHO Mirror CLI and optionally preserve configuration or persistent data.
+purpose: Provide the canonical one-time uninstallation prompt for Mirror.
 created: 2026-08-22
-owner: mirror
+owner: mirror-mirror-prompts
 flags: []
 tags: [mirror, uninstall]
-keywords: [mirror-uninstall, uninstall prompt]
+keywords: [guiho-p-mirror-uninstall, uninstall prompt]
+metadata:
+  version: "1.0.0"
 ---
 
 # Mirror Uninstall
