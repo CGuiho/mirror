@@ -1,27 +1,53 @@
-schema: 1
+version: "2.0.0"
 namespace: mirror
+scripts:
+  directory: .scripts
 commands:
   - uid: mirror-fmt
     id: fmt
-    run: gofmt -l .
-    desc: Check Go formatting
+    summary: Check Go formatting.
+    description: List first-party Go files that require gofmt.
+    command: gofmt -l .
+    confirm: never
+
   - uid: mirror-test
     id: test
-    run: go test -count=1 ./...
-    desc: Run all Go tests
+    summary: Run all Go tests.
+    description: Run every package test once without cached results.
+    command: go test -count=1 ./...
+    confirm: never
+
   - uid: mirror-vet
     id: vet
-    run: go vet ./...
-    desc: Vet all Go packages
+    summary: Vet all Go packages.
+    description: Run standard Go static analysis over every package.
+    command: go vet ./...
+    confirm: never
+
   - uid: mirror-build
     id: build
-    run: go run ./devops/build-binaries.go --version 0.0.0-dev --commit local --build-date 2026-01-01T00:00:00Z
-    desc: Build exact 11-asset release matrix
+    summary: Build the release matrix.
+    description: Build the exact 11-asset release matrix with local development metadata.
+    command: go run ./devops/build-binaries.go --version 0.0.0-dev --commit local --build-date 2026-01-01T00:00:00Z
+    confirm: never
+
   - uid: mirror-verify-assets
     id: verify-assets
-    run: go run ./devops/verify-release-assets --dir bin
-    desc: Verify release assets
+    summary: Verify release assets.
+    description: Verify names, count, metadata, and checksums for the generated release set.
+    command: go run ./devops/verify-release-assets --directory bin
+    confirm: never
+
   - uid: mirror-help-tree
     id: help-tree
-    run: go run . --help-tree
-    desc: Show command hierarchy
+    summary: Show the command hierarchy.
+    description: Render the complete live Cobra command and flag tree.
+    command: go run . --help-tree
+    confirm: never
+
+  - uid: mirror-test-stable-upgrade
+    id: test-stable-upgrade
+    summary: Prove native stable upgrades.
+    description: Prove the native v4.2.4 bridge and synchronous stable-launcher older-to-newer activation.
+    command: go test -count=1 ./pkg/launcher ./pkg/updater -run 'TestLegacyDecoratedVersionProbeDetectsV424Helper|TestNativeStableLauncherUpgradeIsSynchronous'
+    confirm: never
