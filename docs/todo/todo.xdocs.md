@@ -6,6 +6,7 @@ children:
   - mirror-docs-todo-done
 files: {}
 documents:
+  windows-upgrade-bridge-stable-launcher.md: Tracks the v4.2.4 compatibility bridge and stable-launcher synchronous upgrade repair.
   canonical-lifecycle-prompt-identities.md: Tracks canonical install and uninstall prompt identities plus local uninstall execution.
   remove-legacy-typescript-implementation.md: Records removal of the archived Bun and TypeScript implementation.
   guiho-convention-0001-cli-migration.md: Defines the breaking full-repository migration needed to satisfy GUIHO Convention 0001.
@@ -52,6 +53,8 @@ keywords:
   - issue 28
   - schema parity
   - prompt identities
+  - stable launcher
+  - Windows upgrade bridge
   - convention 0002
   - convention 0001
   - stable launcher

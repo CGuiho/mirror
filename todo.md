@@ -14,6 +14,19 @@ All Rights Reserved.
 
 # GUIHO Mirror TODO List
 
+## Windows Upgrade Bridge and Stable Launcher
+
+- Status: testing
+- Created: `2026-08-23`
+- Updated: `2026-08-23`
+- Outcome: Bridge the released v4.2.4 decorated-version verifier and migrate
+  Mirror to a stable shared-bin launcher with immutable version payloads and
+  synchronous pointer activation.
+- Task:
+  [docs/todo/windows-upgrade-bridge-stable-launcher.md](docs/todo/windows-upgrade-bridge-stable-launcher.md)
+- Plan: emergency accepted C0001-05 through C0001-07 stable-launcher slice;
+  complete manifest and agent transaction expansion remains separately tracked.
+
 ## Canonical Mirror Lifecycle Prompt Identities
 
 - Status: completed
