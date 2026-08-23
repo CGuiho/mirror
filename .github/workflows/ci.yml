@@ -146,7 +146,7 @@ jobs:
           mkdir -p "$bootstrap_root/home" "$bootstrap_root/project"
           chmod +x "bin/${{ matrix.asset }}"
           test "$("bin/${{ matrix.asset }}" --version)" = '0.0.0-ci'
-          hello="$("MIRROR_HOME_DIR="$bootstrap_root/home" "bin/${{ matrix.asset }}" --cwd "$bootstrap_root/project")"; echo "$hello" | grep -F "v0.0.0-ci"; echo "$hello" | grep -F "GUIHO"
+          hello="$(MIRROR_HOME_DIR="$bootstrap_root/home" "bin/${{ matrix.asset }}" --cwd "$bootstrap_root/project")"; echo "$hello" | grep -F "v0.0.0-ci"; echo "$hello" | grep -F "GUIHO"
           "bin/${{ matrix.asset }}" agent prompt list --names | grep -Fx guiho-i-mirror
 
       - name: Smoke Windows target
