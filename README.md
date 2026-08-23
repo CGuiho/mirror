@@ -26,9 +26,10 @@ The Unix installer is POSIX `sh` compatible and does not require Bash.
 AI agents — give your agent this prompt:
 
 ```text
-Load the Mirror install prompt at agent/prompts/mirror-install.md (or run
-mirror agent prompt show mirror-install) and follow it in order to install
-the CLI.
+Install the GUIHO Mirror CLI by following its install prompt
+(`guiho-p-mirror-install`). Load the prompt file at
+https://raw.githubusercontent.com/CGuiho/mirror/main/agent/prompts/guiho-p-mirror-install.md
+and follow it in order to install the CLI.
 ```
 
 Verify the installation:
@@ -68,8 +69,8 @@ AI agents — give your agent this prompt:
 
 ```text
 Uninstall the GUIHO Mirror CLI by following its uninstall prompt
-(mirror-uninstall). Load the prompt file at
-https://raw.githubusercontent.com/CGuiho/mirror/main/agent/prompts/mirror-uninstall.md
+(`guiho-p-mirror-uninstall`). Load the prompt file at
+https://raw.githubusercontent.com/CGuiho/mirror/main/agent/prompts/guiho-p-mirror-uninstall.md
 and follow it in order to uninstall the CLI.
 ```
 
