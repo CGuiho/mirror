@@ -6,6 +6,8 @@ children:
   - mirror-docs-todo-done
 files: {}
 documents:
+  canonical-lifecycle-prompt-identities.md: Tracks canonical install and uninstall prompt identities plus local uninstall execution.
+  remove-legacy-typescript-implementation.md: Records removal of the archived Bun and TypeScript implementation.
   guiho-convention-0001-cli-migration.md: Defines the breaking full-repository migration needed to satisfy GUIHO Convention 0001.
   xdocs-scan-exclusion-configuration.md: Tracks the bounded repair of invalid path-shaped XDocs scan exclusions.
   issue-28-instruction-hook-schema-parity.md: Defines the required generated, committed, and published schema parity outcome for GitHub issue 28.
@@ -49,6 +51,8 @@ keywords:
   - init defaults
   - issue 28
   - schema parity
+  - prompt identities
+  - convention 0002
   - convention 0001
   - stable launcher
   - complete release
