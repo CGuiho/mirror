@@ -3,7 +3,7 @@ name: Remove Legacy TypeScript Implementation
 purpose: Delete the archived Bun/TypeScript Mirror implementation now that Go/Cobra is the production authority.
 description: Remove all TypeScript code and its build/publish scaffolding from the repository.
 created: 2026-08-16
-owner: mirror
+owner: mirror-docs-todo
 flags: []
 tags: [mirror, cleanup, typescript]
 keywords: [legacy removal, bun, typescript]
