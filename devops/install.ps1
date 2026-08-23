@@ -169,7 +169,9 @@ try {
   $resolvedVersion = Resolve-MirrorVersion $Version
   $base = Get-MirrorAssetBase $resolvedVersion
   $installerStage = 'temporary workspace creation'
-  $temporaryDirectory = Join-Path ([System.IO.Path]::GetTempPath()) ('mirror-install-' + [guid]::NewGuid().ToString('N'))
+  $sharedTemp = Join-Path $MirrorHome '.guiho\.temp'
+  New-Item -ItemType Directory -Path $sharedTemp -Force | Out-Null
+  $temporaryDirectory = Join-Path $sharedTemp ('mirror-install-' + [guid]::NewGuid().ToString('N'))
   New-Item -ItemType Directory -Path $temporaryDirectory | Out-Null
   try {
     Write-Host 'Installing GUIHO Mirror'
@@ -198,26 +200,69 @@ try {
     [void](Read-ValidatedMarkdown $skill 'guiho-s-mirror')
     $promptContent = Read-ValidatedMarkdown $instruction 'guiho-i-mirror'
 
-    $installerStage = 'binary installation'
+    $installerStage = 'candidate startup verification'
+    $previousDisable = $env:MIRROR_DISABLE_UPDATE_CHECK
+    $env:MIRROR_DISABLE_UPDATE_CHECK = '1'
+    try {
+      $candidateVersion = ([string](& $binary --version | Out-String)).Trim()
+      if ($candidateVersion -ne $resolvedVersion) { throw "Candidate version verification failed: $candidateVersion" }
+      $candidateSelfTest = @(& $binary __self-test)
+      if ($LASTEXITCODE -ne 0) { throw "Candidate self-test failed with exit code $LASTEXITCODE" }
+      if ($candidateSelfTest.Count -ne 0) { throw 'Candidate self-test produced unexpected output.' }
+    } finally {
+      $env:MIRROR_DISABLE_UPDATE_CHECK = $previousDisable
+    }
+
+    $installerStage = 'stable launcher and immutable payload installation'
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
+    $cliHome = Join-Path $MirrorHome '.guiho\mirror'
+    $payloadDirectory = Join-Path $cliHome "versions\$resolvedVersion"
+    $payload = Join-Path $payloadDirectory 'mirror.exe'
+    $currentState = Join-Path $cliHome 'current.json'
+    New-Item -ItemType Directory -Path $payloadDirectory -Force | Out-Null
+    Copy-Item -LiteralPath $binary -Destination $payload -Force
+    $payloadChecksum = (Get-FileHash -Algorithm SHA256 -LiteralPath $payload).Hash.ToLowerInvariant()
+
     $destination = Join-Path $InstallDir 'mirror.exe'
     $backup = "$destination.mirror-backup"
+    $stateBackup = "$currentState.mirror-backup"
     if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Force }
+    if (Test-Path -LiteralPath $stateBackup) { Remove-Item -LiteralPath $stateBackup -Force }
     if (Test-Path -LiteralPath $destination) { Move-Item -LiteralPath $destination -Destination $backup }
+    if (Test-Path -LiteralPath $currentState) { Copy-Item -LiteralPath $currentState -Destination $stateBackup }
     try {
       Copy-Item -LiteralPath $binary -Destination $destination
+      $state = [ordered]@{
+        schema = 1
+        active = [ordered]@{
+          version = $resolvedVersion
+          relativePath = "versions/$resolvedVersion/mirror.exe"
+          sha256 = $payloadChecksum
+        }
+      }
+      $stateStage = "$currentState.$([guid]::NewGuid().ToString('N')).tmp"
+      [System.IO.File]::WriteAllText($stateStage, (($state | ConvertTo-Json -Depth 4) + "`n"), [System.Text.UTF8Encoding]::new($false))
+      Move-Item -LiteralPath $stateStage -Destination $currentState -Force
       $previousDisable = $env:MIRROR_DISABLE_UPDATE_CHECK
       $env:MIRROR_DISABLE_UPDATE_CHECK = '1'
       try { $observed = [string](& $destination --version | Out-String) } finally { $env:MIRROR_DISABLE_UPDATE_CHECK = $previousDisable }
-      $observed = (Get-MirrorRequiredText $observed 'Installed binary version output').Trim()
-      if ($observed -ne $resolvedVersion) { throw "Installed binary version verification failed: $observed" }
+      $observed = (Get-MirrorRequiredText $observed 'Installed launcher version output').Trim()
+      if ($observed -ne $resolvedVersion) { throw "Installed launcher version verification failed: $observed" }
       if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Force }
+      if (Test-Path -LiteralPath $stateBackup) { Remove-Item -LiteralPath $stateBackup -Force }
     } catch {
       if (Test-Path -LiteralPath $destination) { Remove-Item -LiteralPath $destination -Force }
       if (Test-Path -LiteralPath $backup) { Move-Item -LiteralPath $backup -Destination $destination }
+      if (Test-Path -LiteralPath $stateBackup) {
+        Move-Item -LiteralPath $stateBackup -Destination $currentState -Force
+      } elseif (Test-Path -LiteralPath $currentState) {
+        Remove-Item -LiteralPath $currentState -Force
+      }
       throw
     }
-    Write-Host "Installed binary: $destination"
+    Write-Host "Installed launcher: $destination"
+    Write-Host "Active payload: $payload"
+    Write-Host "Mirror home: $cliHome"
 
     $installerStage = 'agent skill installation'
     Install-MirrorSkill $skill (Join-Path $MirrorHome '.agents\skills\guiho-s-mirror')

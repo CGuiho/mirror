@@ -98,6 +98,9 @@ jobs:
               sh -s -- --version 0.0.0-ci
           done
           test "$(MIRROR_DISABLE_UPDATE_CHECK=1 "$root/install/mirror" --version)" = '0.0.0-ci'
+          test -s "$root/home/.guiho/mirror/current.json"
+          test -x "$root/home/.guiho/mirror/versions/0.0.0-ci/mirror"
+          MIRROR_DISABLE_UPDATE_CHECK=1 "$root/install/mirror" __self-test
           test -s "$root/home/.agents/skills/guiho-s-mirror/SKILL.md"
           test -s "$root/home/.claude/skills/guiho-s-mirror/SKILL.md"
           test "$(grep -Fc '<!-- BEGIN MIRROR — DO NOT EDIT THIS SECTION -->' AGENTS.md)" -eq 1
@@ -238,6 +241,10 @@ jobs:
             $installerSource | Invoke-Expression
 
             if ((& "$install\mirror.exe" --version | Out-String).Trim() -ne '0.0.0-ci') { exit 1 }
+            if (-not (Test-Path "$mirrorHome\.guiho\mirror\current.json")) { exit 1 }
+            if (-not (Test-Path "$mirrorHome\.guiho\mirror\versions\0.0.0-ci\mirror.exe")) { exit 1 }
+            & "$install\mirror.exe" __self-test
+            if ($LASTEXITCODE -ne 0) { exit 1 }
             if (-not (Test-Path "$mirrorHome\.agents\skills\guiho-s-mirror\SKILL.md")) { exit 1 }
             if (-not (Test-Path "$mirrorHome\.claude\skills\guiho-s-mirror\SKILL.md")) { exit 1 }
             if ((Select-String -LiteralPath "$project\AGENTS.md" -SimpleMatch '<!-- BEGIN MIRROR').Count -ne 1) { exit 1 }

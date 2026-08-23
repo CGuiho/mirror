@@ -107,3 +107,6 @@ jobs:
           MIRROR_DISABLE_UPDATE_CHECK=1 \
             bash "$GITHUB_WORKSPACE/devops/install.sh" --version '${{ steps.release.outputs.version }}'
           test "$(MIRROR_DISABLE_UPDATE_CHECK=1 "$root/install/mirror" --version)" = '${{ steps.release.outputs.version }}'
+          test -s "$root/home/.guiho/mirror/current.json"
+          test -x "$root/home/.guiho/mirror/versions/${{ steps.release.outputs.version }}/mirror"
+          MIRROR_DISABLE_UPDATE_CHECK=1 "$root/install/mirror" __self-test

@@ -238,7 +238,9 @@ command -v unzip >/dev/null 2>&1 || { printf 'unzip is required.\n' >&2; exit 1;
 ASSET="$(detect_asset)"
 RESOLVED_VERSION="$(resolve_version "$VERSION")"
 BASE_URL="$(asset_base_url "$RESOLVED_VERSION")"
-TMP="$(mktemp -d)"
+GUIHO_TEMP="$MIRROR_HOME/.guiho/.temp"
+mkdir -p "$GUIHO_TEMP"
+TMP="$(mktemp -d "$GUIHO_TEMP/mirror-install-XXXXXX")"
 trap 'rm -rf "$TMP"' 0
 
 printf 'Installing GUIHO Mirror\nVersion: %s\nTarget: %s\nSource: %s\n' "$RESOLVED_VERSION" "$ASSET" "$BASE_URL"
@@ -253,24 +255,62 @@ verify_asset "$TMP/checksums.txt" guiho-i-mirror.md "$TMP/guiho-i-mirror.md"
 unzip -p "$TMP/guiho-s-mirror.zip" guiho-s-mirror/SKILL.md > "$TMP/SKILL.md"
 verify_markdown "$TMP/SKILL.md" guiho-s-mirror || { printf 'Invalid Mirror skill archive.\n' >&2; exit 1; }
 verify_markdown "$TMP/guiho-i-mirror.md" guiho-i-mirror || { printf 'Invalid Mirror instruction asset.\n' >&2; exit 1; }
+chmod 0755 "$TMP/$ASSET"
+if [ "$(MIRROR_DISABLE_UPDATE_CHECK=1 "$TMP/$ASSET" --version)" != "$RESOLVED_VERSION" ]; then
+  printf 'Candidate version verification failed.\n' >&2
+  exit 1
+fi
+candidate_self_test="$(MIRROR_DISABLE_UPDATE_CHECK=1 "$TMP/$ASSET" __self-test)"
+if [ -n "$candidate_self_test" ]; then
+  printf 'Candidate self-test produced unexpected output.\n' >&2
+  exit 1
+fi
 
 mkdir -p "$INSTALL_DIR"
+CLI_HOME="$MIRROR_HOME/.guiho/mirror"
+PAYLOAD_DIRECTORY="$CLI_HOME/versions/$RESOLVED_VERSION"
+PAYLOAD="$PAYLOAD_DIRECTORY/mirror"
+CURRENT_STATE="$CLI_HOME/current.json"
+mkdir -p "$PAYLOAD_DIRECTORY"
+install -m 0755 "$TMP/$ASSET" "$PAYLOAD"
+PAYLOAD_CHECKSUM="$(sha256_file "$PAYLOAD")"
+
 DESTINATION="$INSTALL_DIR/mirror"
 BACKUP="$DESTINATION.mirror-backup"
-rm -f "$BACKUP"
+STATE_BACKUP="$CURRENT_STATE.mirror-backup"
+rm -f "$BACKUP" "$STATE_BACKUP"
 [ -e "$DESTINATION" ] && mv "$DESTINATION" "$BACKUP"
+[ -e "$CURRENT_STATE" ] && cp "$CURRENT_STATE" "$STATE_BACKUP"
 if ! install -m 0755 "$TMP/$ASSET" "$DESTINATION"; then
   [ -e "$BACKUP" ] && mv "$BACKUP" "$DESTINATION"
   exit 1
 fi
+STATE_STAGE="$CLI_HOME/.current.$$.tmp"
+cat > "$STATE_STAGE" <<EOF
+{
+  "schema": 1,
+  "active": {
+    "version": "$RESOLVED_VERSION",
+    "relativePath": "versions/$RESOLVED_VERSION/mirror",
+    "sha256": "$PAYLOAD_CHECKSUM"
+  }
+}
+EOF
+chmod 0600 "$STATE_STAGE"
+mv "$STATE_STAGE" "$CURRENT_STATE"
 if [ "$(MIRROR_DISABLE_UPDATE_CHECK=1 "$DESTINATION" --version)" != "$RESOLVED_VERSION" ]; then
   rm -f "$DESTINATION"
   [ -e "$BACKUP" ] && mv "$BACKUP" "$DESTINATION"
-  printf 'Installed binary version verification failed.\n' >&2
+  if [ -e "$STATE_BACKUP" ]; then
+    mv "$STATE_BACKUP" "$CURRENT_STATE"
+  else
+    rm -f "$CURRENT_STATE"
+  fi
+  printf 'Installed launcher version verification failed.\n' >&2
   exit 1
 fi
-rm -f "$BACKUP"
-printf 'Installed binary: %s\n' "$DESTINATION"
+rm -f "$BACKUP" "$STATE_BACKUP"
+printf 'Installed launcher: %s\nActive payload: %s\nMirror home: %s\n' "$DESTINATION" "$PAYLOAD" "$CLI_HOME"
 
 install_skill "$TMP/SKILL.md" "$MIRROR_HOME/.agents/skills/guiho-s-mirror"
 install_skill "$TMP/SKILL.md" "$MIRROR_HOME/.claude/skills/guiho-s-mirror"
