@@ -18,6 +18,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.2.5] - 2026-08-22
+
+### Added
+
+- Added missing `--help-tree-global-flags` per Convention 0001 § Default Flags: when absent, global flags shown once under `Global Flags:` at the tree top; when present, repeated under every command.
+- Added missing lifecycle scripts `devops/uninstall.sh` and `devops/uninstall.ps1` and `runx.yaml` catalog per Convention 0001 § Mandatory Project Tooling.
+- Added `agent/prompts/mirror-install.md` and `agent/prompts/mirror-uninstall.md` per Convention 0001 § Required Agent Artifacts and updated `README.md` Install/Uninstall sections to reference them.
+
+### Changed
+
+- Made `README.md` Install AI prompt reference-only (`Load mirror-install...`) per Convention 0001 and added the missing `## Uninstall` section directly after `## Install` with Windows/macOS/AI commands plus destructive default, dry-run, and preserve examples.
+
+### Fixed
+
+- Fixed `mirror upgrade` to print the mandatory reinstall recovery block as the first output after arg validation and again as the final block for every outcome (success, scheduled, dry-run, failure) per Convention 0001 § Synchronous Upgrade Transaction.
+- Fixed `mirror -v`/`--version` to print raw SemVer only (`1.2.3`, not `mirror v1.2.3`) per Convention 0001 § Default Flags.
+- Fixed bare `mirror` update notice to write to `stderr` with the exact two-line form `⚠ New version available: vX` / `  run mirror upgrade to update` per Convention 0001 § Startup Update Check, and removed the duplicate inline notice from the hello window.
+
 ## [4.2.4] - 2026-08-22
 
 ### Fixed
