@@ -68,6 +68,56 @@ first prerelease identifier matches: use `-Channel` / `--channel`, where
 `stable` means the newest release without a prerelease component. Exact
 version and channel selection are mutually exclusive.
 
+## Uninstall
+
+Windows (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/CGuiho/mirror/main/devops/uninstall.ps1 | iex
+```
+
+macOS and Linux:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/uninstall.sh | sh
+```
+
+AI agents — give your agent this prompt:
+
+```text
+Uninstall the GUIHO Mirror CLI by following its uninstall prompt
+(mirror-uninstall). Load the prompt file at
+https://raw.githubusercontent.com/CGuiho/mirror/main/agent/prompts/mirror-uninstall.md
+and follow it in order to uninstall the CLI.
+```
+
+By default, uninstallation removes all Mirror-owned artifacts including the
+launcher, versioned payloads, `~/.guiho/mirror/`, global skills, the managed
+instruction block, and the current project's `mirror.yaml`.
+
+Destructive default (removes everything):
+
+```text
+mirror uninstall --yes
+```
+
+Dry run (shows plan without changes):
+
+```text
+mirror uninstall --dry-run
+```
+
+Preserve configuration and data:
+
+```text
+mirror uninstall --preserve-config --preserve-data --yes
+```
+
+Options: `--preserve-config` keeps `mirror.global.yaml` and `mirror.yaml`;
+`--preserve-data` keeps databases and persistent data; `--dry-run` shows the
+plan; `--yes` confirms without prompt. Without `--yes` in a non-interactive
+terminal, uninstallation fails without changes.
+
 ## Quick Start
 
 ```text
