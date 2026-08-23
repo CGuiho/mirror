@@ -14,6 +14,25 @@ import (
 
 const embeddedSkillID = "guiho-s-mirror"
 
+type bundledPrompt struct {
+	ID          string
+	Path        string
+	Description string
+}
+
+var bundledPrompts = []bundledPrompt{
+	{
+		ID:          "guiho-p-mirror-install",
+		Path:        "prompts/guiho-p-mirror-install.md",
+		Description: "Install and initialize the GUIHO Mirror CLI.",
+	},
+	{
+		ID:          "guiho-p-mirror-uninstall",
+		Path:        "prompts/guiho-p-mirror-uninstall.md",
+		Description: "Uninstall the GUIHO Mirror CLI with explicit preservation choices.",
+	},
+}
+
 func newAgentCommand(_ Dependencies) *cobra.Command {
 	command := &cobra.Command{
 		Use:   "agent",
@@ -248,16 +267,21 @@ func newAgentPromptListCommand() *cobra.Command {
 		Short: "List bundled Mirror prompts.",
 		Args:  cobra.NoArgs,
 		RunE: func(command *cobra.Command, _ []string) error {
-			name := "guiho-i-mirror"
+			names := make([]string, 0, len(bundledPrompts))
+			for _, prompt := range bundledPrompts {
+				names = append(names, prompt.ID)
+			}
 			if outputFormat(command) == "json" {
 				return json.NewEncoder(command.OutOrStdout()).Encode(map[string]any{
-					"command": command.CommandPath(), "prompts": []string{name},
+					"command": command.CommandPath(), "prompts": names,
 				})
 			}
-			if namesOnly {
-				fmt.Fprintln(command.OutOrStdout(), name)
-			} else {
-				fmt.Fprintf(command.OutOrStdout(), "%s\tMirror semantic-version planning and release instruction.\n", name)
+			for _, prompt := range bundledPrompts {
+				if namesOnly {
+					fmt.Fprintln(command.OutOrStdout(), prompt.ID)
+				} else {
+					fmt.Fprintf(command.OutOrStdout(), "%s\t%s\n", prompt.ID, prompt.Description)
+				}
 			}
 			return nil
 		},
@@ -273,15 +297,18 @@ func newAgentPromptShowCommand() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(command *cobra.Command, args []string) error {
 			id := strings.TrimSuffix(args[0], ".md")
-			if id != "guiho-i-mirror" {
-				return withExitCode(2, fmt.Errorf("prompt %q not found", args[0]))
+			for _, prompt := range bundledPrompts {
+				if id != prompt.ID {
+					continue
+				}
+				data, err := fs.ReadFile(embedFS.FS, prompt.Path)
+				if err != nil {
+					return fmt.Errorf("read embedded prompt: %w", err)
+				}
+				_, err = command.OutOrStdout().Write(data)
+				return err
 			}
-			data, err := fs.ReadFile(embedFS.FS, "prompts/guiho-i-mirror.md")
-			if err != nil {
-				return fmt.Errorf("read embedded prompt: %w", err)
-			}
-			_, err = command.OutOrStdout().Write(data)
-			return err
+			return withExitCode(2, fmt.Errorf("prompt %q not found", args[0]))
 		},
 	}
 }
