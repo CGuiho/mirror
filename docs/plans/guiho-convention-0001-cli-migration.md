@@ -29,8 +29,9 @@ keywords:
 This is the complete implementation plan, but it is **not yet authorized for
 execution**. The code path is fully decomposed; execution is gated on:
 
-1. human confirmation of `mirror`, `guiho-s-mirror`, and `guiho-p-mirror` in
-   the identity decision;
+1. human confirmation of `mirror`, `guiho-s-mirror`,
+   `guiho-p-mirror-install`, and `guiho-p-mirror-uninstall` in the identity
+   decision;
 2. materialization of the completed second architecture-review readiness
    verdict and human approval of the revised architecture, this plan, and
    review conditions;
@@ -549,7 +550,7 @@ preserving user-authored instruction content.
 ### Dependencies and gates
 
 - C0001-02 integrated.
-- Main skill and main prompt IDs explicitly accepted.
+- Main skill and lifecycle prompt IDs explicitly accepted.
 - Agent Evolution and Feedback wording reviewed against the convention.
 
 ### Branch and ownership
@@ -561,7 +562,8 @@ preserving user-authored instruction content.
   `cmd/agent_test.go`, `pkg/maintenance/**`, `embed/embed.go`,
   `embed/skills/guiho-s-mirror/**`, moved
   `embed/instructions/guiho-i-mirror.md`, new
-  `embed/prompts/guiho-p-mirror.md`, related descriptors, README/DOCS sections
+  `embed/prompts/guiho-p-mirror-install.md` and
+  `embed/prompts/guiho-p-mirror-uninstall.md`, related descriptors, README/DOCS sections
   only as necessary to test current behavior, plus
   `devops/test-convention-agent-init/**` and
   `devops/test-fixtures/convention-0001/agent-init/**`.
@@ -575,9 +577,11 @@ preserving user-authored instruction content.
    `__self-test` and later release manifest generation. Extend C0001-01's
    ordered assembler with the `embedded-resources` check; do not replace the
    dependency contract.
-2. Write the main setup prompt with remote install/recovery, common init, raw
-   version verification, config locations, complete repair, and safe failure
-   guidance. It must work when no current payload is usable.
+2. Write the installation prompt with remote install/recovery, common init,
+   raw version verification, config locations, complete repair, and safe
+   failure guidance. Write the uninstallation prompt with the destructive
+   default, preservation choices, dry-run behavior, and noninteractive safety.
+   Both must work when no current payload is usable.
 3. Update the main skill with the complete AI-managed lifecycle, exact
    install/upgrade/uninstall commands, evolution enforcement, CLI Evolution and
    Feedback section, configuration precedence, and current hook trust boundary.
