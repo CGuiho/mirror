@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.2.6] - 2026-08-23
+
 ### Added
 
 - Added a stable shared-bin launcher with strictly decoded atomic `current.json`, immutable `versions/<version>` payloads, exact stream/argument/exit forwarding, verified previous-payload fallback, and installer-driven layout bootstrap.
