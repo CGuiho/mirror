@@ -1,12 +1,14 @@
 ---
-name: mirror-install
-description: Install the GUIHO Mirror CLI via the canonical remote installer or manual verified binary.
-purpose: Provide the one-time install prompt for Mirror.
+name: guiho-p-mirror-install
+description: Install the GUIHO Mirror CLI via the canonical remote installer or a manually verified binary.
+purpose: Provide the canonical one-time installation prompt for Mirror.
 created: 2026-08-22
-owner: mirror
+owner: mirror-mirror-prompts
 flags: []
 tags: [mirror, install]
-keywords: [mirror-install, install prompt]
+keywords: [guiho-p-mirror-install, install prompt]
+metadata:
+  version: "1.0.0"
 ---
 
 # Mirror Install
