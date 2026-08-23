@@ -6,7 +6,7 @@ created: 2026-07-18
 owner: mirror
 flags: []
 tags: [mirror, architecture, go, cobra]
-keywords: [strict yaml, transactional upgrade, release matrix]
+keywords: [strict yaml, stable launcher, immutable payload, transactional upgrade, release matrix]
 ---
 
 # Mirror Technical Overview
@@ -42,12 +42,23 @@ priority, or executed by the Go process. Read-only commands execute no command
 hooks, and JSON mode captures hook output inside one structured envelope.
 
 The foreground startup path reads local update state only. Detached workers use
-bounded HTTP clients and platform guards. Upgrade candidates are streamed to a
-temporary file with visible progress, checked against the signed release set's
-SHA-256 manifest, executed for exact version verification, and atomically
-swapped while retaining a backup. Unix reconciles embedded agent resources by
-running the new executable; Windows uses an out-of-process replacement worker
-and a completion journal consumed on the next invocation.
+bounded HTTP clients and platform guards. The canonical shared-bin executable
+is a stable launcher. It strictly decodes `~/.guiho/mirror/current.json`,
+verifies the selected immutable payload under `versions/<version>/`, forwards
+all arguments and standard streams, waits, and returns the payload's exact exit
+code. A missing pointer bootstraps the current canonical binary into the
+versioned layout; corrupt state fails closed. A missing or unstartable active
+payload falls back once to the previous verified pointer.
+
+Upgrade candidates are streamed under the shared GUIHO temporary root with
+visible progress, checked against `checksums.txt`, and executed for raw version
+and hidden self-test verification. Stable-layout upgrades install a new
+immutable payload, atomically switch `current.json`, and verify both version and
+self-test through the launcher before reporting synchronous success. Failure
+restores the previous pointer; no running payload or launcher is overwritten
+and no `.old` rollback is used. A narrowly isolated Windows bridge recognizes
+the released v4.2.4 helper and supplies its legacy decorated verification output
+only during that one transition.
 
 `pkg/release` is the single source for eight native targets:
 

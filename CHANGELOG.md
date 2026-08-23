@@ -18,8 +18,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added a stable shared-bin launcher with strictly decoded atomic `current.json`, immutable `versions/<version>` payloads, exact stream/argument/exit forwarding, verified previous-payload fallback, and installer-driven layout bootstrap.
+- Added a hidden candidate self-test and a narrowly isolated Windows bridge that satisfies the released v4.2.4 decorated-version helper only during its one-time compatibility transition.
+
 ### Fixed
 
+- Fixed Windows upgrades falsely reporting `scheduled` success before activation and then silently rolling back because v4.2.4 expected `mirror v4.2.5` while v4.2.5 emitted raw `4.2.5`. Stable-layout upgrades now install and verify a new payload synchronously by atomic pointer activation and restore the previous pointer on failure.
+- Fixed upgrade recovery output to print one complete platform-specific README installer command before network work and again as the final terminal block, without incorrectly pinning a default upgrade to the current version.
 - Corrected the canonical installation and uninstallation prompt artifact IDs to `guiho-p-mirror-install` and `guiho-p-mirror-uninstall`, added required `metadata.version` fields, embedded both prompts, and removed the instruction ID `guiho-i-mirror` from `agent prompt` lookup per GUIHO Agent Artifacts Convention 0002.
 
 ## [4.2.5] - 2026-08-22

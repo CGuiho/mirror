@@ -39,9 +39,11 @@ mirror --version
 ```
 
 Both installers map the host to an approved native asset, verify it against
-`checksums.txt`, install the bundled skill into both global agent roots,
-reconcile the managed instruction block without the prompt asset's YAML
-frontmatter, and verify the raw SemVer reported by `mirror --version`.
+`checksums.txt`, install the stable launcher under `$HOME/.guiho/bin`, install
+the immutable payload under `$HOME/.guiho/mirror/versions/<version>/`,
+atomically write `current.json`, install the bundled skill into both global
+agent roots, reconcile the managed instruction block without the instruction
+asset's YAML frontmatter, and verify the raw SemVer through the launcher.
 
 By default both installers select the latest stable release. Pass an exact
 version instead with `-Version` or `MIRROR_VERSION` in PowerShell and
@@ -177,10 +179,24 @@ mirror upgrade list
 mirror upgrade
 ```
 
+Before network work, `mirror upgrade` prints the complete platform-specific
+reinstall command. It prints the command again as the final block for every
+terminal outcome, pinned to the resolved exact version when available.
+
 Upgrades select the exact current-platform asset, stream bounded download
-progress, verify SHA-256 and the candidate executable, perform transactional
-replacement, and retain a backup for rollback. Windows completes replacement
-out of process and reports the completion journal on the next start.
+progress, verify SHA-256, raw version, and the hidden self-test, install a new
+immutable payload under `$HOME/.guiho/mirror/versions/<version>/`, atomically
+switch `current.json`, and verify through the stable launcher before reporting
+success. Verification failure restores the previous pointer synchronously.
+Ordinary stable-layout upgrades never replace the running payload or launcher,
+never retain `.old`, and never report `scheduled` success.
+
+A legacy direct Windows installation requires one compatibility transition
+because Windows locks its running executable. That transition never reports
+unverified success: it returns the full reinstall command while the bridge
+helper exits the old process and installs a candidate capable of bootstrapping
+the stable launcher layout. Installer-driven repair is the deterministic
+fallback for legacy v4.2.4 installations.
 
 ## Development
 
