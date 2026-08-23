@@ -38,12 +38,12 @@ an obsolete installation layout or public verb where it conflicts with the
 convention is not a design goal. Compatibility may be provided only when it
 does not weaken the new invariant or create a second authority.
 
-The following identities are proposed but require explicit human confirmation
-before any unit that publishes or installs them may start:
+The following identities are explicitly human-confirmed:
 
 - CLI home name: `mirror`, yielding `$HOME/.guiho/mirror/`;
 - main skill ID: `guiho-s-mirror`;
-- main install/setup prompt ID: `guiho-p-mirror`.
+- installation prompt ID: `guiho-p-mirror-install`;
+- uninstallation prompt ID: `guiho-p-mirror-uninstall`.
 
 ## Architectural Goals
 
@@ -286,7 +286,7 @@ missing or drifted owned projections.
 ## Complete Release Contract
 
 The canonical release is manifest-derived. With the accepted eight-target
-matrix and proposed identities, the current architecture expects 25 assets:
+matrix and confirmed identities, the current architecture expects 26 assets:
 
 - 8 statically linked application payloads:
   `mirror-<goos>-<arch>[.exe]` using the existing exact target matrix;
@@ -294,7 +294,8 @@ matrix and proposed identities, the current architecture expects 25 assets:
   `mirror-launcher-<goos>-<arch>[.exe]` for the same target matrix;
 - `guiho-s-mirror.zip`;
 - `guiho-i-mirror.md`;
-- `guiho-p-mirror.md`;
+- `guiho-p-mirror-install.md`;
+- `guiho-p-mirror-uninstall.md`;
 - `mirror.schema.json` and `mirror.global.schema.json`;
 - `mirror.example.yaml` and `mirror.global.example.yaml`;
 - `artifacts.json`;
