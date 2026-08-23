@@ -26,27 +26,9 @@ The Unix installer is POSIX `sh` compatible and does not require Bash.
 AI agents — give your agent this prompt:
 
 ```text
-Install the GUIHO Mirror CLI by running exactly one command, chosen by the
-host operating system:
-
-- Windows (PowerShell):
-  irm https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.ps1 | iex
-- macOS or Linux (POSIX sh):
-  curl -fsSL https://raw.githubusercontent.com/CGuiho/mirror/main/devops/install.sh | sh
-
-Never install Mirror through a package manager (npm, Bun, pip, or similar);
-no such package exists or is supported. When the installer finishes, verify
-with `mirror --version`.
-
-If the installer fails, fall back to a manual binary installation:
-1. Download the asset matching the host platform from
-   https://github.com/CGuiho/mirror/releases/latest — for example
-   `mirror-windows-amd64.exe` or `mirror-linux-amd64` — and verify its SHA-256
-   digest against the release's `checksums.txt`.
-2. Place the binary at `$HOME/.guiho/bin/mirror` (`mirror.exe` on Windows),
-   creating the directory when needed.
-3. On macOS and Linux, mark it executable with `chmod +x`. Ensure
-   `$HOME/.guiho/bin` is on the `PATH`, then verify with `mirror --version`.
+Load the Mirror install prompt at agent/prompts/mirror-install.md (or run
+mirror agent prompt show mirror-install) and follow it in order to install
+the CLI.
 ```
 
 Verify the installation:
