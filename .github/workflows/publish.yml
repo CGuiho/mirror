@@ -53,7 +53,7 @@ jobs:
             --commit "${GITHUB_SHA}" \
             --build-date '${{ steps.release.outputs.build_date }}'
           go run ./devops/verify-release-assets --directory bin
-          test "$(MIRROR_DISABLE_UPDATE_CHECK=1 bin/mirror-linux-amd64 --version)" = 'mirror v${{ steps.release.outputs.version }}'
+          test "$(MIRROR_DISABLE_UPDATE_CHECK=1 bin/mirror-linux-amd64 --version)" = '${{ steps.release.outputs.version }}'
 
       - name: Extract exact-version release notes
         run: go run ./devops/extract-release-notes "${GITHUB_REF_NAME}" CHANGELOG.md "${RUNNER_TEMP}/mirror-release-notes.md"
@@ -106,4 +106,4 @@ jobs:
           MIRROR_SKIP_PATH_UPDATE=1 \
           MIRROR_DISABLE_UPDATE_CHECK=1 \
             bash "$GITHUB_WORKSPACE/devops/install.sh" --version '${{ steps.release.outputs.version }}'
-          test "$(MIRROR_DISABLE_UPDATE_CHECK=1 "$root/install/mirror" --version)" = 'mirror v${{ steps.release.outputs.version }}'
+          test "$(MIRROR_DISABLE_UPDATE_CHECK=1 "$root/install/mirror" --version)" = '${{ steps.release.outputs.version }}'

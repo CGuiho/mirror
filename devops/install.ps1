@@ -210,7 +210,7 @@ try {
       $env:MIRROR_DISABLE_UPDATE_CHECK = '1'
       try { $observed = [string](& $destination --version | Out-String) } finally { $env:MIRROR_DISABLE_UPDATE_CHECK = $previousDisable }
       $observed = (Get-MirrorRequiredText $observed 'Installed binary version output').Trim()
-      if ($observed -ne "mirror v$resolvedVersion") { throw "Installed binary version verification failed: $observed" }
+      if ($observed -ne $resolvedVersion) { throw "Installed binary version verification failed: $observed" }
       if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Force }
     } catch {
       if (Test-Path -LiteralPath $destination) { Remove-Item -LiteralPath $destination -Force }

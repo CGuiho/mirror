@@ -263,7 +263,7 @@ if ! install -m 0755 "$TMP/$ASSET" "$DESTINATION"; then
   [ -e "$BACKUP" ] && mv "$BACKUP" "$DESTINATION"
   exit 1
 fi
-if [ "$(MIRROR_DISABLE_UPDATE_CHECK=1 "$DESTINATION" --version)" != "mirror v$RESOLVED_VERSION" ]; then
+if [ "$(MIRROR_DISABLE_UPDATE_CHECK=1 "$DESTINATION" --version)" != "$RESOLVED_VERSION" ]; then
   rm -f "$DESTINATION"
   [ -e "$BACKUP" ] && mv "$BACKUP" "$DESTINATION"
   printf 'Installed binary version verification failed.\n' >&2

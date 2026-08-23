@@ -40,7 +40,7 @@ mirror --version
 Both installers map the host to an approved native asset, verify it against
 `checksums.txt`, install the bundled skill into both global agent roots,
 reconcile the managed instruction block without the prompt asset's YAML
-frontmatter, and verify `mirror v<version>`.
+frontmatter, and verify the raw SemVer reported by `mirror --version`.
 
 By default both installers select the latest stable release. Pass an exact
 version instead with `-Version` or `MIRROR_VERSION` in PowerShell and

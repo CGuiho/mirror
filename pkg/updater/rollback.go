@@ -18,8 +18,8 @@ func VerifyExecutable(path, targetVersion string) error {
 	}
 	expected := strings.TrimPrefix(targetVersion, "v")
 	observed := strings.TrimSpace(string(output))
-	if observed != "mirror v"+expected {
-		return fmt.Errorf("verify replacement executable: expected %q, got %q", "mirror v"+expected, observed)
+	if observed != expected {
+		return fmt.Errorf("verify replacement executable: expected %q, got %q", expected, observed)
 	}
 	return nil
 }

@@ -54,7 +54,7 @@ jobs:
           bootstrap_root="$(mktemp -d)"
           trap 'rm -rf "$bootstrap_root"' EXIT
           mkdir -p "$bootstrap_root/home" "$bootstrap_root/project"
-          test "$(bin/mirror-linux-amd64 --version)" = 'mirror v0.0.0-ci'
+          test "$(bin/mirror-linux-amd64 --version)" = '0.0.0-ci'
           hello="$(MIRROR_HOME_DIR="$bootstrap_root/home" bin/mirror-linux-amd64 --cwd "$bootstrap_root/project")"; echo "$hello" | grep -F "v0.0.0-ci"; echo "$hello" | grep -F "GUIHO"
           test -s "$bootstrap_root/home/.agents/skills/guiho-s-mirror/SKILL.md"
           test -s "$bootstrap_root/home/.claude/skills/guiho-s-mirror/SKILL.md"
@@ -97,7 +97,7 @@ jobs:
               MIRROR_DISABLE_UPDATE_CHECK=1 \
               sh -s -- --version 0.0.0-ci
           done
-          test "$(MIRROR_DISABLE_UPDATE_CHECK=1 "$root/install/mirror" --version)" = 'mirror v0.0.0-ci'
+          test "$(MIRROR_DISABLE_UPDATE_CHECK=1 "$root/install/mirror" --version)" = '0.0.0-ci'
           test -s "$root/home/.agents/skills/guiho-s-mirror/SKILL.md"
           test -s "$root/home/.claude/skills/guiho-s-mirror/SKILL.md"
           test "$(grep -Fc '<!-- BEGIN MIRROR — DO NOT EDIT THIS SECTION -->' AGENTS.md)" -eq 1
@@ -145,7 +145,7 @@ jobs:
           trap 'rm -rf "$bootstrap_root"' EXIT
           mkdir -p "$bootstrap_root/home" "$bootstrap_root/project"
           chmod +x "bin/${{ matrix.asset }}"
-          test "$("bin/${{ matrix.asset }}" --version)" = 'mirror v0.0.0-ci'
+          test "$("bin/${{ matrix.asset }}" --version)" = '0.0.0-ci'
           hello="$("MIRROR_HOME_DIR="$bootstrap_root/home" "bin/${{ matrix.asset }}" --cwd "$bootstrap_root/project")"; echo "$hello" | grep -F "v0.0.0-ci"; echo "$hello" | grep -F "GUIHO"
           "bin/${{ matrix.asset }}" agent prompt list --names | grep -Fx guiho-i-mirror
 
