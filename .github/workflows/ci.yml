@@ -160,7 +160,7 @@ jobs:
           $env:MIRROR_HOME_DIR = Join-Path $bootstrapRoot 'home'
           $project = Join-Path $bootstrapRoot 'project'
           New-Item -ItemType Directory -Force -Path $env:MIRROR_HOME_DIR, $project | Out-Null
-          if ((& $binary --version | Out-String).Trim() -ne 'mirror v0.0.0-ci') { exit 1 }
+          if ((& $binary --version | Out-String).Trim() -ne '0.0.0-ci') { exit 1 }
           $hello = (& $binary --cwd $project | Out-String); if (-not ($hello.Contains("v0.0.0-ci") -and $hello.Contains("GUIHO"))) { Write-Error "Hello window missing GUIHO or version"; exit 1 }
           if ((& $binary agent prompt list --names | Out-String).Trim() -ne 'guiho-i-mirror') { exit 1 }
 
@@ -235,7 +235,7 @@ jobs:
             $installerSource | Invoke-Expression
             $installerSource | Invoke-Expression
 
-            if ((& "$install\mirror.exe" --version | Out-String).Trim() -ne 'mirror v0.0.0-ci') { exit 1 }
+            if ((& "$install\mirror.exe" --version | Out-String).Trim() -ne '0.0.0-ci') { exit 1 }
             if (-not (Test-Path "$mirrorHome\.agents\skills\guiho-s-mirror\SKILL.md")) { exit 1 }
             if (-not (Test-Path "$mirrorHome\.claude\skills\guiho-s-mirror\SKILL.md")) { exit 1 }
             if ((Select-String -LiteralPath "$project\AGENTS.md" -SimpleMatch '<!-- BEGIN MIRROR').Count -ne 1) { exit 1 }

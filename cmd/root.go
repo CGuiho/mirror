@@ -81,7 +81,7 @@ func NewRootCommand(deps Dependencies, info BuildInfo) *cobra.Command {
 				if outputFormat(command) == "json" {
 					return writeJSON(deps.Out, successEnvelope{OK: true, Command: command.CommandPath(), Result: info})
 				}
-				fmt.Fprintf(deps.Out, "mirror v%s\n", info.Version)
+				fmt.Fprintf(deps.Out, "%s\n", info.Version)
 				return nil
 			}
 			cwd, err := effectiveCWD(command, deps)

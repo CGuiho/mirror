@@ -29,7 +29,7 @@ func TestFreshRootTreesHaveIndependentState(t *testing.T) {
 	require.NoError(t, first.Execute())
 	second.SetArgs(nil)
 	require.NoError(t, second.Execute())
-	assert.Equal(t, "mirror v1.2.3\n", firstOut.String())
+	assert.Equal(t, "1.2.3\n", firstOut.String())
 	assert.Contains(t, secondOut.String(), "v9.8.7")
 	assert.Contains(t, secondOut.String(), "GUIHO")
 }
