@@ -13,7 +13,7 @@ keywords: [guiho-p-mirror-install, guiho-p-mirror-uninstall, agent artifacts, un
 
 ## Status
 
-Testing.
+Completed on 2026-08-23.
 
 ## Confirmed Decision
 
@@ -47,4 +47,26 @@ work is one coordinated compatibility unit.
 
 ## Validation Evidence
 
-Pending.
+- `gofmt -l .`: clean.
+- `go vet ./...`: passed.
+- `go test -count=1 ./...`: passed.
+- `mirror agent prompt list --names` from source: returned exactly
+  `guiho-p-mirror-install` and `guiho-p-mirror-uninstall`.
+- Both `agent prompt show` paths returned matching canonical `name` fields and
+  `metadata.version: "1.0.0"`; `guiho-i-mirror` is no longer accepted as a
+  prompt ID.
+- XDocs strict metadata validation: passed repository-wide.
+- `xdocs tree`: passed with the restored `agent/` descriptor.
+- `xdocs doctor .`: valid with zero errors and zero warnings.
+- Delivery: 24 smallest-coherent commits pushed to `origin/main` through
+  `74fa638` before local uninstallation.
+- Uninstall: installed Mirror `4.2.4` removed; executable, stale Mirror helper
+  executables, CLI home, both global skill copies, current managed instruction
+  block, and current project `mirror.yaml` removed. Shared `$HOME/.guiho/`,
+  `$HOME/.guiho/bin/`, shared `PATH`, and `runx.exe` were preserved.
+
+## Mirror Decision
+
+Patch release deferred. The correction is compatible and belongs in a future
+patch, but the user requested local Mirror uninstallation rather than another
+version transition.
