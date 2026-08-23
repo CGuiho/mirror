@@ -139,20 +139,6 @@ func RenderHello(info BuildInfo, latestVersion string, hasUpdate bool, useColor 
 	b.WriteString(colorize(useColor, "mirror --help", ansiCyan+ansiBold))
 	b.WriteString(" to see available commands.")
 
-	// Update notice (inside the hello window, not stderr)
-	if hasUpdate {
-		b.WriteString("\n\n")
-		if latestVersion != "" {
-			b.WriteString(colorize(useColor, "▲  New version available: v"+latestVersion, ansiYellow+ansiBold))
-		} else {
-			b.WriteString(colorize(useColor, "▲  New version available", ansiYellow+ansiBold))
-		}
-		b.WriteString("\n")
-		b.WriteString(colorize(useColor, "   run ", ansiGray))
-		b.WriteString(colorize(useColor, "mirror upgrade", ansiCyan+ansiBold))
-		b.WriteString(colorize(useColor, " to update", ansiGray))
-	}
-
 	return b.String()
 }
 
@@ -178,10 +164,20 @@ func writeHello(deps Dependencies, command *cobra.Command, info BuildInfo) error
 	} else {
 		latest, hasUpdate = latestAvailable(info.Version, deps.Now())
 	}
-	text := RenderHello(info, latest, hasUpdate, useColor)
+	text := RenderHello(info, "", false, useColor)
 	// Two blank lines before and two after the whole hello window — only for the hello page.
-	_, err := fmt.Fprintf(deps.Out, "\n\n%s\n\n\n", text)
-	return err
+	if _, err := fmt.Fprintf(deps.Out, "\n\n%s\n\n\n", text); err != nil {
+		return err
+	}
+	if hasUpdate {
+		if latest != "" {
+			fmt.Fprintf(deps.Err, "⚠ New version available: v%s\n  run mirror upgrade to update\n", latest)
+		} else {
+			fmt.Fprintln(deps.Err, "⚠ New version available")
+			fmt.Fprintln(deps.Err, "  run mirror upgrade to update")
+		}
+	}
+	return nil
 }
 
 var versionInNotice = regexp.MustCompile(`v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?`)

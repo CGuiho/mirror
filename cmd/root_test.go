@@ -49,10 +49,9 @@ func TestStartupUsesOnlyCachedNoticeAndDetachedLauncher(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, stdout.String(), "v1.0.0")
 	assert.Contains(t, stdout.String(), "GUIHO")
-	// Hello window now renders the cached update notice inline instead of on
-	// stderr to keep the update visible in the landing page.
-	assert.Contains(t, stdout.String(), "New version available")
-	assert.Equal(t, "", stderr.String())
+	assert.NotContains(t, stdout.String(), "New version available")
+	assert.Contains(t, stderr.String(), "⚠ New version available")
+	assert.Contains(t, stderr.String(), "run mirror upgrade to update")
 	assert.Equal(t, 1, launches)
 }
 
