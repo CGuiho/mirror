@@ -37,11 +37,25 @@ func TestAgentNamespaceUsesEmbeddedResourcesAndBothSkillTargets(t *testing.T) {
 
 	stdout.Reset()
 	err = ExecuteContext(context.Background(), deps, BuildInfo{Version: "dev"}, []string{
-		"agent", "prompt", "show", "guiho-i-mirror",
+		"agent", "prompt", "list", "--names",
 	})
 	require.NoError(t, err)
-	assert.True(t, strings.HasPrefix(stdout.String(), "---\nname: guiho-i-mirror"))
-	assert.Contains(t, stdout.String(), "name: guiho-i-mirror")
+	assert.Equal(t, "guiho-p-mirror-install\nguiho-p-mirror-uninstall\n", stdout.String())
+
+	for _, id := range []string{"guiho-p-mirror-install", "guiho-p-mirror-uninstall"} {
+		stdout.Reset()
+		err = ExecuteContext(context.Background(), deps, BuildInfo{Version: "dev"}, []string{
+			"agent", "prompt", "show", id,
+		})
+		require.NoError(t, err)
+		assert.True(t, strings.HasPrefix(stdout.String(), "---\nname: "+id))
+		assert.Contains(t, stdout.String(), "metadata:\n  version: \"1.0.0\"")
+	}
+
+	err = ExecuteContext(context.Background(), deps, BuildInfo{Version: "dev"}, []string{
+		"agent", "prompt", "show", "guiho-i-mirror",
+	})
+	require.ErrorContains(t, err, `prompt "guiho-i-mirror" not found`)
 
 	stdout.Reset()
 	err = ExecuteContext(context.Background(), deps, BuildInfo{Version: "dev"}, []string{
