@@ -147,7 +147,8 @@ jobs:
           chmod +x "bin/${{ matrix.asset }}"
           test "$("bin/${{ matrix.asset }}" --version)" = '0.0.0-ci'
           hello="$(MIRROR_HOME_DIR="$bootstrap_root/home" "bin/${{ matrix.asset }}" --cwd "$bootstrap_root/project")"; echo "$hello" | grep -F "v0.0.0-ci"; echo "$hello" | grep -F "GUIHO"
-          "bin/${{ matrix.asset }}" agent prompt list --names | grep -Fx guiho-i-mirror
+          prompts="$("bin/${{ matrix.asset }}" agent prompt list --names)"
+          test "$prompts" = $'guiho-p-mirror-install\nguiho-p-mirror-uninstall'
 
       - name: Smoke Windows target
         if: runner.os == 'Windows'
@@ -162,7 +163,8 @@ jobs:
           New-Item -ItemType Directory -Force -Path $env:MIRROR_HOME_DIR, $project | Out-Null
           if ((& $binary --version | Out-String).Trim() -ne '0.0.0-ci') { exit 1 }
           $hello = (& $binary --cwd $project | Out-String); if (-not ($hello.Contains("v0.0.0-ci") -and $hello.Contains("GUIHO"))) { Write-Error "Hello window missing GUIHO or version"; exit 1 }
-          if ((& $binary agent prompt list --names | Out-String).Trim() -ne 'guiho-i-mirror') { exit 1 }
+          $prompts = @(& $binary agent prompt list --names)
+          if (($prompts -join "`n") -ne "guiho-p-mirror-install`nguiho-p-mirror-uninstall") { exit 1 }
 
   windows-installer:
     needs: go-quality-and-release-assets
