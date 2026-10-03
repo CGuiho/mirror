@@ -132,8 +132,8 @@ Managed by the GUIHO Mandume swarm ([CGuiho/mandume](https://github.com/CGuiho/m
 
 ```yaml
 execution: dnd  # dnd | interruptible — orchestrator NEVER stops during execution/review
-notifications: off  # off | on
-harness: opencode  # only harness, YOLO, full permission
+notifications: off  # human-facing only; child completion stays enabled
+harness: opencode  # only current harness; native background subagents always
 tmux-session: mirror  # orchestrator session on su-57; convention = this project's name
 ```
 
@@ -149,16 +149,30 @@ tmux-session: mirror  # orchestrator session on su-57; convention = this project
 
 ### Workers
 
+| Worker | Class | Model (exact OpenCode ID) | Thinking | Usage |
+| --- | --- | --- | --- | --- |
+| `mastermind` | mastermind | `xiaomi/mimo-v2.6-pro` (direct Xiaomi API) | provider default, no variant | CG-authorized default; provider/account-dependent |
+| `engineer` | workhorse | `xiaomi/mimo-v2.6-pro` (direct Xiaomi API) | provider default, no variant | CG-authorized default; provider/account-dependent |
+
+Both roles follow [canonical Convention 0007](https://github.com/CGuiho/guiho/blob/cd2ce966/conventions/guiho-convention-0007-models.md). MiMo variants=[]: document omission of the variant parameter; thinking is enabled under provider defaults, with no fabricated max/xhigh tier. No guaranteed capacity, second active model or silent fallback. `openai/gpt-6.1-sol#xhigh` is expressly authorized only for this rollout, not a future default. Weekly-pool models need ensured usage and explicit CG run authorization.
+
+### Historical worker pins — inactive
+
+The following former pins are retained history only, never current workers or fallback capacity.
+
 | Worker       | Class      | Model (opencode ID)                                                                                     | Thinking | Usage        |
 | ------------ | ---------- | --------------------------------------------------------------------------------------------------------------------- | -------- | ------------ |
 | `mastermind` | mastermind | Muse Spark 1.3 Contributor (`vercel/meta/muse-spark-1.3-contributor`, Vercel AI Gateway, first-pick mastermind) | max      | api-always   |
 | `engineer`   | workhorse  | DeepSeek V4.1 Flash (`opencode/deepseek-v4-flash`)                                                                    | max      | api-always   |
 | `engineer`   | workhorse  | GLM 5.3 Flash (`opencode/glm-5.3-flash`)
 
-> All three worker models serve as both mastermind and workhorse (order: Muse Spark → GLM → DeepSeek). Canonical roster, class assignments, and IDs live in `guiho-convention-0007-models.md` (`CGuiho/guiho`, `conventions/`) — the single place CG changes the models.                                                                              | max      | api-always   |
+> Former order: Muse Spark → GLM → DeepSeek; former GLM thinking/usage: max / api-always. All values in this historical section are inactive.
 
 ### Contract
 
-- The orchestrator is pure orchestration on `main`, always working, always ready to answer CG; subagents are the workers above, called with full permission via `guiho-s-0440-hand-off`.
-- Never stop during execution/review: questions are answered with the safest reversible choice and ledgered under `docs/questions/`. Questions to CG only when CG is present and available, or during brainstorming.
+- Read the actual [Convention 0011 §8.1](https://github.com/CGuiho/guiho/blob/cd2ce966/conventions/guiho-convention-0011-agent-readiness.md) and owning instructions. OpenCode is the only currently supported agent harness. Always delegate via its built-in subagent tool under `guiho-s-0440-hand-off`; select an authorized capable native agent with actual required child permissions. General supports broad shell/write work; Explore is read-only by default. Each child has its own configured permissions, not an assumed copy of the parent's; preserve full task authority within those permissions.
+- Resolve the authorized exact provider/model and available reasoning variant against the actual catalog and registry; pass them explicitly through the live native tool schema, documenting provider-default omission when no variant exists. Every brief includes Mode: dnd, actual convention/owning context, task identity, exclusive paths, capabilities, acceptance/checks and commit/push authority.
+- Use background child sessions and harness completion notifications. Human notifications off does not disable child completion. No native worker polling, sleeping, repeated status loops or file tailing. On completion inspect child identity, errors and timing; verify actual scoped diff, acceptance/checks, owning issue/Project membership/exact Component/Status readbacks and owned commits; integrate and immediately continue the next ready unit without CG.
+- Record exact tool/provider/permission failures, fail dependent units safely and continue independent work; select an already-authorized capable native agent where possible. No active OpenCode CLI-worker exception exists, including capability gaps, permission denial or an earlier CLI request; no host permission/config widening or silent model substitution. Other harness adapters are inactive history. CLI workers are dormant only for a future CG-authorized harness actually lacking a native subagent tool. Ordinary Git/gh/Bun/XDocs/RunX CLI tools and launching a primary OpenCode session are distinct from CLI workers.
+- Coordinate on main and never ask CG or wait for a wake-up during DND execution/technical review. Resolve reversible questions from evidence, ledger in `docs/questions/`, and continue; actual security/data-loss, impossible-specification or missing-security-authorization blockers go to `docs/issues/` while independent valid units continue. Commit only coherent owned work; preserve unowned edits, secret/production boundaries and existing lifecycle requirements. Child push requires explicit parent authorization; independent human review follows technical review.
 - Use the Mandume skills (`guiho-s-mandume` + lifecycle skills) and the Essentials skills (`guiho-s-0001-guiho`, `guiho-s-0004-working-with-cg`, `guiho-s-0040-explorer`, `guiho-s-0032-git-commit`). Conventions: `conventions/` in `CGuiho/guiho` (`apps.md` for ports).
