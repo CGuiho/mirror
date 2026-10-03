@@ -24,19 +24,19 @@ All Rights Reserved.
 
 ## Native worker policy deployment
 
-Rollout status summary: in progress 1; testing 0; completed 0. Existing engineering statuses below are retained.
+Rollout status summary: in progress 0; testing 1; completed 0. Existing engineering statuses below are retained.
 
 ### 1. Deploy OpenCode-only native background worker policy
 
-- Status: in progress
+- Status: testing
 - Created: `2026-10-03`
-- Updated: `2026-10-03`
+- Updated: `2026-10-04`
 - Outcome: Persist native-only operating policy with canonical MiMo defaults.
 - Spec: [docs/todo/native-background-worker-policy.md](docs/todo/native-background-worker-policy.md)
 - GitHub project item: [#32](https://github.com/CGuiho/mirror/issues/32)
 - GitHub component: `mirror`
 - Related files: [scoped handoff](docs/plans/native-subagent-rollout/execution/handoffs/2026-10-03-packages-general.md)
-- Remote baseline: parent verified OPEN/In Progress; fresh leaf readback outage-pending.
+- Remote readback: OPEN / Testing; Project #2 membership and exact Component `mirror` verified after reconnection; evidence in the spec.
 - Delivery: owned main commits; no child push, parent reviewer delivers.
 
 ## Windows Upgrade Bridge and Stable Launcher

@@ -3,7 +3,7 @@ name: Native Background Worker Policy
 purpose: Define mirror issue 32 acceptance and preservation
 description: Operating-policy deployment without versioning source or release changes.
 created: 2026-10-03
-flags: [in-progress]
+flags: [testing]
 tags: [task, native-rollout]
 keywords: [mirror, OpenCode, MiMo]
 ---
@@ -12,7 +12,15 @@ keywords: [mirror, OpenCode, MiMo]
 
 # Native Background Worker Policy
 
-- Index: [todo.md](../../todo.md), task 1; Status: in progress.
+## Verified Technical Review
+
+Current state: OPEN / Testing, Project #2, exact Component `mirror`, read back at `2026-10-03T22:19:28Z`; item `PVTI_lAHOBUk1ds4AULOgzg-XUDk`, Component option `08036dfc`, Testing option `f874e9fb`. All gh read/mutation/readback commands exited 0. Earlier outage/pending paragraphs below are historical bootstrap context; fresh reconciliation resolved those pending intentions.
+
+Policy commit `b03dc9bb3b44dbf2b0c793ef2c69d921bfd4bce5`. `python3 /tmp/opencode/native-deployment-packages-validate.py mirror`: exit 0, 19 checks covering full clauses, actual old baseline/seven mutants, metadata/links and scoped Git checks. Bun imported Mandume `checkNativePolicy` on live AGENTS with `requireContract:false`: exit 0, no contradictions; permission-denial CLI mutant rejected. Full deployment obligations checked separately. Only four authorized paths differ; Go/Cobra/versioning/release requirements, source/embedded resources, README, YAML and legacy index preserved.
+
+XDocs CLI skipped because legacy `XDOCS.md` would be removed outside suffix-only policy; RunX/resource commands, Mirror bootstrap/version/release operations and application builds outside this docs unit. Static/catalog checks are not MiMo-provider or recursive-harness proof. Main commits only, NO PUSH; parent independent review/delivery pending. Evidence under `/tmp/opencode`: per-repository validation/commit logs, `native-deployment-packages-source-contradiction.json`, `native-deployment-packages-gh-live.json`, `native-deployment-packages-preservation.json`.
+
+- Index: [todo.md](../../todo.md), task 1; Status: testing.
 - GitHub project item: [#32](https://github.com/CGuiho/mirror/issues/32); GitHub component: `mirror`; Project [#2](https://github.com/users/CGuiho/projects/2).
 - Parent: [GUIHO #86](https://github.com/CGuiho/guiho/issues/86); [handoff](../plans/native-subagent-rollout/execution/handoffs/2026-10-03-packages-general.md).
 
