@@ -9,6 +9,8 @@ tags: [mirror, agents, go]
 keywords: [cli engineering, validation, release boundary]
 ---
 
+#### &copy; 2026 [GUIHO](https://guiho.co) as represented by [Cristóvão GUIHO](https://guiho.co/cguiho) All Rights Reserved.
+
 ## Agent
 
 Always read `C:\GUIHO\superiority\agents\guiho-a-0001-swe.AGENTS.md`.
@@ -138,7 +140,10 @@ tmux-session: mirror  # orchestrator session on su-57; convention = this project
 ### Coordination
 
 - GitHub repository: https://github.com/CGuiho/mirror.git
-- GitHub Project: pending — CG binds one per project; it is the source of truth for new items (`todo.md` mirrors executable state; every item carries its issue URL)
+- GitHub Project: [#2 GUIHO](https://github.com/users/CGuiho/projects/2) — authoritative for task state; local Markdown mirrors remote readbacks.
+- GitHub component: `mirror` — exact option verified by parent bootstrap.
+- Issue ownership: every task is a real issue in its owning repository, attached to this Project with exactly one Component; a draft alone is insufficient.
+- Current policy task: [#32](https://github.com/CGuiho/mirror/issues/32); [spec](docs/todo/native-background-worker-policy.md).
 - To-do file: `todo.md` (repo root)
 - Reserved port: pending — reserve in `apps.md` (`CGuiho/guiho`)
 
@@ -157,4 +162,3 @@ tmux-session: mirror  # orchestrator session on su-57; convention = this project
 - The orchestrator is pure orchestration on `main`, always working, always ready to answer CG; subagents are the workers above, called with full permission via `guiho-s-0440-hand-off`.
 - Never stop during execution/review: questions are answered with the safest reversible choice and ledgered under `docs/questions/`. Questions to CG only when CG is present and available, or during brainstorming.
 - Use the Mandume skills (`guiho-s-mandume` + lifecycle skills) and the Essentials skills (`guiho-s-0001-guiho`, `guiho-s-0004-working-with-cg`, `guiho-s-0040-explorer`, `guiho-s-0032-git-commit`). Conventions: `conventions/` in `CGuiho/guiho` (`apps.md` for ports).
-

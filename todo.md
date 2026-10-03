@@ -9,10 +9,35 @@ tags: [mirror, todo]
 keywords: [tasks, plans, reviews, validation]
 ---
 
+#### &copy; 2026 [GUIHO](https://guiho.co) as represented by [Cristóvão GUIHO](https://guiho.co/cguiho) All Rights Reserved.
+
 Copyright (c) 2026 GUIHO Technologies as represented by Cristovao GUIHO
 All Rights Reserved.
 
 # GUIHO Mirror TODO List
+
+## GitHub Project
+
+- GitHub repository: `CGuiho/mirror`
+- URL: [#2 GUIHO](https://github.com/users/CGuiho/projects/2)
+- GitHub component: `mirror`
+
+## Native worker policy deployment
+
+Rollout status summary: in progress 1; testing 0; completed 0. Existing engineering statuses below are retained.
+
+### 1. Deploy OpenCode-only native background worker policy
+
+- Status: in progress
+- Created: `2026-10-03`
+- Updated: `2026-10-03`
+- Outcome: Persist native-only operating policy with canonical MiMo defaults.
+- Spec: [docs/todo/native-background-worker-policy.md](docs/todo/native-background-worker-policy.md)
+- GitHub project item: [#32](https://github.com/CGuiho/mirror/issues/32)
+- GitHub component: `mirror`
+- Related files: [scoped handoff](docs/plans/native-subagent-rollout/execution/handoffs/2026-10-03-packages-general.md)
+- Remote baseline: parent verified OPEN/In Progress; fresh leaf readback outage-pending.
+- Delivery: owned main commits; no child push, parent reviewer delivers.
 
 ## Windows Upgrade Bridge and Stable Launcher
 
