@@ -132,7 +132,7 @@ Managed by the GUIHO Mandume swarm ([CGuiho/mandume](https://github.com/CGuiho/m
 
 ```yaml
 execution: dnd  # dnd | interruptible — orchestrator NEVER stops during execution/review
-notifications: off  # human-facing only; child completion stays enabled
+notifications: "off"  # human-facing only; child completion stays enabled
 harness: opencode  # only current harness; native background subagents always
 tmux-session: mirror  # orchestrator session on su-57; convention = this project's name
 ```
