@@ -11,15 +11,8 @@ keywords: [cli engineering, validation, release boundary]
 
 #### &copy; 2026 [GUIHO](https://guiho.co) as represented by [Cristóvão GUIHO](https://guiho.co/cguiho) All Rights Reserved.
 
-## Agent
-
-Always read `C:\GUIHO\superiority\agents\guiho-a-0001-swe.AGENTS.md`.
-Stop if it cannot be found.
-
 ## Required CLI Engineering
 
-- Use `guiho-a-0001-swe` as the lifecycle controller for Mirror architecture,
-  planning, implementation, review, validation, and release preparation.
 - Load and follow `guiho-s-0035-cli-engineer-go` whenever creating, changing,
   reviewing, testing, packaging, installing, or releasing the Mirror CLI.
 - Use `guiho-s-xdocs` for structured documentation and `guiho-s-mirror` for
