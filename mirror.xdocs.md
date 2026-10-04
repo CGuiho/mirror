@@ -31,5 +31,7 @@ flags: []
 status: stable
 ---
 
+
+#### &copy; 2026 [GUIHO](https://guiho.co) as represented by [Cristóvão GUIHO](https://guiho.co/cguiho) All Rights Reserved.
 The repository root is the production Mirror Go module. The Bun package is a
 historical child; `cmd`, `pkg`, `embed`, and `devops` own current delivery.

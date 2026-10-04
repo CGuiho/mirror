@@ -429,3 +429,18 @@ Add an option for Python version propagation from a source project to a target p
 - Spec: [docs/todo/background-update-worker-cpu-safety.md](docs/todo/background-update-worker-cpu-safety.md)
 - Related files:
   - [docs/validation/background-update-worker-cpu-safety.md](docs/validation/background-update-worker-cpu-safety.md) - Concurrency, process-count, timeout, stale-lock, CI, and release evidence.
+
+## Readiness Task Seed — 2026-10-04
+
+### 2. Set up verified agent readiness for mirror
+
+- Status: in progress
+- Created: `2026-10-04T01:20:09Z`
+- Updated: `2026-10-04T01:20:11.531109+00:00`
+- Outcome: Complete evidence-based Convention 0011 readiness within the adopted owning scope.
+- Spec: [docs/todo/agent-readiness.md](docs/todo/agent-readiness.md)
+- GitHub project item: [Issue #33](https://github.com/CGuiho/mirror/issues/33)
+- GitHub component: `mirror`
+- Project item ID: `PVTI_lAHOBUk1ds4AULOgzg-YlRs`
+- Readback: owning issue OPEN; GUIHO Project #2; exact Component; In Progress.
+- Seed delivery: local main commits only; independent parent review/delivery pending. Full setup remains open.

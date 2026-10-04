@@ -28,4 +28,6 @@ flags: []
 status: stable
 ---
 
+
+#### &copy; 2026 [GUIHO](https://guiho.co) as represented by [Cristóvão GUIHO](https://guiho.co/cguiho) All Rights Reserved.
 Durable documentation directory for docs. This descriptor documents files, companion Markdown documents, and child modules in this directory.
