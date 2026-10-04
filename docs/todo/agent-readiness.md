@@ -4,7 +4,7 @@ purpose: Define readiness outcome and acceptance for task 2 in todo.md.
 description: Distinct owning readiness task with verified remote binding and bounded
   seed lineage.
 created: '2026-10-04T01:20:09Z'
-owner: CGuiho/mirror
+owner: mirror-docs-todo
 flags:
 - in-progress
 - readiness-seed
