@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
@@ -27,7 +28,25 @@ const (
 	ansiGreen  = ansiTeal
 	ansiYellow = ansiOrange
 	ansiGray   = ansiCream + ansiDim // muted cream for secondary text
+
+	// ansiAccent is Mirror's primary brand colour, used for the GUIHO
+	// attribution, the version and the website in the Author detail.
+	ansiAccent = ansiOrange + ansiBold
 )
+
+var helloPlatformLabels = map[string]string{
+	"darwin":  "macOS",
+	"linux":   "Linux",
+	"windows": "Windows",
+	"win32":   "Windows",
+}
+
+var helloArchLabels = map[string]string{
+	"amd64": "x64",
+	"386":   "x86",
+	"arm64": "arm64",
+	"arm":   "arm",
+}
 
 // mirrorLogo is the ANSI Shadow rendering of "MIRROR" (6 letters, 6 rows).
 var mirrorLogo = []string{
@@ -76,70 +95,71 @@ func latestAvailable(currentVersion string, now time.Time) (string, bool) {
 	return cache.LatestVersion, true
 }
 
-// RenderHello returns the complete hello window as a string, without a
-// trailing newline. The caller is responsible for writing it.
+// RenderHello returns the complete left-aligned hello window as a string,
+// framed by exactly one leading and one trailing blank line. The caller is
+// responsible for writing it.
 func RenderHello(info BuildInfo, latestVersion string, hasUpdate bool, useColor bool) string {
-	var b strings.Builder
+	return renderHello(runtime.GOOS, runtime.GOARCH, info.Version, useColor)
+}
 
-	// Borderless layout — no box around the logo per user request.
-	// Keep centered alignment using the same innerWidth calculation
-	// but render only the logo + tagline with palette colors.
-	innerWidth := 0
-	for _, line := range mirrorLogo {
-		if l := len([]rune(line)); l > innerWidth {
-			innerWidth = l
-		}
+func renderHello(goos, goarch, version string, useColor bool) string {
+	platform := helloPlatformLabels[goos]
+	if platform == "" {
+		platform = goos
 	}
-	innerWidth += 4
-	if innerWidth < 56 {
-		innerWidth = 56
+	architecture := helloArchLabels[goarch]
+	if architecture == "" {
+		architecture = goarch
 	}
+	version = strings.TrimPrefix(strings.TrimSpace(version), "v")
 
 	tagline := "Deterministic semantic versioning"
 	logoColor := ansiOrange + ansiBold
 	taglineColor := ansiCream + ansiDim
 
-	// Logo lines centered without borders — palette: FF7D00 orange on dark bg
+	var b strings.Builder
+	// One blank line before, so the hello never touches the prompt line
+	b.WriteString("\n")
+
+	// Logo rows flush left — palette: FF7D00 orange on dark bg
 	for _, line := range mirrorLogo {
-		lineLen := len([]rune(line))
-		totalPad := innerWidth - lineLen
-		left := totalPad / 2
-		inner := strings.Repeat(" ", left) + line
-		b.WriteString(colorize(useColor, inner, logoColor))
+		b.WriteString(colorize(useColor, line, logoColor))
 		b.WriteString("\n")
 	}
-	// Tagline centered below logo, no box — palette: FFECD1 cream dimmed
-	tagPad := innerWidth - len([]rune(tagline))
-	left := tagPad / 2
-	tagInner := strings.Repeat(" ", left) + tagline
-	b.WriteString(colorize(useColor, tagInner, taglineColor))
+	// Tagline flush left below logo — palette: FFECD1 cream dimmed
+	b.WriteString(colorize(useColor, tagline, taglineColor))
 	b.WriteString("\n")
-
-	// ── Metadata ─────────────────────────────────────────────
-	// Blank line after header
-	b.WriteString("\n\n")
-	b.WriteString(colorize(useColor, "GUIHO", ansiYellow+ansiBold))
-	b.WriteString(colorize(useColor, "  —  Deterministic semantic versioning", ansiGray))
+	b.WriteString(colorize(useColor, "GUIHO \u00b7 Crist\u00f3v\u00e3o GUIHO", ansiAccent))
 	b.WriteString("\n\n")
 
-	// Creator
-	b.WriteString(colorize(useColor, fmt.Sprintf("%-9s", "Creator"), ansiGray))
-	b.WriteString("  ")
-	b.WriteString(colorize(useColor, "Cristóvão GUIHO", ansiCyan+ansiBold))
-	b.WriteString("\n")
-
-	// Version
-	versionLabel := colorize(useColor, fmt.Sprintf("%-9s", "version"), ansiGray)
-	versionValue := colorize(useColor, "v"+info.Version, ansiGreen+ansiBold)
-	b.WriteString(fmt.Sprintf("%s  %s\n", versionLabel, versionValue))
+	// Details — platform, version, author
+	writeHelloDetail(&b, useColor, "Platform", colorize(useColor, platform+" "+architecture, ansiCream))
+	writeHelloDetail(&b, useColor, "Version", colorize(useColor, "v"+version, ansiAccent))
+	writeHelloDetail(&b, useColor, "Author",
+		colorize(useColor, "GUIHO (", ansiCream)+
+			colorize(useColor, "www.guiho.co", ansiAccent)+
+			colorize(useColor, ")", ansiCream))
 	b.WriteString("\n")
 
 	// Help hint
 	b.WriteString("Run ")
 	b.WriteString(colorize(useColor, "mirror --help", ansiCyan+ansiBold))
 	b.WriteString(" to see available commands.")
+	b.WriteString("\n")
+	// One blank line after, so the hello never touches the next prompt
+	b.WriteString("\n")
 
 	return b.String()
+}
+
+// detailLabelWidth fits the longest detail label ("Platform") so values align.
+const detailLabelWidth = 8
+
+// writeHelloDetail writes one left-aligned detail row; value is already
+// colorized by the caller when colour is enabled.
+func writeHelloDetail(b *strings.Builder, useColor bool, label, value string) {
+	padded := colorize(useColor, fmt.Sprintf("%-*s", detailLabelWidth, label), ansiGray)
+	fmt.Fprintf(b, "%s  %s\n", padded, value)
 }
 
 func writeHello(deps Dependencies, command *cobra.Command, info BuildInfo) error {
@@ -165,8 +185,8 @@ func writeHello(deps Dependencies, command *cobra.Command, info BuildInfo) error
 		latest, hasUpdate = latestAvailable(info.Version, deps.Now())
 	}
 	text := RenderHello(info, "", false, useColor)
-	// Two blank lines before and two after the whole hello window — only for the hello page.
-	if _, err := fmt.Fprintf(deps.Out, "\n\n%s\n\n\n", text); err != nil {
+	// The hello window carries its own one-blank-line framing.
+	if _, err := fmt.Fprint(deps.Out, text); err != nil {
 		return err
 	}
 	if hasUpdate {
