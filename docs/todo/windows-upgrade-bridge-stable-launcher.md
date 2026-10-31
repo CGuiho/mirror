@@ -77,9 +77,9 @@ already define the required design.
 ## Evidence
 
 - Implementation review:
-  [windows-upgrade-bridge-stable-launcher.md](../reviews/implementation/windows-upgrade-bridge-stable-launcher.md)
+  windows-upgrade-bridge-stable-launcher.md (private `CGuiho/guiho`, `docs/projects/mirror/reviews/implementation/windows-upgrade-bridge-stable-launcher.md`)
 - Validation:
-  [windows-upgrade-bridge-stable-launcher.md](../validation/windows-upgrade-bridge-stable-launcher.md)
+  windows-upgrade-bridge-stable-launcher.md (private `CGuiho/guiho`, `docs/projects/mirror/validation/windows-upgrade-bridge-stable-launcher.md`)
 - Exact released v4.2.4 helper bridge: passed on native Windows.
 - Native 4.2.6 to 4.2.7 stable-layout synchronous transition: passed.
 - Hosted CI and independent PR review: pending.

@@ -49,7 +49,7 @@ repeated/comma-separated `--output` and `--auxiliary` behavior that Citty
 
 - Status: completed and validated on 2026-07-14.
 - Implementation: [Citty CLI migration implementation](citty-cli-migration-implementation.md)
-- Validation: [Citty CLI migration validation](../validation/citty-cli-migration.md)
+- Validation: Citty CLI migration validation (private `CGuiho/guiho`, `docs/projects/mirror/validation/citty-cli-migration.md`)
 - Release state: no version bump, tag, push, or publish was performed.
 
 ## Current Baseline
@@ -219,6 +219,6 @@ background update-check worker remains callable only by internal automation.
 
 - [TODO.md](../../TODO.md)
 - [Implementation record](citty-cli-migration-implementation.md)
-- [Validation report](../validation/citty-cli-migration.md)
+- Validation report (private `CGuiho/guiho`, `docs/projects/mirror/validation/citty-cli-migration.md`)
 - [CLI contextual help design](../cli-contextual-help-design.md)
 - [Mirror package documentation](../../mirror/DOCS.md)

@@ -24,7 +24,7 @@ keywords:
 - Task: `Mirror Background Update Worker CPU Safety`
 - Status: completed
 - Index: [todo.md](../../todo.md)
-- Validation: [background-update-worker-cpu-safety.md](../validation/background-update-worker-cpu-safety.md)
+- Validation: background-update-worker-cpu-safety.md (private `CGuiho/guiho`, `docs/projects/mirror/validation/background-update-worker-cpu-safety.md`)
 
 ## Outcome
 

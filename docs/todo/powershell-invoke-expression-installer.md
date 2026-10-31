@@ -60,7 +60,7 @@ keywords:
 - Current Windows CI executes the installer as a file with an exact offline
   version and does not pipe the installer source through `Invoke-Expression`.
 - After PR #20 merged, the exact public command failed from
-  `C:\cguiho\meudon-laboratory-manager` with:
+  `C:\<project>` with:
 
   ```text
   Mirror installer failed during architecture detection: Windows architecture is missing or empty.

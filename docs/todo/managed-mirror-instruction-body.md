@@ -99,8 +99,8 @@ keywords:
 ## Evidence
 
 - Review:
-  [Managed Mirror Instruction Body Review](../reviews/implementation/managed-mirror-instruction-body-review.md)
+  Managed Mirror Instruction Body Review (private `CGuiho/guiho`, `docs/projects/mirror/reviews/implementation/managed-mirror-instruction-body-review.md`)
 - Validation:
-  [Managed Mirror Instruction Body Validation](../validation/managed-mirror-instruction-body.md)
+  Managed Mirror Instruction Body Validation (private `CGuiho/guiho`, `docs/projects/mirror/validation/managed-mirror-instruction-body.md`)
 - XDocs metadata execution is blocked by the repository's pre-existing
   `scan.exclude` path entries; descriptor coverage was updated manually.

@@ -2,8 +2,7 @@
 subject: mirror-docs-todo
 description: Durable task specifications linked from the Mirror TODO index.
 parent: mirror-docs
-children:
-  - mirror-docs-todo-done
+children: []
 files: {}
 documents:
   windows-upgrade-bridge-stable-launcher.md: Tracks the v4.2.4 compatibility bridge

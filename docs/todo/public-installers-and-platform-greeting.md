@@ -20,7 +20,7 @@ keywords:
 - Task: `Mirror Public Installers And Platform Greeting`
 - Status: testing
 - Index: [todo.md](../../todo.md)
-- Validation: [public-installers-and-platform-greeting.md](../validation/public-installers-and-platform-greeting.md)
+- Validation: public-installers-and-platform-greeting.md (private `CGuiho/guiho`, `docs/projects/mirror/validation/public-installers-and-platform-greeting.md`)
 
 ## Outcome
 

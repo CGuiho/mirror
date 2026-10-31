@@ -29,7 +29,8 @@ breaking changes for the cohesive implementation plan.
 ## Decision
 
 The current
-`C:\GUIHO\guiho\docs\conventions\guiho-convention-0001-cli.md` governs the
+`guiho-convention-0001-cli.md` convention in the private GUIHO repository
+`CGuiho/guiho` governs the
 Mirror compliance migration.
 
 Where the convention conflicts with older Mirror repository documents or the

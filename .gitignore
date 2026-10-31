@@ -22,3 +22,18 @@
 **/library/
 **/bundle/
 **/bin/
+
+# Plaintext configuration and secrets — never commit
+# (the *.unencrypted.* sibling of a pair is human-owned plaintext; .env holds raw credentials).
+*.unencrypted.json
+*.unencrypted.jsonc
+.env.*
+!.env.example
+!.env.*.example
+
+# Key material
+*.pem
+*.p12
+*.pfx
+id_rsa
+id_ed25519

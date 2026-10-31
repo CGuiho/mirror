@@ -30,7 +30,7 @@ the domain implementations behind thin command handlers.
 ## Links
 
 - [Task specification](citty-cli-migration.md)
-- [Validation report](../validation/citty-cli-migration.md)
+- Validation report (private `CGuiho/guiho`, `docs/projects/mirror/validation/citty-cli-migration.md`)
 - [Package documentation](../../mirror/DOCS.md)
 
 ## Decisions

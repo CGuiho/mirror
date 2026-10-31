@@ -38,7 +38,7 @@ it.
 - Status: completed
 - Index: [todo.md](../../todo.md)
 - External: [CGuiho/mirror#28](https://github.com/CGuiho/mirror/issues/28)
-- Plan: [issue-28-instruction-hook-schema-parity.md](../plans/issue-28-instruction-hook-schema-parity.md)
+- Plan: issue-28-instruction-hook-schema-parity.md (private `CGuiho/guiho`, `docs/projects/mirror/plans/issue-28-instruction-hook-schema-parity.md`)
 
 ## Outcome
 
@@ -101,7 +101,7 @@ served from `main` and release tags.
 ## Dependencies and Context
 
 - Approved hook architecture: [Mirror Hooks Design](../2026-06-07-mirror-hooks-design.md).
-- Prior implementation plan: [Mirror v4.1.0 Hooks](../plans/mirror-v4.1.0-hooks.md).
+- Prior implementation plan: Mirror v4.1.0 Hooks (private `CGuiho/guiho`, `docs/projects/mirror/plans/mirror-v4.1.0-hooks.md`).
 - Production schema generator: `pkg/config.JSONSchema()` in
   `pkg/config/config.go`.
 - Publication artifact: `mirror/schema/mirror.schema.json`.
@@ -184,7 +184,7 @@ publication parity, not product behavior or architecture.
 - S28-02 completed: `mirror/schema/schema.xdocs.md` no longer attributes the
   artifact to TypeBox; `todo.md` and this spec moved to `testing`; local
   validation evidence recorded in
-  [docs/validation/issue-28-instruction-hook-schema-parity.md](../validation/issue-28-instruction-hook-schema-parity.md).
+  docs/validation/issue-28-instruction-hook-schema-parity.md (private `CGuiho/guiho`, `docs/projects/mirror/validation/issue-28-instruction-hook-schema-parity.md`).
 - No-change decisions: `README.md`, `mirror/DOCS.md`, `TECHNICAL.md`, and the
   embedded Mirror skill already describe canonical hook objects correctly and
   were left untouched.
@@ -218,4 +218,4 @@ publication parity, not product behavior or architecture.
 - [todo.md](../../todo.md)
 - [Issue #28](https://github.com/CGuiho/mirror/issues/28)
 - [Issue #24](https://github.com/CGuiho/mirror/issues/24)
-- [Implementation plan](../plans/issue-28-instruction-hook-schema-parity.md)
+- Implementation plan (private `CGuiho/guiho`, `docs/projects/mirror/plans/issue-28-instruction-hook-schema-parity.md`)

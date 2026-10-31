@@ -95,7 +95,7 @@ Bun-dependent public npm launcher.
 
 ## References
 
-- [Plan](../plans/rfc-0034-cli-compliance-migration.md)
+- Plan (private `CGuiho/guiho`, `docs/projects/mirror/plans/rfc-0034-cli-compliance-migration.md`)
 - [Task specification](./rfc-0034-cli-compliance-migration.md)
-- [Implementation review](../reviews/implementation/rfc-0034-cli-compliance-migration-review.md)
-- [Validation](../validation/rfc-0034-cli-compliance-migration.md)
+- Implementation review (private `CGuiho/guiho`, `docs/projects/mirror/reviews/implementation/rfc-0034-cli-compliance-migration-review.md`)
+- Validation (private `CGuiho/guiho`, `docs/projects/mirror/validation/rfc-0034-cli-compliance-migration.md`)

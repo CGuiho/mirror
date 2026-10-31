@@ -251,7 +251,7 @@ Resolving target...
   os      : windows
   arch    : x64
   binary  : guiho-mirror-windows-x64-baseline.exe
-  path    : C:/Users/crist/.local/bin/mirror.exe
+  path    : C:/Users/<user>/.local/bin/mirror.exe
   url     : https://github.com/CGuiho/mirror/releases/download/%40guiho%2Fmirror%403.4.2/guiho-mirror-windows-x64-baseline.exe
 ------------------------------------------------------------
 Downloading...
@@ -332,7 +332,7 @@ Successful shape:
     "variant": "baseline",
     "asset": "guiho-mirror-windows-x64-baseline.exe",
     "downloadUrl": "https://github.com/CGuiho/mirror/releases/download/%40guiho%2Fmirror%403.4.2/guiho-mirror-windows-x64-baseline.exe",
-    "executablePath": "C:/Users/crist/.local/bin/mirror.exe",
+    "executablePath": "C:/Users/<user>/.local/bin/mirror.exe",
     "dryRun": false,
     "upToDate": false
   },

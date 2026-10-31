@@ -35,7 +35,7 @@ Rollout status summary: in progress 0; testing 1; completed 0. Existing engineer
 - Spec: [docs/todo/native-background-worker-policy.md](docs/todo/native-background-worker-policy.md)
 - GitHub project item: [#32](https://github.com/CGuiho/mirror/issues/32)
 - GitHub component: `mirror`
-- Related files: [scoped handoff](docs/plans/native-subagent-rollout/execution/handoffs/2026-10-03-packages-general.md)
+- Related files: scoped handoff (private `CGuiho/guiho`, `docs/projects/mirror/plans/native-subagent-rollout/execution/handoffs/2026-10-03-packages-general.md`)
 - Remote readback: OPEN / Testing; Project #2 membership and exact Component `mirror` verified after reconnection; evidence in the spec.
 - Delivery: owned main commits; no child push, parent reviewer delivers.
 
@@ -91,21 +91,21 @@ Rollout status summary: in progress 0; testing 1; completed 0. Existing engineer
   release, launcher, installation, upgrade, uninstall, documentation, and
   validation architecture.
 - Audit:
-  [docs/reviews/implementation/guiho-convention-0001-cli-compliance-review.md](docs/reviews/implementation/guiho-convention-0001-cli-compliance-review.md)
+  (private `CGuiho/guiho`, `docs/projects/mirror/reviews/implementation/guiho-convention-0001-cli-compliance-review.md`)
 - Architecture:
   [docs/architecture/guiho-convention-0001-cli-migration.md](docs/architecture/guiho-convention-0001-cli-migration.md)
 - Decisions:
   [authority and supersession](docs/decisions/guiho-convention-0001-cli-authority.md),
   [proposed identities](docs/decisions/guiho-convention-0001-cli-identities.md)
 - Reviews:
-  [architecture review](docs/reviews/architecture/guiho-convention-0001-cli-migration-review.md),
-  [plan review](docs/reviews/plans/guiho-convention-0001-cli-migration-review.md)
+  architecture review (private `CGuiho/guiho`, `docs/projects/mirror/reviews/architecture/guiho-convention-0001-cli-migration-review.md`),
+  plan review (private `CGuiho/guiho`, `docs/projects/mirror/reviews/plans/guiho-convention-0001-cli-migration-review.md`)
 - Plan:
-  [docs/plans/guiho-convention-0001-cli-migration.md](docs/plans/guiho-convention-0001-cli-migration.md)
+  (private `CGuiho/guiho`, `docs/projects/mirror/plans/guiho-convention-0001-cli-migration.md`)
 - Task:
   [docs/todo/guiho-convention-0001-cli-migration.md](docs/todo/guiho-convention-0001-cli-migration.md)
 - Question ledger:
-  [docs/questions/guiho-convention-0001-cli-migration.md](docs/questions/guiho-convention-0001-cli-migration.md)
+  (private `CGuiho/guiho`, `docs/projects/mirror/questions/guiho-convention-0001-cli-migration.md`)
 - Execution gates: CLI home `mirror`, main skill `guiho-s-mirror`, and lifecycle
   prompts `guiho-p-mirror-install` / `guiho-p-mirror-uninstall` are confirmed;
   approve architecture/plan; integrate the
@@ -126,7 +126,7 @@ Rollout status summary: in progress 0; testing 1; completed 0. Existing engineer
 - Spec:
   [docs/todo/xdocs-scan-exclusion-configuration.md](docs/todo/xdocs-scan-exclusion-configuration.md)
 - Validation:
-  [docs/validation/xdocs-scan-exclusion-configuration.md](docs/validation/xdocs-scan-exclusion-configuration.md)
+  (private `CGuiho/guiho`, `docs/projects/mirror/validation/xdocs-scan-exclusion-configuration.md`)
 - Plan: a dedicated plan is unnecessary for this bounded configuration repair;
   the installed XDocs v0.10.0 validation error and source contract fully define
   the change and its validation matrix.
@@ -144,8 +144,8 @@ Rollout status summary: in progress 0; testing 1; completed 0. Existing engineer
 - Spec:
   [docs/todo/issue-28-instruction-hook-schema-parity.md](docs/todo/issue-28-instruction-hook-schema-parity.md)
 - Related files:
-  - [docs/plans/issue-28-instruction-hook-schema-parity.md](docs/plans/issue-28-instruction-hook-schema-parity.md) - Executable implementation and validation plan.
-  - [docs/validation/issue-28-instruction-hook-schema-parity.md](docs/validation/issue-28-instruction-hook-schema-parity.md) - Local parity, hook-matrix, runtime, and delivery evidence.
+  - (private `CGuiho/guiho`, `docs/projects/mirror/plans/issue-28-instruction-hook-schema-parity.md`) - Executable implementation and validation plan.
+  - (private `CGuiho/guiho`, `docs/projects/mirror/validation/issue-28-instruction-hook-schema-parity.md`) - Local parity, hook-matrix, runtime, and delivery evidence.
 - External: GitHub issue
   [#28](https://github.com/CGuiho/mirror/issues/28).
 - Execution: S28-01 (`0e0a033`) and S28-02 implemented directly on `main` with
@@ -170,7 +170,7 @@ Rollout status summary: in progress 0; testing 1; completed 0. Existing engineer
 - Plan unit: `INIT-26`; a dedicated architecture/plan is unnecessary for this
   bounded init-default correction.
 - Validation:
-  [docs/validation/init-git-defaults.md](docs/validation/init-git-defaults.md)
+  (private `CGuiho/guiho`, `docs/projects/mirror/validation/init-git-defaults.md`)
 
 ## Mirror v4.1.0 Hooks
 
@@ -184,11 +184,11 @@ Rollout status summary: in progress 0; testing 1; completed 0. Existing engineer
 - Design:
   [docs/2026-06-07-mirror-hooks-design.md](docs/2026-06-07-mirror-hooks-design.md)
 - Plan:
-  [docs/plans/mirror-v4.1.0-hooks.md](docs/plans/mirror-v4.1.0-hooks.md)
+  (private `CGuiho/guiho`, `docs/projects/mirror/plans/mirror-v4.1.0-hooks.md`)
 - Review:
-  [docs/reviews/implementation/mirror-v4.1.0-hooks-review.md](docs/reviews/implementation/mirror-v4.1.0-hooks-review.md)
+  (private `CGuiho/guiho`, `docs/projects/mirror/reviews/implementation/mirror-v4.1.0-hooks-review.md`)
 - Validation:
-  [docs/validation/mirror-v4.1.0-hooks.md](docs/validation/mirror-v4.1.0-hooks.md)
+  (private `CGuiho/guiho`, `docs/projects/mirror/validation/mirror-v4.1.0-hooks.md`)
 - External: GitHub issue
   [#24](https://github.com/CGuiho/mirror/issues/24).
 - Release: implementation and pull-request publication are authorized; version
@@ -213,9 +213,9 @@ Rollout status summary: in progress 0; testing 1; completed 0. Existing engineer
   [30804069515](https://github.com/CGuiho/mirror/actions/runs/30804069515)
   passed all eight jobs; the pull request is ready for merge.
 - Review:
-  [docs/reviews/implementation/posix-sh-installer-pipe-review.md](docs/reviews/implementation/posix-sh-installer-pipe-review.md)
+  (private `CGuiho/guiho`, `docs/projects/mirror/reviews/implementation/posix-sh-installer-pipe-review.md`)
 - Validation:
-  [docs/validation/posix-sh-installer-pipe.md](docs/validation/posix-sh-installer-pipe.md)
+  (private `CGuiho/guiho`, `docs/projects/mirror/validation/posix-sh-installer-pipe.md`)
 - Delivery: branch `codex/fix-posix-sh-installer`; pull request
   [#23](https://github.com/CGuiho/mirror/pull/23).
 - Release boundary: no version bump, tag, release, or publication is authorized.
@@ -235,9 +235,9 @@ Rollout status summary: in progress 0; testing 1; completed 0. Existing engineer
   contracts, and twice-run offline PowerShell installation pass. Hosted CI
   remains required for the full Bash installer and workflow.
 - Review:
-  [docs/reviews/implementation/managed-mirror-instruction-body-review.md](docs/reviews/implementation/managed-mirror-instruction-body-review.md)
+  (private `CGuiho/guiho`, `docs/projects/mirror/reviews/implementation/managed-mirror-instruction-body-review.md`)
 - Validation:
-  [docs/validation/managed-mirror-instruction-body.md](docs/validation/managed-mirror-instruction-body.md)
+  (private `CGuiho/guiho`, `docs/projects/mirror/validation/managed-mirror-instruction-body.md`)
 - Delivery: include in the fork-based follow-up pull request for the installer
   architecture correction; do not modify any `AGENTS.md`.
 
@@ -261,9 +261,9 @@ Rollout status summary: in progress 0; testing 1; completed 0. Existing engineer
   verification, configuration/help contracts, and two complete offline
   `Invoke-Expression` installations also pass.
 - Review:
-  [docs/reviews/implementation/powershell-invoke-expression-installer-review.md](docs/reviews/implementation/powershell-invoke-expression-installer-review.md)
+  (private `CGuiho/guiho`, `docs/projects/mirror/reviews/implementation/powershell-invoke-expression-installer-review.md`)
 - Validation:
-  [docs/validation/powershell-invoke-expression-installer.md](docs/validation/powershell-invoke-expression-installer.md)
+  (private `CGuiho/guiho`, `docs/projects/mirror/validation/powershell-invoke-expression-installer.md`)
 - Delivery: pull request
   [#20](https://github.com/CGuiho/mirror/pull/20) merged as
   `c49eccf095d0a0eba47903be37b0603bb53e24f8`; issue
@@ -293,8 +293,8 @@ Rollout status summary: in progress 0; testing 1; completed 0. Existing engineer
 
 ## Parent TODO
 
-- Parent: [../guiho/TODO.md](../guiho/TODO.md)
-- Parent AGENTS: [../guiho/AGENTS.md](../guiho/AGENTS.md)
+- Parent: `TODO.md` in the parent GUIHO repository `CGuiho/guiho`
+- Parent AGENTS: `AGENTS.md` in the parent GUIHO repository `CGuiho/guiho`
 - Local AGENTS: [./AGENTS.md](./AGENTS.md)
 - Local context: Semantic project versioning and release workflow package for @guiho/mirror.
 
@@ -307,9 +307,9 @@ Rollout status summary: in progress 0; testing 1; completed 0. Existing engineer
   and publication authority with strict YAML, embedded resources, safe native
   maintenance, and exactly 11 release assets.
 - RFC: [docs/rfc/mirror-go-rewrite-rfc.md](docs/rfc/mirror-go-rewrite-rfc.md)
-- Plan: [docs/plans/mirror-go-production-migration.md](docs/plans/mirror-go-production-migration.md)
-- Review: [docs/reviews/implementation/mirror-go-production-migration-review.md](docs/reviews/implementation/mirror-go-production-migration-review.md)
-- Validation: [docs/validation/mirror-go-production-migration.md](docs/validation/mirror-go-production-migration.md)
+- Plan: (private `CGuiho/guiho`, `docs/projects/mirror/plans/mirror-go-production-migration.md`)
+- Review: (private `CGuiho/guiho`, `docs/projects/mirror/reviews/implementation/mirror-go-production-migration-review.md`)
+- Validation: (private `CGuiho/guiho`, `docs/projects/mirror/validation/mirror-go-production-migration.md`)
 - Result: Local Go tests, vet, exact-set cross-build, verifier, Windows native
   smoke, and offline PowerShell installer passed. Hosted platform validation and
   any release remain separate, explicitly authorized work.
@@ -329,9 +329,9 @@ Rollout status summary: in progress 0; testing 1; completed 0. Existing engineer
 - Specs:
   - [Global Mirror Schema](docs/todo/global-mirror-schema.md)
   - [Complete YAML Configuration Migration](docs/todo/complete-yaml-configuration-migration.md)
-- Plan: [Mirror 3.6.0 Schema And YAML Plan](docs/plans/mirror-3.6.0-schema-and-yaml.md)
-- Review: [Implementation Review](docs/reviews/implementation/mirror-3.6.0-schema-and-yaml-review.md)
-- Validation: [Validation Report](docs/validation/mirror-3.6.0-schema-and-yaml.md)
+- Plan: Mirror 3.6.0 Schema And YAML Plan (private `CGuiho/guiho`, `docs/projects/mirror/plans/mirror-3.6.0-schema-and-yaml.md`)
+- Review: Implementation Review (private `CGuiho/guiho`, `docs/projects/mirror/reviews/implementation/mirror-3.6.0-schema-and-yaml-review.md`)
+- Validation: Validation Report (private `CGuiho/guiho`, `docs/projects/mirror/validation/mirror-3.6.0-schema-and-yaml.md`)
 - External: GitHub issues [#14](https://github.com/CGuiho/mirror/issues/14)
   and [#15](https://github.com/CGuiho/mirror/issues/15)
 - Release: [`@guiho/mirror@3.6.1`](https://github.com/CGuiho/mirror/releases/tag/%40guiho/mirror%403.6.1)
@@ -354,12 +354,12 @@ Add an option for Python version propagation from a source project to a target p
 - Outcome: Simplify `upgrade list`, stream visible download progress, and remove
   the unbounded Bun-compiled Linux download wait without weakening transactional
   replacement.
-- Spec: [docs/todo/done/upgrade-catalog-progress-and-linux-download.md](docs/todo/done/upgrade-catalog-progress-and-linux-download.md)
-- Plan: [docs/plans/upgrade-catalog-progress-and-linux-download.md](docs/plans/upgrade-catalog-progress-and-linux-download.md)
+- Spec: (private `CGuiho/guiho`, `docs/projects/mirror/todo/done/upgrade-catalog-progress-and-linux-download.md`)
+- Plan: (private `CGuiho/guiho`, `docs/projects/mirror/plans/upgrade-catalog-progress-and-linux-download.md`)
 - Decision: [docs/decisions/streamed-upgrade-download.md](docs/decisions/streamed-upgrade-download.md)
-- Review: [docs/reviews/implementation/upgrade-catalog-progress-and-linux-download-review.md](docs/reviews/implementation/upgrade-catalog-progress-and-linux-download-review.md)
-- Validation: [docs/validation/upgrade-catalog-progress-and-linux-download.md](docs/validation/upgrade-catalog-progress-and-linux-download.md)
-- Archive: [docs/todo/done/done.md](docs/todo/done/done.md)
+- Review: (private `CGuiho/guiho`, `docs/projects/mirror/reviews/implementation/upgrade-catalog-progress-and-linux-download-review.md`)
+- Validation: (private `CGuiho/guiho`, `docs/projects/mirror/validation/upgrade-catalog-progress-and-linux-download.md`)
+- Archive: (private `CGuiho/guiho`, `docs/projects/mirror/todo/done/done.md`)
 - External: GitHub issues [#16](https://github.com/CGuiho/mirror/issues/16),
   [#17](https://github.com/CGuiho/mirror/issues/17), and
   [#18](https://github.com/CGuiho/mirror/issues/18)
@@ -375,7 +375,7 @@ Add an option for Python version propagation from a source project to a target p
 - Outcome: Replace Mirror's handwritten argument parsing and command routing with Citty while preserving release safety, command compatibility, contextual help, native distribution, and domain behavior.
 - Spec: [docs/todo/citty-cli-migration.md](docs/todo/citty-cli-migration.md)
 - Implementation: [docs/todo/citty-cli-migration-implementation.md](docs/todo/citty-cli-migration-implementation.md)
-- Validation: [docs/validation/citty-cli-migration.md](docs/validation/citty-cli-migration.md)
+- Validation: (private `CGuiho/guiho`, `docs/projects/mirror/validation/citty-cli-migration.md`)
 
 ## Mirror Upgrade Reliability
 
@@ -387,9 +387,9 @@ Add an option for Python version propagation from a source project to a target p
 - Implementation: [docs/todo/upgrade-reliability-implementation.md](docs/todo/upgrade-reliability-implementation.md)
 - Related files:
   - [docs/superpowers/specs/2026-07-15-upgrade-reliability-design.md](docs/superpowers/specs/2026-07-15-upgrade-reliability-design.md) - Approved architecture and behavior contract.
-  - [docs/plans/upgrade-reliability-implementation.md](docs/plans/upgrade-reliability-implementation.md) - Executable implementation plan.
-  - [docs/reviews/plans/upgrade-reliability-implementation-review.md](docs/reviews/plans/upgrade-reliability-implementation-review.md) - Plan-readiness review and execution verdict.
-  - [docs/validation/upgrade-reliability.md](docs/validation/upgrade-reliability.md) - Verification evidence and remaining release gates.
+  - (private `CGuiho/guiho`, `docs/projects/mirror/plans/upgrade-reliability-implementation.md`) - Executable implementation plan.
+  - (private `CGuiho/guiho`, `docs/projects/mirror/reviews/plans/upgrade-reliability-implementation-review.md`) - Plan-readiness review and execution verdict.
+  - (private `CGuiho/guiho`, `docs/projects/mirror/validation/upgrade-reliability.md`) - Verification evidence and remaining release gates.
 - External: GitHub issue [#9](https://github.com/CGuiho/mirror/issues/9); GitHub issue [#10](https://github.com/CGuiho/mirror/issues/10)
 
 ## RFC 0034 CLI Compliance Migration
@@ -402,12 +402,12 @@ Add an option for Python version propagation from a source project to a target p
   authority; see the Go migration above.
 - Spec: [docs/todo/rfc-0034-cli-compliance-migration.md](docs/todo/rfc-0034-cli-compliance-migration.md)
 - Related files:
-  - [docs/plans/rfc-0034-cli-compliance-migration.md](docs/plans/rfc-0034-cli-compliance-migration.md) - Approved step-by-step migration plan.
-  - [docs/reviews/plans/rfc-0034-cli-compliance-migration-review.md](docs/reviews/plans/rfc-0034-cli-compliance-migration-review.md) - Ready-for-execution plan review.
+  - (private `CGuiho/guiho`, `docs/projects/mirror/plans/rfc-0034-cli-compliance-migration.md`) - Approved step-by-step migration plan.
+  - (private `CGuiho/guiho`, `docs/projects/mirror/reviews/plans/rfc-0034-cli-compliance-migration-review.md`) - Ready-for-execution plan review.
   - [docs/todo/rfc-0034-cli-compliance-migration-implementation.md](docs/todo/rfc-0034-cli-compliance-migration-implementation.md) - Implementation record for MR-01 through MR-16.
-  - [docs/reviews/implementation/rfc-0034-cli-compliance-migration-review.md](docs/reviews/implementation/rfc-0034-cli-compliance-migration-review.md) - Delivery-readiness implementation review.
-  - [docs/validation/rfc-0034-cli-compliance-migration.md](docs/validation/rfc-0034-cli-compliance-migration.md) - Full verification evidence.
-  - [docs/validation/rfc-0034-downstream-handoff.md](docs/validation/rfc-0034-downstream-handoff.md) - Consumer migration inventory.
+  - (private `CGuiho/guiho`, `docs/projects/mirror/reviews/implementation/rfc-0034-cli-compliance-migration-review.md`) - Delivery-readiness implementation review.
+  - (private `CGuiho/guiho`, `docs/projects/mirror/validation/rfc-0034-cli-compliance-migration.md`) - Full verification evidence.
+  - (private `CGuiho/guiho`, `docs/projects/mirror/validation/rfc-0034-downstream-handoff.md`) - Consumer migration inventory.
 
 ## Mirror Public Installers And Platform Greeting
 
@@ -417,7 +417,7 @@ Add an option for Python version propagation from a source project to a target p
 - Outcome: Make both public installer pipes standalone and reliable, and report the current platform in Mirror's deterministic no-argument greeting.
 - Spec: [docs/todo/public-installers-and-platform-greeting.md](docs/todo/public-installers-and-platform-greeting.md)
 - Related files:
-  - [docs/validation/public-installers-and-platform-greeting.md](docs/validation/public-installers-and-platform-greeting.md) - Local, CI, release, and public installation evidence.
+  - (private `CGuiho/guiho`, `docs/projects/mirror/validation/public-installers-and-platform-greeting.md`) - Local, CI, release, and public installation evidence.
 - External: GitHub issue [#12](https://github.com/CGuiho/mirror/issues/12); GitHub issue [#13](https://github.com/CGuiho/mirror/issues/13)
 
 ## Mirror Background Update Worker CPU Safety
@@ -428,7 +428,7 @@ Add an option for Python version propagation from a source project to a target p
 - Outcome: Mirror `3.5.9` preserves its nonblocking release check while guaranteeing one bounded worker per cache, stale recovery, deterministic exit, foreground failure isolation, and idempotent UTF-8 PowerShell installation.
 - Spec: [docs/todo/background-update-worker-cpu-safety.md](docs/todo/background-update-worker-cpu-safety.md)
 - Related files:
-  - [docs/validation/background-update-worker-cpu-safety.md](docs/validation/background-update-worker-cpu-safety.md) - Concurrency, process-count, timeout, stale-lock, CI, and release evidence.
+  - (private `CGuiho/guiho`, `docs/projects/mirror/validation/background-update-worker-cpu-safety.md`) - Concurrency, process-count, timeout, stale-lock, CI, and release evidence.
 
 ## Readiness Task Seed — 2026-10-04
 
@@ -441,6 +441,6 @@ Add an option for Python version propagation from a source project to a target p
 - Spec: [docs/todo/agent-readiness.md](docs/todo/agent-readiness.md)
 - GitHub project item: [Issue #33](https://github.com/CGuiho/mirror/issues/33)
 - GitHub component: `mirror`
-- Project item ID: `PVTI_lAHOBUk1ds4AULOgzg-YlRs`
+- Project item ID: `<project id>`
 - Readback: owning issue OPEN; GUIHO Project #2; exact Component; In Progress.
 - Seed delivery: local main commits only; independent parent review/delivery pending. Full setup remains open.

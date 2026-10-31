@@ -31,7 +31,7 @@ keywords:
 - GitHub project item: [Issue #33](https://github.com/CGuiho/mirror/issues/33)
 - GitHub component: `mirror`
 - Issue node: `I_kwDOOJGQAM8AAAABU3WfGA`
-- Project item: `PVTI_lAHOBUk1ds4AULOgzg-YlRs`
+- Project item: `<project id>`
 - Component option: `08036dfc`
 - Readback: `2026-10-04T01:20:11.531109+00:00`; OPEN / Project #2 GUIHO / In Progress.
 

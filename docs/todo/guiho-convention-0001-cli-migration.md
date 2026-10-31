@@ -32,39 +32,39 @@ keywords:
 - Planning release context: latest canonical tag `mirror/v4.1.0-alpha.2`;
   latest stable tag `mirror/v4.0.1`.
 - Compliance audit:
-  [guiho-convention-0001-cli-compliance-review.md](../reviews/implementation/guiho-convention-0001-cli-compliance-review.md)
+  guiho-convention-0001-cli-compliance-review.md (private `CGuiho/guiho`, `docs/projects/mirror/reviews/implementation/guiho-convention-0001-cli-compliance-review.md`)
 - Architecture:
   [guiho-convention-0001-cli-migration.md](../architecture/guiho-convention-0001-cli-migration.md)
 - Architecture review:
-  [guiho-convention-0001-cli-migration-review.md](../reviews/architecture/guiho-convention-0001-cli-migration-review.md)
+  guiho-convention-0001-cli-migration-review.md (private `CGuiho/guiho`, `docs/projects/mirror/reviews/architecture/guiho-convention-0001-cli-migration-review.md`)
 - Plan:
-  [guiho-convention-0001-cli-migration.md](../plans/guiho-convention-0001-cli-migration.md)
+  guiho-convention-0001-cli-migration.md (private `CGuiho/guiho`, `docs/projects/mirror/plans/guiho-convention-0001-cli-migration.md`)
 - Plan review:
-  [guiho-convention-0001-cli-migration-review.md](../reviews/plans/guiho-convention-0001-cli-migration-review.md)
+  guiho-convention-0001-cli-migration-review.md (private `CGuiho/guiho`, `docs/projects/mirror/reviews/plans/guiho-convention-0001-cli-migration-review.md`)
 - Question ledger:
-  [guiho-convention-0001-cli-migration.md](../questions/guiho-convention-0001-cli-migration.md)
+  guiho-convention-0001-cli-migration.md (private `CGuiho/guiho`, `docs/projects/mirror/questions/guiho-convention-0001-cli-migration.md`)
 
 ## Unit Dependency and Evidence Table
 
 | Unit | Depends on | Primary outcome | Ledger |
 | --- | --- | --- | --- |
-| C0001-00 | Commander gates | Authority, RunX, full XDocs baseline | [C0001-00](../questions/guiho-convention-0001-cli-migration/C0001-00.md) |
-| C0001-01 | C0001-00 | Cobra/version/help/lists/agent verbs/transitional self-test | [C0001-01](../questions/guiho-convention-0001-cli-migration/C0001-01.md) |
-| C0001-02 | C0001-01 | Dual config, schemas/examples, evolution policy | [C0001-02](../questions/guiho-convention-0001-cli-migration/C0001-02.md) |
-| C0001-03 | C0001-02 | Common init, resources, bounded plain invocation | [C0001-03](../questions/guiho-convention-0001-cli-migration/C0001-03.md) |
-| C0001-04 | C0001-03 | Manifest-derived 25-asset build/verification fixture | [C0001-04](../questions/guiho-convention-0001-cli-migration/C0001-04.md) |
-| C0001-05 | C0001-04 | Launcher/state/transaction engine and Windows proofs | [C0001-05](../questions/guiho-convention-0001-cli-migration/C0001-05.md) |
-| C0001-06 | C0001-05, E-001 | Both installers, repair, PATH, legacy detection | [C0001-06](../questions/guiho-convention-0001-cli-migration/C0001-06.md) |
-| C0001-07 | C0001-06, E-003 | Synchronous complete-release upgrade | [C0001-07](../questions/guiho-convention-0001-cli-migration/C0001-07.md) |
-| C0001-08 | C0001-07, E-002 | CLI/POSIX/PowerShell uninstall parity | [C0001-08](../questions/guiho-convention-0001-cli-migration/C0001-08.md) |
-| C0001-09 | C0001-00..08, Q-012 | Native CI, docs, publication gates, zero-finding audit | [C0001-09](../questions/guiho-convention-0001-cli-migration/C0001-09.md) |
+| C0001-00 | Commander gates | Authority, RunX, full XDocs baseline | C0001-00 (private `CGuiho/guiho`, `docs/projects/mirror/questions/guiho-convention-0001-cli-migration/C0001-00.md`) |
+| C0001-01 | C0001-00 | Cobra/version/help/lists/agent verbs/transitional self-test | C0001-01 (private `CGuiho/guiho`, `docs/projects/mirror/questions/guiho-convention-0001-cli-migration/C0001-01.md`) |
+| C0001-02 | C0001-01 | Dual config, schemas/examples, evolution policy | C0001-02 (private `CGuiho/guiho`, `docs/projects/mirror/questions/guiho-convention-0001-cli-migration/C0001-02.md`) |
+| C0001-03 | C0001-02 | Common init, resources, bounded plain invocation | C0001-03 (private `CGuiho/guiho`, `docs/projects/mirror/questions/guiho-convention-0001-cli-migration/C0001-03.md`) |
+| C0001-04 | C0001-03 | Manifest-derived 25-asset build/verification fixture | C0001-04 (private `CGuiho/guiho`, `docs/projects/mirror/questions/guiho-convention-0001-cli-migration/C0001-04.md`) |
+| C0001-05 | C0001-04 | Launcher/state/transaction engine and Windows proofs | C0001-05 (private `CGuiho/guiho`, `docs/projects/mirror/questions/guiho-convention-0001-cli-migration/C0001-05.md`) |
+| C0001-06 | C0001-05, E-001 | Both installers, repair, PATH, legacy detection | C0001-06 (private `CGuiho/guiho`, `docs/projects/mirror/questions/guiho-convention-0001-cli-migration/C0001-06.md`) |
+| C0001-07 | C0001-06, E-003 | Synchronous complete-release upgrade | C0001-07 (private `CGuiho/guiho`, `docs/projects/mirror/questions/guiho-convention-0001-cli-migration/C0001-07.md`) |
+| C0001-08 | C0001-07, E-002 | CLI/POSIX/PowerShell uninstall parity | C0001-08 (private `CGuiho/guiho`, `docs/projects/mirror/questions/guiho-convention-0001-cli-migration/C0001-08.md`) |
+| C0001-09 | C0001-00..08, Q-012 | Native CI, docs, publication gates, zero-finding audit | C0001-09 (private `CGuiho/guiho`, `docs/projects/mirror/questions/guiho-convention-0001-cli-migration/C0001-09.md`) |
 
-For each `<NN>`, integrated evidence is stored at
-`docs/reviews/implementation/guiho-convention-0001-cli-migration-C0001-<NN>.md`
-and `docs/validation/guiho-convention-0001-cli-migration-C0001-<NN>.md`.
+For each `<NN>`, integrated evidence is stored in `CGuiho/guiho` at
+`docs/projects/mirror/reviews/implementation/guiho-convention-0001-cli-migration-C0001-<NN>.md`
+and `docs/projects/mirror/validation/guiho-convention-0001-cli-migration-C0001-<NN>.md`.
 Final evidence uses
-`docs/reviews/implementation/guiho-convention-0001-cli-compliance-final-review.md`
-and `docs/validation/guiho-convention-0001-cli-migration-final.md`.
+`docs/projects/mirror/reviews/implementation/guiho-convention-0001-cli-compliance-final-review.md`
+and `docs/projects/mirror/validation/guiho-convention-0001-cli-migration-final.md`.
 
 ## Finding Traceability
 

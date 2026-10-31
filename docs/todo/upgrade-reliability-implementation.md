@@ -29,9 +29,9 @@ Canonical PowerShell/POSIX installers now validate exact versions, replace throu
 
 - [Task specification](./upgrade-reliability.md)
 - [Approved design](../superpowers/specs/2026-07-15-upgrade-reliability-design.md)
-- [Implementation plan](../plans/upgrade-reliability-implementation.md)
-- [Plan review](../reviews/plans/upgrade-reliability-implementation-review.md)
-- [Validation report](../validation/upgrade-reliability.md)
+- Implementation plan (private `CGuiho/guiho`, `docs/projects/mirror/plans/upgrade-reliability-implementation.md`)
+- Plan review (private `CGuiho/guiho`, `docs/projects/mirror/reviews/plans/upgrade-reliability-implementation-review.md`)
+- Validation report (private `CGuiho/guiho`, `docs/projects/mirror/validation/upgrade-reliability.md`)
 
 ## Decisions Preserved
 
@@ -57,7 +57,7 @@ Canonical PowerShell/POSIX installers now validate exact versions, replace throu
 - PowerShell parser checks for canonical/devops scripts: passed.
 - `bash -n mirror/install.sh` and `bash -n devops/install.sh`: passed.
 - CI run [29668516605](https://github.com/CGuiho/mirror/actions/runs/29668516605): Linux/full-build and `windows-self-upgrade` jobs passed.
-- The final review is [upgrade-reliability-final-review.md](../reviews/implementation/upgrade-reliability-final-review.md).
+- The final review is upgrade-reliability-final-review.md (private `CGuiho/guiho`, `docs/projects/mirror/reviews/implementation/upgrade-reliability-final-review.md`).
 
 ## Handoff
 

@@ -101,7 +101,7 @@ workflow.
 
 ## Dependencies And Context
 
-- [Executable migration plan](../plans/rfc-0034-cli-compliance-migration.md)
+- Executable migration plan (private `CGuiho/guiho`, `docs/projects/mirror/plans/rfc-0034-cli-compliance-migration.md`)
 - The coordinating agent is `guiho-a-0001-swe`; the mandatory CLI specialist is
   the `guiho-s-0034-cli-engineer` skill.
 - Existing upgrade transaction and agent instruction discovery are useful
@@ -144,21 +144,21 @@ workflow.
 
 ## Related Files
 
-- [Implementation plan](../plans/rfc-0034-cli-compliance-migration.md) -
+- Implementation plan (private `CGuiho/guiho`, `docs/projects/mirror/plans/rfc-0034-cli-compliance-migration.md`) -
   Ordered execution units and verification gates.
-- [Upgrade reliability plan](../plans/upgrade-reliability-implementation.md) -
+- Upgrade reliability plan (private `CGuiho/guiho`, `docs/projects/mirror/plans/upgrade-reliability-implementation.md`) -
   Existing verified replacement behavior to preserve and extend.
 - [Contextual help design](../cli-contextual-help-design.md) - Existing help
   behavior that the generated RFC help system supersedes where conflicting.
-- [Plan review](../reviews/plans/rfc-0034-cli-compliance-migration-review.md) -
+- Plan review (private `CGuiho/guiho`, `docs/projects/mirror/reviews/plans/rfc-0034-cli-compliance-migration-review.md`) -
   Ready-for-execution review of self-hosting, sequencing, and release gates.
 - [Implementation record](./rfc-0034-cli-compliance-migration-implementation.md) -
   Completed units, changed surfaces, and release handoff.
-- [Implementation review](../reviews/implementation/rfc-0034-cli-compliance-migration-review.md) -
+- Implementation review (private `CGuiho/guiho`, `docs/projects/mirror/reviews/implementation/rfc-0034-cli-compliance-migration-review.md`) -
   Acceptance review against the approved plan.
-- [Validation report](../validation/rfc-0034-cli-compliance-migration.md) -
+- Validation report (private `CGuiho/guiho`, `docs/projects/mirror/validation/rfc-0034-cli-compliance-migration.md`) -
   Commands, behavior checks, build evidence, and readiness.
-- [Downstream handoff](../validation/rfc-0034-downstream-handoff.md) -
+- Downstream handoff (private `CGuiho/guiho`, `docs/projects/mirror/validation/rfc-0034-downstream-handoff.md`) -
   Repositories that still require YAML migration.
 
 ## References

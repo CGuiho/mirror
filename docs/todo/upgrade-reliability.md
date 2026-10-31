@@ -53,7 +53,7 @@ owner: mirror-docs-todo
 ## Dependencies and Context
 
 - [Approved design](../superpowers/specs/2026-07-15-upgrade-reliability-design.md)
-- [Implementation plan](../plans/upgrade-reliability-implementation.md)
+- Implementation plan (private `CGuiho/guiho`, `docs/projects/mirror/plans/upgrade-reliability-implementation.md`)
 - Existing Citty migration and local `3.5.0-alpha.0` history must be preserved.
 - [Implementation notes](./upgrade-reliability-implementation.md) record progress and validation handoff.
 

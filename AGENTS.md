@@ -77,8 +77,13 @@ keywords: [cli engineering, validation, release boundary]
 
 - `README.md` is the user entrypoint and `mirror/DOCS.md` is the full behavior
   contract. Update both when user-visible behavior or delivery changes.
-- Keep `TECHNICAL.md`, the Go RFC, implementation plan, review, validation, TODO,
-  XDocs descriptors, and embedded skill consistent with shipped behavior.
+- Keep `TECHNICAL.md`, the Go RFC, TODO, XDocs descriptors, and embedded skill
+  consistent with shipped behavior.
+- The internal lifecycle records — plans, question ledgers, review handoffs,
+  validation evidence and the completed-task archive — live in the private GUIHO
+  repository `CGuiho/guiho` under `docs/projects/mirror/` (see
+  [`docs/internal-records.md`](docs/internal-records.md)); read them there, they
+  are not kept in this public repository.
 
 ## Semantic Project Versioning
 
@@ -90,11 +95,11 @@ ordinary implementation or validation.
 
 ## GUIHO Project
 
-- Repository: `C:\GUIHO\mirror`
-- Parent: `C:\GUIHO\guiho`
+- Repository: `<local path>`
+- Parent: `<local path>` — the checkout of `CGuiho/guiho`
 - Purpose: deterministic semantic project versioning and release workflows.
-- Parent instructions: `../guiho/AGENTS.md`
-- Parent backlog: `../guiho/TODO.md`
+- Parent instructions: `AGENTS.md` in the parent `CGuiho/guiho` repository
+- Parent backlog: `TODO.md` in the parent `CGuiho/guiho` repository
 - Local backlog: `TODO.md`
 - Keep component work local and cross-component coordination in the parent.
 - Do not publish, deploy, migrate, rotate secrets, or mutate production without
@@ -157,7 +162,7 @@ Managed by the GUIHO Mandume swarm ([CGuiho/mandume](https://github.com/CGuiho/m
 execution: dnd  # dnd | interruptible — orchestrator NEVER stops during execution/review
 notifications: "off"  # human-facing only; child completion stays enabled
 harness: opencode  # only current harness; native background subagents always
-tmux-session: mirror  # orchestrator session on su-57; convention = this project's name
+tmux-session: mirror  # orchestrator session on <host>; convention = this project's name
 ```
 
 ### Coordination
@@ -197,5 +202,5 @@ The following former pins are retained history only, never current workers or fa
 - Resolve the authorized exact provider/model and available reasoning variant against the actual catalog and registry; pass them explicitly through the live native tool schema, documenting provider-default omission when no variant exists. Every brief includes Mode: dnd, actual convention/owning context, task identity, exclusive paths, capabilities, acceptance/checks and commit/push authority.
 - Use background child sessions and harness completion notifications. Human notifications off does not disable child completion. No native worker polling, sleeping, repeated status loops or file tailing. On completion inspect child identity, errors and timing; verify actual scoped diff, acceptance/checks, owning issue/Project membership/exact Component/Status readbacks and owned commits; integrate and immediately continue the next ready unit without CG.
 - Record exact tool/provider/permission failures, fail dependent units safely and continue independent work; select an already-authorized capable native agent where possible. No active OpenCode CLI-worker exception exists, including capability gaps, permission denial or an earlier CLI request; no host permission/config widening or silent model substitution. Other harness adapters are inactive history. CLI workers are dormant only for a future CG-authorized harness actually lacking a native subagent tool. Ordinary Git/gh/Bun/XDocs/RunX CLI tools and launching a primary OpenCode session are distinct from CLI workers.
-- Coordinate on main and never ask CG or wait for a wake-up during DND execution/technical review. Resolve reversible questions from evidence, ledger in `docs/questions/`, and continue; actual security/data-loss, impossible-specification or missing-security-authorization blockers go to `docs/issues/` while independent valid units continue. Commit only coherent owned work; preserve unowned edits, secret/production boundaries and existing lifecycle requirements. Child push requires explicit parent authorization; independent human review follows technical review.
+- Coordinate on main and never ask CG or wait for a wake-up during DND execution/technical review. Resolve reversible questions from evidence, ledger in `docs/projects/mirror/questions/` in `CGuiho/guiho`, and continue; actual security/data-loss, impossible-specification or missing-security-authorization blockers go to `docs/issues/` while independent valid units continue. Commit only coherent owned work; preserve unowned edits, secret/production boundaries and existing lifecycle requirements. Child push requires explicit parent authorization; independent human review follows technical review.
 - Use the Mandume skills (`guiho-s-mandume` + lifecycle skills) and the Essentials skills (`guiho-s-0001-guiho`, `guiho-s-0004-working-with-cg`, `guiho-s-0040-explorer`, `guiho-s-0032-git-commit`). Conventions: `conventions/` in `CGuiho/guiho` (`apps.md` for ports).
