@@ -114,6 +114,29 @@ func TestInstructionBodyRequiresClosedFrontmatterAndContent(t *testing.T) {
 	}
 }
 
+func TestEmbeddedInstructionDocumentsRemoteMCPTokenMode(t *testing.T) {
+	body, err := EmbeddedInstructionBody(embedFS.FS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{
+		`"type": "remote"`,
+		`"oauth": false`,
+		`"Authorization": "Bearer {env:CLOUDFLARE_API_TOKEN}"`,
+		"`mcp.servers`",
+		"`enabled: true`",
+	} {
+		if !strings.Contains(body, expected) {
+			t.Errorf("managed instruction body is missing %q", expected)
+		}
+	}
+	for _, line := range strings.Split(body, "\n") {
+		if strings.Contains(line, "Authorization") && !strings.Contains(line, "{env:") {
+			t.Errorf("managed instruction Authorization header must use an {env:} placeholder: %q", line)
+		}
+	}
+}
+
 func TestMalformedInstructionBlockFailsWithoutMutation(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "AGENTS.md")

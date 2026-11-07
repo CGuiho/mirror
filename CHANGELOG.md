@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Documented token-mode authentication for remote MCP servers in the managed Mirror instruction block: remote servers default to interactive OAuth, so the block now records the current OpenCode V2 `mcp.servers` shape with `oauth: false` and an `{env:...}` header placeholder, and states that credential values never belong in managed instructions or generated files.
+
 ## [4.2.7] - 2026-10-17
 
 ### Changed

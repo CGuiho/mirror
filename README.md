@@ -121,7 +121,10 @@ global agent roots and reconciles the bounded instruction block in the current
 repository before printing its normal banner. If both `AGENTS.md` and
 `CLAUDE.md` exist, both are updated; if neither exists, `AGENTS.md` is created.
 The managed body begins with `## GUIHO Mirror Instruction Block`; descriptor
-frontmatter remains only in the standalone prompt asset.
+frontmatter remains only in the standalone prompt asset. The block also records
+token-mode authentication for remote MCP servers (`oauth: false` plus an
+`{env:NAME}` header placeholder) so unattended agents never wait on an
+interactive sign-in.
 
 Agent mutations are explicit:
 
