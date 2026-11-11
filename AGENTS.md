@@ -179,10 +179,10 @@ tmux-session: mirror  # orchestrator session on <host>; convention = this projec
 
 | Worker | Class | Model (exact OpenCode ID) | Thinking | Usage |
 | --- | --- | --- | --- | --- |
-| `mastermind` | mastermind | `xiaomi/mimo-v2.6-pro` (direct Xiaomi API) | provider default, no variant | CG-authorized default; provider/account-dependent |
-| `engineer` | workhorse | `xiaomi/mimo-v2.6-pro` (direct Xiaomi API) | provider default, no variant | CG-authorized default; provider/account-dependent |
+| `mastermind` | mastermind | see Convention 0007 | see Convention 0007 | CG-authorized default; provider/account-dependent |
+| `engineer` | workhorse | see Convention 0007 | see Convention 0007 | CG-authorized default; provider/account-dependent |
 
-Both roles follow [canonical Convention 0007](https://github.com/CGuiho/guiho/blob/cd2ce966/conventions/guiho-convention-0007-models.md). MiMo variants=[]: document omission of the variant parameter; thinking is enabled under provider defaults, with no fabricated max/xhigh tier. No guaranteed capacity, second active model or silent fallback. `openai/gpt-6.1-sol#xhigh` is expressly authorized only for this rollout, not a future default. Weekly-pool models need ensured usage and explicit CG run authorization.
+Model selection: read Convention 0007 — Models (`conventions/guiho-convention-0007-models.md`) in `CGuiho/guiho` — the single source of truth. Never duplicate the model list here; verify the live catalog before dispatch. No guaranteed capacity, second active model or silent fallback is authorized outside Convention 0007. Weekly-pool models need ensured usage and explicit CG run authorization.
 
 ### Historical worker pins — inactive
 
