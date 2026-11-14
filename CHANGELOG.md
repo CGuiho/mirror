@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Documented token-mode authentication for remote MCP servers in the managed Mirror instruction block: remote servers default to interactive OAuth, so the block now records the current OpenCode V2 `mcp.servers` shape with `oauth: false` and an `{env:...}` header placeholder, and states that credential values never belong in managed instructions or generated files.
 
+### Fixed
+
+- Fixed `mirror init` silently generating a `mirror.yaml` whose `{name}` tag template had no user-supplied project name: choosing tag template 2 (`{name}@{version}`) or 3 (`{name}/v{version}`) now prompts `Project name [<default>]:` (defaulting to the base of the `go.mod` module path, or the working directory name), and the entered name is stored as `project.name` so the generated configuration resolves the tag. The `v{version}` template never prompts, and non-interactive runs derive the same default without prompting.
+
 ## [4.2.7] - 2026-10-17
 
 ### Changed
