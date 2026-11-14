@@ -137,7 +137,12 @@ mirror agent prompt list
 `mirror init` defaults to Git as the version source and only Git as the output,
 tag template `v{version}`, release commits enabled, and release-ref pushes
 enabled. Interactive option 1 and both `[Y/n]` prompts show those defaults;
-explicit answers and flags override them.
+explicit answers and flags override them. Choosing tag template 2
+(`{name}@{version}`) or 3 (`{name}/v{version}`) additionally prompts
+`Project name [<default>]:`, defaulting to the base of the `go.mod` module
+path or the working directory name, and stores the entered name as
+`project.name` so `mirror.yaml` can resolve the tag; `v{version}` never
+prompts for a name, and non-interactive runs derive the same default.
 
 For a new Git-only repository with no version tags, start with an exact version,
 for example `mirror version plan 0.0.1` and `mirror version apply 0.0.1 --yes`.

@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -66,10 +67,21 @@ func newInitCommand(deps Dependencies) *cobra.Command {
 			}
 			resolvedCommit := commit
 			resolvedPush := push
+			resolvedName := ""
 			if deps.IsTerminal() && !yes && !nonInteractive {
 				prompter := newInitPrompter(deps)
 				if !command.Flags().Changed("tag-template") {
 					resolvedTag, err = prompter.selectTagTemplate()
+					if err != nil {
+						return err
+					}
+				}
+				if strings.Contains(resolvedTag, "{name}") {
+					def, defErr := defaultProjectName(cwd)
+					if defErr != nil {
+						return defErr
+					}
+					resolvedName, err = prompter.enterProjectName(def)
 					if err != nil {
 						return err
 					}
@@ -87,7 +99,7 @@ func newInitCommand(deps Dependencies) *cobra.Command {
 					}
 				}
 			}
-			rendered, err := renderInitialConfig(cwd, source, resolvedTag, resolvedCommit, resolvedPush)
+			rendered, err := renderInitialConfig(cwd, source, resolvedTag, resolvedCommit, resolvedPush, resolvedName)
 			if err != nil {
 				return err
 			}
@@ -124,20 +136,28 @@ func renderInitResult(command *cobra.Command, deps Dependencies, path, status st
 	return nil
 }
 
-func renderInitialConfig(cwd, source, tagTemplate string, commit, push bool) (string, error) {
+func renderInitialConfig(cwd, source, tagTemplate string, commit, push bool, projectName string) (string, error) {
 	if source != "package.json" && source != "jsr.json" && source != "git" {
 		return "", fmt.Errorf("source must be package.json, jsr.json, or git")
 	}
-	name := filepath.Base(cwd)
-	if strings.TrimSpace(name) == "" || name == "." {
-		return "", fmt.Errorf("cannot derive project name from working directory %s", cwd)
+	explicitName := strings.TrimSpace(projectName) != ""
+	if explicitName {
+		projectName = strings.TrimSpace(projectName)
+	} else if source == "git" {
+		var err error
+		projectName, err = defaultProjectName(cwd)
+		if err != nil {
+			return "", err
+		}
 	}
 
-	projectLine := "  name: " + quoteYAML(name)
+	projectLine := "  name: " + quoteYAML(projectName)
 	output := `["git"]`
 	if source != "git" {
-		projectLine = "  name_source: " + quoteYAML(source)
 		output = fmt.Sprintf("[%s, \"git\"]", quoteYAML(source))
+		if !explicitName {
+			projectLine = "  name_source: " + quoteYAML(source)
+		}
 	}
 	if tagTemplate != "v{version}" && tagTemplate != "{name}@{version}" && tagTemplate != "{name}/v{version}" {
 		return "", fmt.Errorf("tag template must be v{version}, {name}@{version}, or {name}/v{version}")
@@ -205,6 +225,27 @@ func (p *initPrompter) selectTagTemplate() (string, error) {
 	}
 }
 
+func (p *initPrompter) enterProjectName(def string) (string, error) {
+	def = strings.TrimSpace(def)
+	if def != "" {
+		fmt.Fprintf(p.out, "Project name [%s]: ", def)
+	} else {
+		fmt.Fprint(p.out, "Project name: ")
+	}
+	answer, err := p.readLine()
+	if err != nil {
+		return "", err
+	}
+	name := strings.TrimSpace(answer)
+	if name == "" {
+		name = def
+	}
+	if name == "" {
+		return "", fmt.Errorf("project name cannot be empty")
+	}
+	return name, nil
+}
+
 func (p *initPrompter) confirm(question string, defaultValue bool) (bool, error) {
 	indicator := " [Y/n]: "
 	if !defaultValue {
@@ -240,4 +281,41 @@ func (p *initPrompter) readLine() (string, error) {
 
 func quoteYAML(value string) string {
 	return fmt.Sprintf("%q", value)
+}
+
+func defaultProjectName(cwd string) (string, error) {
+	if name := goModProjectName(cwd); name != "" {
+		return name, nil
+	}
+	name := filepath.Base(cwd)
+	if strings.TrimSpace(name) == "" || name == "." || name == string(filepath.Separator) {
+		return "", fmt.Errorf("cannot derive project name from working directory %s", cwd)
+	}
+	return name, nil
+}
+
+func goModProjectName(cwd string) string {
+	data, err := os.ReadFile(filepath.Join(cwd, "go.mod"))
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "module ") {
+			continue
+		}
+		modulePath := strings.TrimSpace(strings.TrimPrefix(line, "module "))
+		if i := strings.Index(modulePath, "//"); i >= 0 {
+			modulePath = strings.TrimSpace(modulePath[:i])
+		}
+		if modulePath == "" {
+			return ""
+		}
+		base := path.Base(modulePath)
+		if base == "." || base == "/" || base == "" {
+			return ""
+		}
+		return base
+	}
+	return ""
 }
